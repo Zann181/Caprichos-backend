@@ -1,0 +1,147 @@
+/* static/core/css/style.css */
+
+/* --- 1. Importar Tipografía y Definir Paleta de Colores --- */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Inter:wght@400;600&display=swap');
+
+:root {
+    --naranja-tostado: #E8772E;
+    --crema-palido: #FDF6E3;
+    --carbon-suave: #4F4A45;
+    --gris-piedra: #D4C5A3;
+    --blanco-hueso: #FEFBF3;
+    --fuente-titulos: 'DM Sans', sans-serif;
+    --fuente-cuerpo: 'Inter', sans-serif;
+}
+
+/* --- 2. Estilos Generales del Cuerpo --- */
+body {
+    font-family: var(--fuente-cuerpo);
+    background-color: var(--crema-palido);
+    color: var(--carbon-suave);
+    margin: 0;
+    padding: 2rem;
+    line-height: 1.6;
+}
+
+/* --- 3. Títulos y Párrafos --- */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--fuente-titulos);
+    color: var(--carbon-suave);
+    margin-top: 0;
+}
+
+p {
+    margin-bottom: 1rem;
+}
+
+a {
+    color: var(--naranja-tostado);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+}
+
+a:hover {
+    text-decoration: underline;
+    opacity: 0.8;
+}
+
+/* --- 4. Contenedores y Tarjetas --- */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.card {
+    background-color: var(--blanco-hueso);
+    border: 1px solid var(--gris-piedra);
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* --- 5. Botones --- */
+.btn {
+    display: inline-block;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 5px;
+    font-family: var(--fuente-titulos);
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    text-decoration: none;
+}
+
+.btn-primary {
+    background-color: var(--naranja-tostado);
+    color: white;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    text-decoration: none;
+}
+
+/* También aplicamos el estilo base a los botones de formularios */
+button {
+    composes: btn btn-primary;
+}
+
+
+/* --- 6. Tablas --- */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1.5rem;
+    background-color: var(--blanco-hueso);
+    border: 1px solid var(--gris-piedra);
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--gris-piedra);
+}
+
+thead th {
+    background-color: var(--gris-piedra);
+    color: var(--carbon-suave);
+    font-family: var(--fuente-titulos);
+    font-weight: 700;
+}
+
+tbody tr:nth-of-type(even) {
+    background-color: rgba(212, 197, 163, 0.2);
+}
+
+tbody tr:hover {
+    background-color: rgba(232, 119, 46, 0.1);
+}
+
+/* --- 7. Formularios --- */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--gris-piedra);
+    border-radius: 5px;
+    background-color: var(--blanco-hueso);
+    color: var(--carbon-suave);
+    font-size: 16px;
+    box-sizing: border-box; /* Importante */
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--naranja-tostado);
+    box-shadow: 0 0 5px rgba(232, 119, 46, 0.5);
+}

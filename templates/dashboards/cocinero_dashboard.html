@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Cocina</title>
+    <style>body { font-family: sans-serif; padding: 2rem; } .logout { margin-top: 2rem; }</style>
+</head>
+<body>
+    <h1>Bienvenido, {{ user.nombre }}</h1>
+    <h2>Panel de Cocina</h2>
+    <p>Aquí aparecerán los productos de las órdenes que debes preparar.</p>
+
+    <div class="logout">
+        <a href="{% url 'logout' %}">Cerrar Sesión</a>
+    </div>
+</body>
+</html>

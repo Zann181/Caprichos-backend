@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Acceso Denegado</title>
+    <style>body { font-family: sans-serif; padding: 2rem; text-align: center; } .logout { margin-top: 2rem; }</style>
+</head>
+<body>
+    <h1>🚫 Acceso Denegado (Error 403)</h1>
+    <p>No tienes los permisos necesarios para acceder a esta página.</p>
+    <p>Es posible que tu usuario no tenga un rol asignado o que intentes entrar a un área que no te corresponde.</p>
+    <div class="logout">
+        <a href="{% url 'logout' %}">Cerrar Sesión e intentarlo con otra cuenta</a>
+    </div>
+</body>
+</html>

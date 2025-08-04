@@ -1,0 +1,90 @@
+erDiagram
+    roles {
+        int id PK
+        varchar nombre UK
+        varchar descripcion
+        boolean is_active
+    }
+    
+    usuarios {
+        int id PK
+        varchar nombre
+        varchar email UK
+        varchar password
+        varchar telefono
+        int id_rol FK
+        boolean is_active
+        timestamp creado_en
+    }
+    
+    productos {
+        int id PK
+        varchar nombre
+        varchar descripcion
+        int cantidad
+        decimal precio
+        varchar categoria
+        int tiempo_preparacion
+        varchar imagen_url
+        boolean is_available
+        boolean is_active
+    }
+    
+    mesas {
+        int id PK
+        int numero UK
+        int capacidad
+        varchar ubicacion
+        varchar estado
+        boolean is_active
+    }
+    
+    ordenes {
+        int id PK
+        varchar numero_orden UK
+        int mesero_id FK
+        int mesa_id FK
+        varchar estado
+        varchar observaciones
+        timestamp creado_en
+        timestamp confirmado_en
+        timestamp enviado_cocina_en
+        timestamp listo_en
+    }
+    
+    orden_productos {
+        int id PK
+        int orden_id FK
+        int producto_id FK
+        int cantidad
+        decimal precio_unitario
+        varchar estado
+        varchar observaciones
+        timestamp listo_en
+    }
+    
+    facturas {
+        int id PK
+        varchar numero_factura UK
+        int orden_id FK
+        decimal subtotal
+        decimal impuesto
+        decimal descuento
+        decimal total
+        varchar metodo_pago
+        varchar estado_pago
+        varchar cliente_nombre
+        varchar cliente_identificacion
+        varchar cliente_telefono
+        varchar observaciones
+        timestamp creado_en
+        timestamp pagado_en
+    }
+    
+    %% RELACIONES
+    roles ||--o{ usuarios : "define_rol"
+    usuarios ||--o{ ordenes : "mesero_toma"
+    mesas ||--o{ ordenes : "asigna_mesa"
+    ordenes ||--o{ orden_productos : "contiene_productos"
+    productos ||--o{ orden_productos : "producto_pedido"
+    ordenes ||--|| facturas : "genera_factura"

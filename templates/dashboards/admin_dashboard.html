@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Administrador</title>
+    <style>
+        body { font-family: sans-serif; padding: 2rem; } 
+        .logout { margin-top: 2rem; }
+        .admin-link { background-color: #333; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Bienvenido, {{ user.nombre }}</h1>
+    <h2>Panel Principal de Administrador</h2>
+    <p>Desde este panel personalizado podrás ver reportes, estadísticas y accesos directos.</p>
+    <hr>
+    <h3>Administración Avanzada</h3>
+    <p>Para gestionar usuarios, roles y todos los datos del sistema directamente en la base de datos, usa el panel de administración de Django.</p>
+    <p><a href="{% url 'admin:index' %}" class="admin-link">Ir al Panel de Administración de Django</a></p>
+
+    <div class="logout">
+        <a href="{% url 'logout' %}">Cerrar Sesión</a>
+    </div>
+</body>
+</html>

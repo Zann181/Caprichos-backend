@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Panel de Mesero - Tomar Pedido{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+        <div>
+            <h1>Panel de Mesero</h1>
+            <p style="margin: 0;">Atendiendo: <strong>{{ user.nombre }}</strong></p>
+        </div>
+        <a href="{% url 'logout' %}" class="btn">Cerrar Sesión</a>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-top: 2rem;">
+    
+    <div class="card" id="menu-productos">
+        <h2>Menú de Productos</h2>
+        {% for categoria in categorias %}
+            <h3 style="border-bottom: 2px solid var(--gris-piedra); padding-bottom: 0.5rem; margin-top: 1.5rem;">{{ categoria.nombre }}</h3>
+            <div class="product-grid">
+                {% for producto in categoria.productos.all %}
+                    {% if producto.is_available and producto.is_active %}
+                    <div class="product-item" data-id="{{ producto.id }}" data-nombre="{{ producto.nombre }}" data-precio="{{ producto.precio }}" data-stock="{{ producto.cantidad }}">
+                        <h4>{{ producto.nombre }}</h4>
+                        <p>${{ producto.precio|floatformat:0 }}</p>
+                        <p style="font-size: 0.8em;">Disponible: <span class="stock-display">{{ producto.cantidad }}</span></p>
+                        
+                        <div class="quantity-selector">
+                            <button class="quantity-btn" data-action="decrement">-</button>
+                            <span class="quantity-value">0</span>
+                            <button class="quantity-btn" data-action="increment">+</button>
+                        </div>
+
+                        <input type="text" class="observaciones-input" placeholder="Observaciones...">
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <div id="resumen-pedido" class="card" style="position: sticky; top: 2rem;">
+        <h2>Orden Actual</h2>
+        <div class="form-group">
+            <label for="select-mesa" style="font-weight: 600;">Asignar a Mesa:</label>
+            <select id="select-mesa">
+                <option value="">-- Elige una mesa libre --</option>
+                {% for mesa in mesas %}
+                <option value="{{ mesa.id }}">Mesa {{ mesa.numero }} ({{ mesa.capacidad }} personas)</option>
+                {% endfor %}
+            </select>
+        </div>
+        <hr style="border: 0; border-top: 1px solid var(--gris-piedra); margin: 1rem 0;">
+        
+        <div id="lista-pedido-items" style="min-height: 200px;">
+            </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--gris-piedra); margin: 1rem 0;">
+        <div style="text-align: right; font-size: 1.5rem; font-family: var(--fuente-titulos);">
+            <strong>Total: $<span id="total-pedido">0</span></strong>
+        </div>
+        <button id="btn-enviar-pedido" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Confirmar y Enviar Pedido</button>
+    </div>
+</div>
+
+<style>
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1.5rem;
+    }
+    .product-item {
+        border: 1px solid var(--gris-piedra);
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+        background-color: #fff;
+        display: flex;
+        flex-direction: column;
+    }
+    .product-item h4 { margin-top: 0; margin-bottom: 0.5rem; }
+    .product-item p { margin: 0.25rem 0; }
+    .quantity-selector {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 1rem 0;
+    }
+    .quantity-btn {
+        width: 30px;
+        height: 30px;
+        border: 1px solid var(--gris-piedra);
+        background-color: #fff;
+        font-size: 20px;
+        cursor: pointer;
+    }
+    .quantity-value {
+        width: 40px;
+        font-size: 18px;
+        font-weight: 600;
+    }
+    .observaciones-input {
+        font-size: 12px;
+        padding: 5px;
+        margin-top: auto; /* Empuja el input hacia abajo */
+    }
+    #lista-pedido-items .item-pedido {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 1rem;
+        align-items: center;
+        padding: 0.5rem 0;
+    }
+    #lista-pedido-items .item-observacion {
+        font-size: 0.8em;
+        color: #666;
+        grid-column: 2 / 4;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Objeto para guardar el estado del pedido: { id: {cantidad, observaciones, nombre, precio}, ... }
+    const orden = {};
+    const csrfToken = '{{ csrf_token }}';
+
+    const menuProductos = document.getElementById('menu-productos');
+    const resumenContainer = document.getElementById('lista-pedido-items');
+    const totalEl = document.getElementById('total-pedido');
+
+    // Función para actualizar el panel de resumen del pedido
+    function actualizarResumen() {
+        resumenContainer.innerHTML = '';
+        let totalGeneral = 0;
+
+        Object.values(orden).forEach(item => {
+            const subtotal = item.cantidad * item.precio;
+            totalGeneral += subtotal;
+
+            const itemHTML = `
+                <div class="item-pedido" data-id="${item.id}">
+                    <span>${item.cantidad}x</span>
+                    <span>${item.nombre}</span>
+                    <strong>$${subtotal.toLocaleString()}</strong>
+                </div>
+                ${item.observaciones ? `<div class="item-observacion">Nota: ${item.observaciones}</div>` : ''}
+            `;
+            resumenContainer.innerHTML += itemHTML;
+        });
+
+        totalEl.textContent = totalGeneral.toLocaleString();
+    }
+
+    // Manejar eventos en el menú de productos
+    menuProductos.addEventListener('click', (e) => {
+        if (e.target.classList.contains('quantity-btn')) {
+            const productItem = e.target.closest('.product-item');
+            const id = productItem.dataset.id;
+            const stock = parseInt(productItem.dataset.stock, 10);
+            
+            let cantidadActual = orden[id] ? orden[id].cantidad : 0;
+
+            if (e.target.dataset.action === 'increment' && cantidadActual < stock) {
+                cantidadActual++;
+            } else if (e.target.dataset.action === 'decrement' && cantidadActual > 0) {
+                cantidadActual--;
+            }
+
+            // Actualizar el objeto de la orden
+            if (cantidadActual > 0) {
+                if (!orden[id]) { // Si es la primera vez que se añade
+                    orden[id] = {
+                        id: id,
+                        nombre: productItem.dataset.nombre,
+                        precio: parseFloat(productItem.dataset.precio),
+                        cantidad: 0,
+                        observaciones: ''
+                    };
+                }
+                orden[id].cantidad = cantidadActual;
+            } else {
+                delete orden[id]; // Eliminar del pedido si la cantidad es 0
+            }
+
+            // Actualizar la UI
+            productItem.querySelector('.quantity-value').textContent = cantidadActual;
+            actualizarResumen();
+        }
+    });
+    
+    // Manejar eventos en los campos de observaciones
+    menuProductos.addEventListener('input', (e) => {
+        if (e.target.classList.contains('observaciones-input')) {
+            const productItem = e.target.closest('.product-item');
+            const id = productItem.dataset.id;
+            
+            if (orden[id]) { // Solo guardar observaciones si el producto está en la orden
+                orden[id].observaciones = e.target.value;
+                actualizarResumen();
+            }
+        }
+    });
+
+    // Enviar el pedido
+    document.getElementById('btn-enviar-pedido').addEventListener('click', async () => {
+        const mesaId = document.getElementById('select-mesa').value;
+        const productosParaEnviar = Object.values(orden);
+
+        if (!mesaId) { alert('Por favor, selecciona una mesa.'); return; }
+        if (productosParaEnviar.length === 0) { alert('El pedido está vacío.'); return; }
+
+        try {
+            const response = await fetch("{% url 'api_crear_orden' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({
+                    mesa_id: mesaId,
+                    productos: productosParaEnviar.map(p => ({
+                        id: p.id,
+                        cantidad: p.cantidad,
+                        observaciones: p.observaciones
+                    }))
+                })
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                alert(`¡Pedido para la mesa ${document.querySelector('#select-mesa option:checked').textContent} creado exitosamente!`);
+                window.location.reload();
+            } else {
+                alert(`Error al crear el pedido: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('Error de red:', error);
+            alert('Hubo un error de conexión al enviar el pedido.');
+        }
+    });
+});
+</script>
+{% endblock %}
