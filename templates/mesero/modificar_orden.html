@@ -1,0 +1,555 @@
+<style>
+    /* Estilos específicos para modificar orden */
+    .mesa-selector { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .mesa-btn { 
+        padding: 1.2rem; 
+        border: 2px solid var(--gris-piedra); 
+        background: white; 
+        border-radius: 8px; 
+        cursor: pointer; 
+        text-align: center; 
+        transition: all 0.3s; 
+        position: relative;
+    }
+    .mesa-btn:hover { 
+        border-color: var(--naranja-tostado); 
+        background-color: rgba(232, 119, 46, 0.1); 
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(232, 119, 46, 0.2);
+    }
+    .mesa-btn.ocupada { 
+        border-color: var(--amarillo-modificado); 
+        background-color: rgba(255, 193, 7, 0.1); 
+    }
+    .mesa-btn.seleccionada { 
+        border-color: var(--naranja-tostado); 
+        background-color: var(--naranja-tostado); 
+        color: white; 
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(232, 119, 46, 0.4);
+    }
+    .mesa-numero { font-size: 1.2em; font-weight: 700; margin-bottom: 0.5rem; }
+    .mesa-info { font-size: 0.8em; opacity: 0.8; }
+    .mesa-estado { 
+        position: absolute; 
+        top: 8px; 
+        right: 8px; 
+        background: var(--amarillo-modificado); 
+        color: white; 
+        border-radius: 50%; 
+        width: 20px; 
+        height: 20px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 10px; 
+    }
+    
+    .orden-existente { 
+        background-color: rgba(23, 162, 184, 0.1); 
+        border: 1px solid var(--azul-info); 
+        border-radius: 8px; 
+        padding: 1.5rem; 
+        margin-bottom: 2rem; 
+    }
+    .orden-existente h3 { 
+        color: var(--azul-info); 
+        margin-bottom: 1rem; 
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .productos-existentes { font-size: 0.9em; }
+    .producto-existente { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
+        padding: 0.5rem 0; 
+        border-bottom: 1px solid rgba(23, 162, 184, 0.2);
+    }
+    .producto-existente:last-child { border-bottom: none; }
+    .producto-existente.listo { color: var(--verde-listo); font-weight: 600; }
+    .producto-existente.agregado-despues { 
+        color: var(--amarillo-modificado); 
+        font-weight: 600; 
+        background-color: rgba(255, 193, 7, 0.1);
+        padding: 0.5rem;
+        border-radius: 4px;
+        margin: 0.25rem 0;
+    }
+    
+    .dashboard-grid-modificar { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-top: 1rem; }
+    .btn-agregar-disabled { opacity: 0.6; cursor: not-allowed; }
+    
+    @media (max-width: 900px) {
+        .dashboard-grid-modificar { grid-template-columns: 1fr; }
+        .mesa-selector { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+    }
+</style>
+
+<h2>🔧 Modificar Orden Existente</h2>
+<p>Selecciona una mesa ocupada para agregar productos a su orden actual:</p>
+
+<!-- Selector de mesas ocupadas -->
+<div class="mesa-selector" id="mesas-ocupadas-container">
+    <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #666;">
+        ⏳ Cargando mesas ocupadas...
+    </div>
+</div>
+
+<!-- Información de la orden actual (oculto inicialmente) -->
+<div id="orden-actual-info" style="display: none;"></div>
+
+<!-- Contenedor para agregar productos (oculto inicialmente) -->
+<div id="agregar-productos-container" style="display: none;">
+    <hr>
+    <h3>➕ Agregar Productos a la Orden</h3>
+    
+    <div class="dashboard-grid-modificar">
+        <!-- Menú de productos para modificar -->
+        <div id="menu-productos-modificar">
+            <div class="category-tabs">
+                <button class="category-btn active" data-category-id="all" data-context="modificar">Todos</button>
+                {% for categoria in categorias %}
+                <button class="category-btn" data-category-id="{{ categoria.id }}" data-context="modificar">{{ categoria.nombre }}</button>
+                {% endfor %}
+            </div>
+            
+            <div class="product-grid" id="productos-modificar">
+                <!-- Se llenarán dinámicamente -->
+            </div>
+        </div>
+        
+        <!-- Resumen de modificación -->
+        <div id="resumen-modificacion">
+            <h3>📦 Productos a Agregar</h3>
+            <div id="lista-productos-agregar">
+                <p style="color: #888; text-align: center;">Selecciona productos para agregar.</p>
+            </div>
+            <hr>
+            <div class="order-total">
+                <strong>Adicional: $<span id="total-adicional">0</span></strong>
+            </div>
+            <button id="btn-agregar-productos" class="btn btn-agregar-disabled" style="width: 100%;" disabled>
+                Agregar a la Orden
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Función de inicialización para modificar orden
+window.inicializar_modificar_orden = function() {
+    const ordenModificar = {}; // Para productos a agregar
+    let ordenSeleccionadaId = null;
+    let mesaSeleccionadaId = null;
+
+    // === CARGAR MESAS OCUPADAS ===
+    async function cargarMesasOcupadas() {
+        const container = document.getElementById('mesas-ocupadas-container');
+        
+        try {
+            container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #666;">⏳ Cargando mesas ocupadas...</div>';
+            
+            const response = await fetch('/api/mesero/mesas-ocupadas/');
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const mesas = await response.json();
+            
+            if (mesas.length === 0) {
+                container.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: #888;">
+                        <h3>😊 ¡Todas las mesas están libres!</h3>
+                        <p>No hay órdenes activas para modificar en este momento.</p>
+                        <button class="btn" onclick="window.recargarPestana('modificar-orden')">🔄 Actualizar</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            mesas.forEach(mesa => {
+                const mesaBtn = document.createElement('div');
+                mesaBtn.className = 'mesa-btn ocupada';
+                mesaBtn.dataset.mesaId = mesa.id;
+                
+                mesaBtn.innerHTML = `
+                    <div class="mesa-estado">🍽️</div>
+                    <div class="mesa-numero">Mesa ${mesa.numero}</div>
+                    <div class="mesa-info">${mesa.ubicacion}</div>
+                    <div class="mesa-info" style="margin-top: 0.5rem; font-weight: 600; color: var(--amarillo-modificado);">
+                        ${mesa.productos_count} productos
+                    </div>
+                `;
+                
+                mesaBtn.addEventListener('click', () => seleccionarMesaParaModificar(mesa.id));
+                container.appendChild(mesaBtn);
+            });
+            
+        } catch (error) {
+            console.error('Error cargando mesas ocupadas:', error);
+            container.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 2rem;">
+                    <div class="error-message">
+                        <strong>❌ Error al cargar mesas</strong><br>
+                        ${error.message}<br>
+                        <button class="btn" onclick="window.inicializar_modificar_orden()">🔄 Reintentar</button>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    // === SELECCIONAR MESA PARA MODIFICAR ===
+    async function seleccionarMesaParaModificar(mesaId) {
+        try {
+            // Actualizar UI de selección
+            document.querySelectorAll('.mesa-btn').forEach(btn => btn.classList.remove('seleccionada'));
+            document.querySelector(`[data-mesa-id="${mesaId}"]`).classList.add('seleccionada');
+            mesaSeleccionadaId = mesaId;
+            
+            // Mostrar loading
+            const infoContainer = document.getElementById('orden-actual-info');
+            infoContainer.style.display = 'block';
+            infoContainer.innerHTML = '<div style="text-align: center; padding: 1rem;">⏳ Cargando información de la orden...</div>';
+            
+            // Obtener orden actual de la mesa
+            const response = await fetch(`/api/mesa/${mesaId}/orden/`);
+            const ordenData = await response.json();
+            
+            if (response.ok) {
+                ordenSeleccionadaId = ordenData.orden_id;
+                mostrarOrdenActual(ordenData);
+                prepararMenuModificacion();
+                document.getElementById('agregar-productos-container').style.display = 'block';
+            } else {
+                throw new Error(ordenData.error || 'Error desconocido');
+            }
+            
+        } catch (error) {
+            console.error('Error obteniendo orden:', error);
+            document.getElementById('orden-actual-info').innerHTML = `
+                <div class="error-message">
+                    <strong>❌ Error al cargar la orden</strong><br>
+                    ${error.message}
+                </div>
+            `;
+        }
+    }
+
+    // === MOSTRAR ORDEN ACTUAL ===
+    function mostrarOrdenActual(ordenData) {
+        const container = document.getElementById('orden-actual-info');
+        
+        let productosHtml = '';
+        let estadoGeneral = '';
+        let totalOriginal = 0;
+        let productosOriginales = 0;
+        let productosAgregados = 0;
+        
+        ordenData.productos.forEach(p => {
+            const subtotal = p.cantidad * p.precio_unitario;
+            totalOriginal += subtotal;
+            
+            let claseProducto = '';
+            let iconoEstado = '';
+            let tipoTexto = '';
+            
+            if (p.agregado_despues) {
+                claseProducto = 'agregado-despues';
+                tipoTexto = '🆕 Agregado después';
+                productosAgregados++;
+            } else {
+                productosOriginales++;
+            }
+            
+            if (p.estado === 'LISTO') {
+                claseProducto += ' listo';
+                iconoEstado = '✅';
+            } else {
+                iconoEstado = '⏳';
+            }
+            
+            productosHtml += `
+                <div class="producto-existente ${claseProducto}">
+                    <div>
+                        <span>${iconoEstado} ${p.cantidad}x ${p.nombre}</span>
+                        ${tipoTexto ? `<div style="font-size: 0.8em; margin-top: 2px;">${tipoTexto}</div>` : ''}
+                        ${p.observaciones ? `<div style="font-size: 0.8em; color: var(--naranja-tostado); font-style: italic;">📝 ${p.observaciones}</div>` : ''}
+                    </div>
+                    <span>$${subtotal.toLocaleString()}</span>
+                </div>
+            `;
+        });
+        
+        // Determinar estado general
+        const productosListos = ordenData.productos.filter(p => p.estado === 'LISTO').length;
+        const productosPendientes = ordenData.productos.length - productosListos;
+        
+        if (productosListos === 0) {
+            estadoGeneral = '⏳ En preparación';
+        } else if (productosPendientes === 0) {
+            estadoGeneral = '✅ Lista para servir';
+        } else {
+            estadoGeneral = `🔄 Parcial (${productosListos}/${ordenData.productos.length} listos)`;
+        }
+        
+        container.innerHTML = `
+            <div class="orden-existente">
+                <h3>
+                    📋 Orden Actual - Mesa ${ordenData.mesa.numero}
+                    <span style="margin-left: auto; font-size: 0.8em; color: #666;">${estadoGeneral}</span>
+                </h3>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; font-size: 0.9em;">
+                    <div><strong>Productos originales:</strong> ${productosOriginales}</div>
+                    <div><strong>Agregados después:</strong> ${productosAgregados}</div>
+                    <div><strong>Total productos:</strong> ${ordenData.productos.length}</div>
+                </div>
+                
+                <div class="productos-existentes">
+                    ${productosHtml}
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(23, 162, 184, 0.2);">
+                    <div><strong>Total actual: $${totalOriginal.toLocaleString()}</strong></div>
+                    <div style="font-size: 0.9em; color: #666;">Estado: ${ordenData.estado}</div>
+                </div>
+                
+                ${ordenData.observaciones ? `
+                    <div style="background: rgba(255, 193, 7, 0.1); padding: 0.8rem; border-radius: 4px; margin-top: 1rem; border-left: 4px solid var(--amarillo-modificado);">
+                        <strong>📝 Observaciones de la orden:</strong><br>
+                        <em>${ordenData.observaciones}</em>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    // === PREPARAR MENÚ DE MODIFICACIÓN ===
+    function prepararMenuModificacion() {
+        // Limpiar orden de modificación
+        Object.keys(ordenModificar).forEach(key => delete ordenModificar[key]);
+        
+        // Obtener productos originales y clonar al área de modificación
+        const menuOriginal = document.querySelector('#menu-productos .product-grid');
+        const menuModificar = document.getElementById('productos-modificar');
+        
+        if (menuOriginal) {
+            menuModificar.innerHTML = menuOriginal.innerHTML;
+            
+            // Resetear cantidades en el menú de modificación
+            menuModificar.querySelectorAll('.quantity-value').forEach(el => el.textContent = '0');
+            menuModificar.querySelectorAll('.observaciones-input').forEach(el => el.value = '');
+        } else {
+            // Si no hay menú original, crear productos básicos
+            menuModificar.innerHTML = `
+                <p style="color: #666; text-align: center; grid-column: 1 / -1;">
+                    ⚠️ No se pudo cargar el menú de productos.<br>
+                    <button class="btn" onclick="window.recargarPestana('nuevo-pedido')">Cargar desde Nuevo Pedido</button>
+                </p>
+            `;
+            return;
+        }
+        
+        // Agregar event listeners para el menú de modificación
+        menuModificar.addEventListener('click', e => {
+            if (e.target.classList.contains('quantity-btn')) {
+                const id = e.target.closest('.product-item').dataset.id;
+                manejarCambioCantidad(id, e.target.dataset.action);
+            }
+        });
+        
+        menuModificar.addEventListener('input', e => {
+            if (e.target.classList.contains('observaciones-input')) {
+                const id = e.target.closest('.product-item').dataset.id;
+                if (ordenModificar[id]) {
+                    ordenModificar[id].observaciones = e.target.value;
+                    actualizarResumenModificacion();
+                }
+            }
+        });
+        
+        actualizarResumenModificacion();
+    }
+
+    // === MANEJAR CAMBIOS DE CANTIDAD ===
+    function manejarCambioCantidad(id, accion) {
+        const productItem = document.querySelector(`#productos-modificar .product-item[data-id="${id}"]`);
+        if (!productItem) return;
+        
+        const stock = parseInt(productItem.dataset.stock, 10);
+        let cantidadActual = ordenModificar[id] ? ordenModificar[id].cantidad : 0;
+
+        if (accion === 'increment' && cantidadActual < stock) {
+            cantidadActual++;
+        } else if (accion === 'decrement' && cantidadActual > 0) {
+            cantidadActual--;
+        }
+
+        if (cantidadActual > 0) {
+            if (!ordenModificar[id]) {
+                ordenModificar[id] = {
+                    id: id,
+                    nombre: productItem.dataset.nombre,
+                    precio: parseFloat(productItem.dataset.precio),
+                    observaciones: productItem.querySelector('.observaciones-input').value
+                };
+            }
+            ordenModificar[id].cantidad = cantidadActual;
+        } else {
+            delete ordenModificar[id];
+        }
+
+        // Actualizar UI del producto
+        productItem.querySelector('.quantity-value').textContent = cantidadActual;
+        
+        actualizarResumenModificacion();
+    }
+
+    // === ACTUALIZAR RESUMEN DE MODIFICACIÓN ===
+    function actualizarResumenModificacion() {
+        const container = document.getElementById('lista-productos-agregar');
+        const totalEl = document.getElementById('total-adicional');
+        const btnAgregar = document.getElementById('btn-agregar-productos');
+        
+        container.innerHTML = '';
+        let totalAdicional = 0;
+        
+        if (Object.keys(ordenModificar).length === 0) {
+            container.innerHTML = '<p style="color: #888; text-align: center;">Selecciona productos para agregar.</p>';
+            btnAgregar.disabled = true;
+            btnAgregar.classList.add('btn-agregar-disabled');
+        } else {
+            btnAgregar.disabled = false;
+            btnAgregar.classList.remove('btn-agregar-disabled');
+            Object.values(ordenModificar).forEach(item => {
+                const subtotal = item.cantidad * item.precio;
+                totalAdicional += subtotal;
+                container.innerHTML += `
+                    <div class="order-item">
+                        <span class="order-item-info">${item.cantidad}x ${item.nombre}</span>
+                        <span>${subtotal.toLocaleString()}</span>
+                        ${item.observaciones ? `<div class="order-item-obs">📝 ${item.observaciones}</div>` : ''}
+                    </div>
+                `;
+            });
+        }
+        
+        totalEl.textContent = totalAdicional.toLocaleString();
+    }
+
+    // === FILTROS DE CATEGORÍAS PARA MODIFICACIÓN ===
+    document.addEventListener('click', e => {
+        if (e.target.tagName === 'BUTTON' && e.target.dataset.context === 'modificar') {
+            const selectedCategoryId = e.target.dataset.categoryId;
+            const parentContainer = e.target.closest('#agregar-productos-container');
+            const categoryButtons = parentContainer.querySelectorAll('[data-context="modificar"]');
+            const productItems = parentContainer.querySelectorAll('.product-item');
+            
+            categoryButtons.forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            productItems.forEach(item => {
+                if (selectedCategoryId === 'all' || item.dataset.categoryId === selectedCategoryId) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+    });
+
+    // === ENVIAR PRODUCTOS ADICIONALES ===
+    document.getElementById('btn-agregar-productos').addEventListener('click', async () => {
+        if (!ordenSeleccionadaId || Object.keys(ordenModificar).length === 0) {
+            alert('Selecciona productos para agregar');
+            return;
+        }
+        
+        const productosParaAgregar = Object.values(ordenModificar).map(p => ({
+            id: p.id,
+            cantidad: p.cantidad,
+            observaciones: p.observaciones || ''
+        }));
+        
+        const totalAdicional = productosParaAgregar.reduce((sum, p) => sum + (p.cantidad * p.precio), 0);
+        
+        // Confirmar antes de enviar
+        const confirmacion = confirm(
+            `¿Confirmar agregar productos a la orden?\n\n` +
+            `Productos a agregar: ${productosParaAgregar.length}\n` +
+            `Costo adicional: ${totalAdicional.toLocaleString()}\n\n` +
+            `¿Proceder?`
+        );
+        
+        if (!confirmacion) return;
+        
+        // Deshabilitar botón mientras se procesa
+        const btnAgregar = document.getElementById('btn-agregar-productos');
+        const textoOriginal = btnAgregar.textContent;
+        btnAgregar.disabled = true;
+        btnAgregar.textContent = '⏳ Agregando productos...';
+        
+        try {
+            const response = await fetch(`/api/orden/${ordenSeleccionadaId}/agregar-productos/`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'X-CSRFToken': window.csrfToken 
+                },
+                body: JSON.stringify({ productos: productosParaAgregar })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                window.mostrarNotificacion(`✅ ${result.mensaje}`, 'success');
+                
+                // Limpiar formulario
+                Object.keys(ordenModificar).forEach(key => delete ordenModificar[key]);
+                actualizarResumenModificacion();
+                
+                // Recargar la información de la orden
+                if (mesaSeleccionadaId) {
+                    await seleccionarMesaParaModificar(mesaSeleccionadaId);
+                }
+                
+                // Sugerir ir a vista de cocina
+                setTimeout(() => {
+                    if (confirm('¿Quieres ver el estado actualizado de la orden en la cocina?')) {
+                        document.querySelector('[data-tab="vista-cocina"]').click();
+                    }
+                }, 2000);
+                
+            } else {
+                window.mostrarNotificacion(`❌ Error: ${result.error}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error agregando productos:', error);
+            window.mostrarNotificacion('🔌 Error de conexión al agregar productos', 'error');
+        } finally {
+            // Rehabilitar botón
+            btnAgregar.disabled = false;
+            btnAgregar.textContent = textoOriginal;
+        }
+    });
+
+    // === INICIALIZACIÓN ===
+    cargarMesasOcupadas();
+    
+    console.log('✅ Modificar orden inicializado');
+};
+
+// Función de actualización (llamada por long polling)
+window.actualizar_modificar_orden = function() {
+    // Recargar mesas ocupadas si hay cambios
+    if (typeof cargarMesasOcupadas === 'function') {
+        cargarMesasOcupadas();
+    }
+    console.log('🔄 Actualizando modificar orden...');
+};
+</script>

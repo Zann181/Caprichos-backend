@@ -1,0 +1,378 @@
+<style>
+    /* Estilos específicos para nuevo pedido */
+    .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
+    .category-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--gris-piedra); padding-bottom: 1rem; }
+    .category-btn { background-color: transparent; border: 1px solid var(--naranja-tostado); color: var(--naranja-tostado); padding: 0.5rem 1rem; border-radius: 20px; cursor: pointer; transition: all 0.2s; }
+    .category-btn:hover, .category-btn.active { background-color: var(--naranja-tostado); color: white; }
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1.5rem; }
+    .product-item { border: 1px solid var(--gris-piedra); border-radius: 8px; padding: 1rem; text-align: center; display: flex; flex-direction: column; }
+    .product-image-container { width: 100%; height: 100px; margin-bottom: 0.5rem; }
+    .product-image-container img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
+    .product-item h4, .product-item p { margin: 0.25rem 0; }
+    .stock-text { font-size: 0.8em; color: #666; }
+    .quantity-selector { display: flex; justify-content: center; align-items: center; margin: 1rem 0; }
+    .quantity-btn { width: 40px; height: 40px; border: 1px solid var(--gris-piedra); background-color: #fff; font-size: 24px; font-weight: bold; cursor: pointer; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; }
+    .quantity-value { width: 50px; font-size: 18px; font-weight: 600; text-align: center; }
+    .observaciones-input { font-size: 12px; padding: 5px; margin-top: auto; border: 1px solid var(--gris-piedra); border-radius: 4px; width: 100%; box-sizing: border-box; }
+    
+    #resumen-pedido { position: sticky; top: 2rem; }
+    #lista-pedido-items { min-height: 200px; max-height: 40vh; overflow-y: auto; }
+    .order-item { display: grid; grid-template-columns: 1fr 120px; gap: 1rem; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid #eee; }
+    .order-item-info { font-weight: 600; }
+    .order-item-obs { font-size: 0.8em; color: #666; grid-column: 1 / 3; }
+    .summary-quantity-selector { display: flex; justify-content: flex-end; align-items: center; }
+    .summary-quantity-selector .quantity-btn { width: 28px; height: 28px; font-size: 18px; }
+    .summary-quantity-selector .quantity-value { width: 35px; font-size: 16px; }
+    .order-total { text-align: right; font-size: 1.5rem; font-family: var(--fuente-titulos); margin: 1rem 0; }
+    
+    @media (max-width: 900px) {
+        .dashboard-grid { grid-template-columns: 1fr; }
+        #resumen-pedido { order: -1; position: static; }
+    }
+</style>
+
+<div class="dashboard-grid">
+    <!-- MENÚ DE PRODUCTOS -->
+    <div id="menu-productos">
+        <h2>Menú de Productos</h2>
+        
+        <!-- Filtros de categorías -->
+        <div class="category-tabs">
+            <button class="category-btn active" data-category-id="all">Todos</button>
+            {% for categoria in categorias %}
+            <button class="category-btn" data-category-id="{{ categoria.id }}">{{ categoria.nombre }}</button>
+            {% endfor %}
+        </div>
+        
+        <!-- Grid de productos -->
+        <div class="product-grid">
+            {% for categoria in categorias %}
+                {% for producto in categoria.productos.all %}
+                    {% if producto.is_available and producto.is_active %}
+                    <div class="product-item" 
+                         data-id="{{ producto.id }}" 
+                         data-nombre="{{ producto.nombre }}" 
+                         data-precio="{{ producto.precio }}" 
+                         data-stock="{{ producto.cantidad }}" 
+                         data-category-id="{{ categoria.id }}">
+                        
+                        <div class="product-image-container">
+                            {% if producto.imagen_url %}
+                                <img src="{{ producto.imagen_url }}" alt="{{ producto.nombre }}">
+                            {% else %}
+                                <img src="https://placehold.co/150x100/FDF6E3/4F4A45?text={{producto.nombre|slice:':10'}}" alt="{{ producto.nombre }}">
+                            {% endif %}
+                        </div>
+                        
+                        <h4>{{ producto.nombre }}</h4>
+                        <p>${{ producto.precio|floatformat:0 }}</p>
+                        <p class="stock-text">Disponible: <span class="stock-display">{{ producto.cantidad }}</span></p>
+                        
+                        <div class="quantity-selector">
+                            <button class="quantity-btn" data-action="decrement">-</button>
+                            <span class="quantity-value">0</span>
+                            <button class="quantity-btn" data-action="increment">+</button>
+                        </div>
+                        
+                        <input type="text" class="observaciones-input" placeholder="Observaciones...">
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- RESUMEN DEL PEDIDO -->
+    <div id="resumen-pedido">
+        <h2>Orden Actual</h2>
+        
+        <!-- Selección de mesa -->
+        <div style="margin-bottom: 1rem;">
+            <label for="select-mesa" style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Asignar a Mesa:</label>
+            <select id="select-mesa" style="width: 100%; padding: 8px; border: 1px solid var(--gris-piedra); border-radius: 5px;">
+                <option value="">-- Elige una mesa libre --</option>
+                {% for mesa in mesas %} 
+                <option value="{{ mesa.id }}">Mesa {{ mesa.numero }} ({{ mesa.ubicacion }})</option> 
+                {% endfor %}
+            </select>
+        </div>
+        
+        <hr>
+        
+        <!-- Observaciones generales -->
+        <div style="margin-bottom: 1rem;">
+            <label for="observaciones-orden" style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Observaciones de la orden:</label>
+            <textarea id="observaciones-orden" 
+                      placeholder="Observaciones generales de la orden..." 
+                      style="width: 100%; padding: 8px; border: 1px solid var(--gris-piedra); border-radius: 5px; resize: vertical; min-height: 60px; box-sizing: border-box;"></textarea>
+        </div>
+        
+        <hr>
+        
+        <!-- Lista de productos seleccionados -->
+        <div id="lista-pedido-items">
+            <p style="color: #888; text-align: center;">Elige productos del menú.</p>
+        </div>
+        
+        <hr>
+        
+        <!-- Total -->
+        <div class="order-total">
+            <strong>Total: $<span id="total-pedido">0</span></strong>
+        </div>
+        
+        <!-- Botón de envío -->
+        <button id="btn-enviar-pedido" class="btn" style="width: 100%;">Confirmar y Enviar Pedido</button>
+    </div>
+</div>
+
+<script>
+// Función de inicialización para nuevo pedido
+window.inicializar_nuevo_pedido = function() {
+    // Objeto para guardar el estado del pedido: { id: {cantidad, observaciones, nombre, precio}, ... }
+    const orden = {};
+    
+    const menuProductos = document.getElementById('menu-productos');
+    const resumenContainer = document.getElementById('lista-pedido-items');
+    const totalEl = document.getElementById('total-pedido');
+    const categoryTabs = document.querySelector('.category-tabs');
+    const productItems = document.querySelectorAll('.product-item');
+
+    // === FILTROS DE CATEGORÍAS ===
+    categoryTabs.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON') {
+            const selectedCategoryId = e.target.dataset.categoryId;
+            
+            // Actualizar botón activo
+            categoryTabs.querySelector('.active').classList.remove('active');
+            e.target.classList.add('active');
+            
+            // Mostrar/ocultar productos
+            productItems.forEach(item => {
+                if (selectedCategoryId === 'all' || item.dataset.categoryId === selectedCategoryId) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+    });
+
+    // === FUNCIONES DE ACTUALIZACIÓN ===
+    function actualizarResumen() {
+        resumenContainer.innerHTML = '';
+        let totalGeneral = 0;
+        
+        if (Object.keys(orden).length === 0) {
+            resumenContainer.innerHTML = '<p style="color: #888; text-align: center;">Elige productos del menú.</p>';
+        } else {
+            Object.values(orden).forEach(item => {
+                const subtotal = item.cantidad * item.precio;
+                totalGeneral += subtotal;
+                
+                const itemHTML = `
+                    <div>
+                        <div class="order-item" data-id="${item.id}">
+                            <span class="order-item-info">${item.nombre} x${item.cantidad}</span>
+                            <div class="summary-quantity-selector">
+                                <button class="quantity-btn" data-action="decrement" data-id="${item.id}">-</button>
+                                <span class="quantity-value">${item.cantidad}</span>
+                                <button class="quantity-btn" data-action="increment" data-id="${item.id}">+</button>
+                            </div>
+                        </div>
+                        ${item.observaciones ? `<div class="order-item-obs">📝 ${item.observaciones}</div>` : ''}
+                    </div>
+                `;
+                resumenContainer.innerHTML += itemHTML;
+            });
+        }
+        
+        totalEl.textContent = totalGeneral.toLocaleString();
+    }
+
+    function actualizarMenuYStock() {
+        productItems.forEach(item => {
+            const id = item.dataset.id;
+            const stockInicial = parseInt(item.dataset.stock, 10);
+            const cantidadEnOrden = orden[id] ? orden[id].cantidad : 0;
+            const stockRestante = stockInicial - cantidadEnOrden;
+            
+            item.querySelector('.quantity-value').textContent = cantidadEnOrden;
+            item.querySelector('.stock-display').textContent = stockRestante;
+            item.querySelector('.observaciones-input').value = orden[id] ? orden[id].observaciones : '';
+        });
+    }
+
+    function manejarCambioCantidad(id, accion) {
+        const productItem = document.querySelector(`.product-item[data-id="${id}"]`);
+        const stock = parseInt(productItem.dataset.stock, 10);
+        let cantidadActual = orden[id] ? orden[id].cantidad : 0;
+
+        if (accion === 'increment' && cantidadActual < stock) {
+            cantidadActual++;
+        } else if (accion === 'decrement' && cantidadActual > 0) {
+            cantidadActual--;
+        }
+
+        if (cantidadActual > 0) {
+            if (!orden[id]) {
+                orden[id] = {
+                    id: id,
+                    nombre: productItem.dataset.nombre,
+                    precio: parseFloat(productItem.dataset.precio),
+                    observaciones: productItem.querySelector('.observaciones-input').value
+                };
+            }
+            orden[id].cantidad = cantidadActual;
+        } else {
+            delete orden[id];
+        }
+        
+        actualizarResumen();
+        actualizarMenuYStock();
+    }
+
+    // === EVENT LISTENERS ===
+    
+    // Clics en el menú de productos (botones +/-)
+    menuProductos.addEventListener('click', e => {
+        if (e.target.classList.contains('quantity-btn')) {
+            const id = e.target.closest('.product-item').dataset.id;
+            manejarCambioCantidad(id, e.target.dataset.action);
+        }
+    });
+
+    // Clics en el resumen del pedido (botones +/-)
+    resumenContainer.addEventListener('click', e => {
+        if (e.target.classList.contains('quantity-btn')) {
+            const id = e.target.dataset.id;
+            manejarCambioCantidad(id, e.target.dataset.action);
+        }
+    });
+
+    // Cambios en las observaciones de productos
+    menuProductos.addEventListener('input', e => {
+        if (e.target.classList.contains('observaciones-input')) {
+            const id = e.target.closest('.product-item').dataset.id;
+            if (orden[id]) {
+                orden[id].observaciones = e.target.value;
+                actualizarResumen();
+            }
+        }
+    });
+
+    // === ENVIAR PEDIDO ===
+    document.getElementById('btn-enviar-pedido').addEventListener('click', async () => {
+        const mesaId = document.getElementById('select-mesa').value;
+        const productosParaEnviar = Object.values(orden);
+        const observacionesOrden = document.getElementById('observaciones-orden').value;
+        
+        // Validaciones
+        if (!mesaId) {
+            alert('Por favor, selecciona una mesa.');
+            return;
+        }
+        
+        if (productosParaEnviar.length === 0) {
+            alert('El pedido está vacío. Agrega al menos un producto.');
+            return;
+        }
+        
+        // Confirmar envío
+        const totalPedido = Object.values(orden).reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
+        const confirmacion = confirm(
+            `¿Confirmar pedido?\n\n` +
+            `Mesa: ${document.querySelector(`option[value="${mesaId}"]`).textContent}\n` +
+            `Productos: ${productosParaEnviar.length}\n` +
+            `Total: ${totalPedido.toLocaleString()}\n\n` +
+            `${observacionesOrden ? `Observaciones: ${observacionesOrden}\n` : ''}` +
+            `¿Proceder con el envío?`
+        );
+        
+        if (!confirmacion) return;
+        
+        // Deshabilitar botón mientras se procesa
+        const btnEnviar = document.getElementById('btn-enviar-pedido');
+        const textoOriginal = btnEnviar.textContent;
+        btnEnviar.disabled = true;
+        btnEnviar.textContent = '⏳ Enviando pedido...';
+        
+        try {
+            const response = await fetch('/api/orden/crear/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': window.csrfToken
+                },
+                body: JSON.stringify({
+                    mesa_id: mesaId,
+                    observaciones_orden: observacionesOrden,
+                    productos: productosParaEnviar.map(p => ({
+                        id: p.id,
+                        cantidad: p.cantidad,
+                        observaciones: p.observaciones || ''
+                    }))
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                // Éxito
+                window.mostrarNotificacion(
+                    `✅ ¡Pedido creado exitosamente! Orden #${result.orden_id}`, 
+                    'success',
+                    8000
+                );
+                
+                // Limpiar formulario
+                Object.keys(orden).forEach(key => delete orden[key]);
+                document.getElementById('select-mesa').value = '';
+                document.getElementById('observaciones-orden').value = '';
+                document.querySelectorAll('.observaciones-input').forEach(input => input.value = '');
+                
+                actualizarResumen();
+                actualizarMenuYStock();
+                
+                // Sugerir cambiar a vista de cocina
+                setTimeout(() => {
+                    if (confirm('¿Quieres ver el estado de tu pedido en la cocina?')) {
+                        document.querySelector('[data-tab="vista-cocina"]').click();
+                    }
+                }, 2000);
+                
+            } else {
+                // Error del servidor
+                window.mostrarNotificacion(
+                    `❌ Error al crear el pedido: ${result.error}`, 
+                    'error'
+                );
+            }
+            
+        } catch (error) {
+            console.error('Error de red:', error);
+            window.mostrarNotificacion(
+                '🔌 Error de conexión. Verifica tu internet e intenta nuevamente.', 
+                'error'
+            );
+        } finally {
+            // Rehabilitar botón
+            btnEnviar.disabled = false;
+            btnEnviar.textContent = textoOriginal;
+        }
+    });
+
+    // === INICIALIZACIÓN ===
+    actualizarResumen();
+    actualizarMenuYStock();
+    
+    console.log('✅ Nuevo pedido inicializado');
+};
+
+// Función de actualización (llamada por long polling)
+window.actualizar_nuevo_pedido = function() {
+    // Actualizar stock en tiempo real si es necesario
+    // Por ahora solo log para debug
+    console.log('🔄 Actualizando nuevo pedido...');
+};
+</script>
