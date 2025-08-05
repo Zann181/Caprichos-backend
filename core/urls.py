@@ -20,7 +20,25 @@ urlpatterns = [
     # --- API para Lógica de Negocio ---
     path('api/orden/crear/', views.api_crear_orden, name='api_crear_orden'),
     
-    # --- APIS PARA LA COCINA (LAS QUE FALTABAN) ---
+    # --- APIs PARA LA COCINA ---
     path('api/cocina/ordenes/', views.api_get_ordenes_cocina, name='api_get_ordenes_cocina'),
     path('api/cocina/producto/<int:producto_orden_id>/listo/', views.api_marcar_producto_listo, name='api_marcar_producto_listo'),
+    path('api/cocina/producto/<int:producto_orden_id>/decrementar/', views.api_decrementar_producto, name='api_decrementar_producto'),
+
+
+    # --- APIs PARA ÓRDENES (TIEMPO REAL) ---
+    path('api/orden/crear/', views.api_crear_orden_tiempo_real, name='api_crear_orden'),
+    
+path('api/cocina/orden/<int:orden_id>/servida/', views.api_marcar_orden_servida, name='api_marcar_orden_servida'),
+    # --- APIs PARA LA COCINA (TIEMPO REAL) ---
+    path('api/cocina/ordenes/', views.api_get_ordenes_cocina, name='api_get_ordenes_cocina'),
+    path('api/cocina/producto/<int:producto_orden_id>/listo/', views.api_marcar_producto_listo_tiempo_real, name='api_marcar_producto_listo'),
+    path('api/cocina/producto/<int:producto_orden_id>/decrementar/', views.api_decrementar_producto_tiempo_real, name='api_decrementar_producto'),
+    
+    # 🚀 LONG POLLING ENDPOINTS
+    path('api/longpolling/cocina/', views.api_longpolling_cocina, name='api_longpolling_cocina'),
+    path('api/longpolling/meseros/', views.api_longpolling_meseros, name='api_longpolling_meseros'),
+    path('api/sistema/estadisticas/', views.api_estadisticas_sistema, name='api_estadisticas_sistema'),
+
+
 ]
