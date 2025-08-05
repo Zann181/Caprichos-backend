@@ -2,7 +2,6 @@
 
 from django.urls import path
 from . import views
-
 urlpatterns = [
     # --- Autenticación y Dashboards ---
     path('', views.UserLoginView.as_view(), name='login'),
@@ -20,4 +19,8 @@ urlpatterns = [
 
     # --- API para Lógica de Negocio ---
     path('api/orden/crear/', views.api_crear_orden, name='api_crear_orden'),
+    
+    # --- APIS PARA LA COCINA (LAS QUE FALTABAN) ---
+    path('api/cocina/ordenes/', views.api_get_ordenes_cocina, name='api_get_ordenes_cocina'),
+    path('api/cocina/producto/<int:producto_orden_id>/listo/', views.api_marcar_producto_listo, name='api_marcar_producto_listo'),
 ]

@@ -197,3 +197,64 @@ def api_crear_orden(request):
         return JsonResponse({'error': 'Datos inválidos en el pedido.'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+
+@login_required
+def api_get_ordenes_cocina(request):
+    """
+    API que devuelve las órdenes activas para la cocina en formato JSON.
+    """
+    # Buscamos órdenes que estén en proceso o recién enviadas
+    ordenes = Orden.objects.filter(estado__in=['EN_PROCESO', 'NUEVA']).order_by('creado_en')
+    
+    lista_ordenes = []
+    for orden in ordenes:
+        productos_ordenados = orden.productos_ordenados.all()
+        lista_productos = []
+        
+        todos_listos = True
+        for po in productos_ordenados:
+            if po.estado != 'LISTO':
+                todos_listos = False
+            lista_productos.append({
+                'id': po.id,
+                'nombre': po.producto.nombre,
+                'cantidad': po.cantidad,
+                'observaciones': po.observaciones,
+                'estado': po.estado
+            })
+        
+        lista_ordenes.append({
+            'id': orden.id,
+            'mesa': orden.mesa.numero,
+            'mesero': orden.mesero.nombre,
+            'creado_en': orden.creado_en.strftime('%I:%M %p'),
+            'productos': lista_productos,
+            'completada': todos_listos
+        })
+        
+    return JsonResponse(lista_ordenes, safe=False)
+
+
+@require_POST
+@login_required
+def api_marcar_producto_listo(request, producto_orden_id):
+    """
+    API para marcar un producto específico de una orden como 'LISTO'.
+    """
+    try:
+        producto_orden = get_object_or_404(OrdenProducto, id=producto_orden_id)
+        producto_orden.estado = 'LISTO'
+        producto_orden.save()
+
+        # Comprobar si todos los productos de la orden están listos
+        orden = producto_orden.orden
+        if not orden.productos_ordenados.filter(estado='PENDIENTE').exists():
+            orden.estado = 'LISTA'
+            orden.save()
+
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+        

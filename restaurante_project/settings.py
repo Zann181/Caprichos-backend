@@ -25,8 +25,13 @@ SECRET_KEY = 'django-insecure-6=at9-)kuxl+6hj@b80s+)dg4h)1#e-yt=b0+l+r7!e0n=tu&%
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+# La configuración correcta y más segura para pruebas:
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost',
+    '192.168.1.112',  # <-- Reemplaza esto, ej: '192.168.1.5'
+    '.ngrok-free.app'
+]
 
 # Application definition
 
@@ -133,3 +138,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Añade esta línea al final del todo
 LOGIN_REDIRECT_URL = 'dashboard'
+
+
+# Añade esta línea al final del archivo. El '*' actúa como comodín.
+CSRF_TRUSTED_ORIGINS = ['https://*.ngrok-free.app']

@@ -2,16 +2,171 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Cocina</title>
-    <style>body { font-family: sans-serif; padding: 2rem; } .logout { margin-top: 2rem; }</style>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Inter:wght@400;600&display=swap');
+        :root {
+            --naranja-tostado: #E8772E; --naranja-oscuro: #C0581B; --crema-palido: #FDF6E3;
+            --carbon-suave: #4F4A45; --gris-piedra: #D4C5A3; --blanco-hueso: #FEFBF3;
+            --verde-listo: #28a745; --azul-actualizando: #0d6efd;
+            --fuente-titulos: 'DM Sans', sans-serif; --fuente-cuerpo: 'Inter', sans-serif;
+        }
+        body { font-family: var(--fuente-cuerpo); background-color: var(--crema-palido); color: var(--carbon-suave); margin: 0; padding: 1rem; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .card { background-color: var(--blanco-hueso); border: 1px solid var(--gris-piedra); border-radius: 8px; padding: 1.5rem; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        .btn { background-color: var(--naranja-tostado); color: white; padding: 10px 20px; border: none; border-radius: 5px; font-family: var(--fuente-titulos); font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .btn:hover { opacity: 0.85; }
+        .btn:active { background-color: var(--naranja-oscuro); transform: translateY(1px); }
+        .dashboard-header { display: flex; justify-content: space-between; align-items: center; }
+        .dashboard-grid { display: grid; grid-template-columns: 3fr 1fr; gap: 2rem; margin-top: 2rem; }
+        .ordenes-columna h2 { border-bottom: 2px solid var(--gris-piedra); padding-bottom: 0.5rem; }
+        .orden-card { border: 1px solid var(--gris-piedra); border-radius: 8px; margin-bottom: 1.5rem; background: #fff; transition: all 0.3s ease-in-out; }
+        .orden-card.actualizando { border-color: var(--azul-actualizando); box-shadow: 0 0 10px rgba(13, 110, 253, 0.3); }
+        .orden-header { background-color: var(--carbon-suave); color: white; padding: 0.75rem 1rem; border-radius: 7px 7px 0 0; display: flex; justify-content: space-between; }
+        .orden-body { padding: 1rem; }
+        .lista-productos { list-style: none; padding: 0; margin: 0; }
+        .producto-item { display: grid; grid-template-columns: 1fr auto; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid #eee; }
+        .producto-item:last-child { border-bottom: none; }
+        .producto-info strong { font-size: 1.1em; }
+        .producto-info .obs { font-size: 1.1em; color: var(--naranja-tostado); font-style: italic; font-weight: 600; margin-top: 5px; }
+        .producto-item.listo .producto-info { text-decoration: line-through; color: #888; }
+        .producto-item.listo .producto-info .obs { text-decoration: none; }
+        .btn-completar { background-color: var(--verde-listo); font-size: 12px; padding: 8px 15px; }
+        .btn-completar:disabled { background-color: var(--gris-piedra); cursor: not-allowed; opacity: 0.7; }
+        @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
+    </style>
 </head>
 <body>
-    <h1>Bienvenido, {{ user.nombre }}</h1>
-    <h2>Panel de Cocina</h2>
-    <p>Aquí aparecerán los productos de las órdenes que debes preparar.</p>
+    <div class="container">
+        <div class="card">
+            <div class="dashboard-header">
+                <div>
+                    <h1>Panel de Cocina</h1>
+                    <p style="margin: 0;">Operador: <strong>{{ user.nombre }}</strong></p>
+                </div>
+                <a href="{% url 'logout' %}" class="btn">Cerrar Sesión</a>
+            </div>
+        </div>
 
-    <div class="logout">
-        <a href="{% url 'logout' %}">Cerrar Sesión</a>
+        <div class="dashboard-grid">
+            <div id="ordenes-pendientes" class="ordenes-columna">
+                <h2>Órdenes Pendientes</h2>
+                </div>
+            <div id="ordenes-listas" class="ordenes-columna">
+                <h2>Listas para Servir</h2>
+                </div>
+        </div>
     </div>
+
+    <template id="order-card-template">
+        <div class="orden-card">
+            <div class="orden-header">
+                <span class="mesa">Mesa #</span>
+                <span class="hora">Hora</span>
+            </div>
+            <div class="orden-body">
+                <ul class="lista-productos"></ul>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const csrfToken = '{{ csrf_token }}';
+            const pendientesContainer = document.getElementById('ordenes-pendientes');
+            const listasContainer = document.getElementById('ordenes-listas');
+            const orderTemplate = document.getElementById('order-card-template');
+
+            function actualizarOAnadirOrden(ordenData) {
+                const container = ordenData.completada ? listasContainer : pendientesContainer;
+                let ordenCard = document.querySelector(`.orden-card[data-orden-id="${ordenData.id}"]`);
+
+                if (!ordenCard) {
+                    const cardNode = document.importNode(orderTemplate.content, true);
+                    ordenCard = cardNode.querySelector('.orden-card');
+                    ordenCard.dataset.ordenId = ordenData.id;
+                    container.appendChild(cardNode);
+                } else if (ordenCard.parentElement !== container) {
+                    container.appendChild(ordenCard); // Mover la tarjeta si cambió de estado
+                }
+                
+                ordenCard.classList.add('actualizando');
+                ordenCard.querySelector('.mesa').textContent = `Mesa #${ordenData.mesa}`;
+                ordenCard.querySelector('.hora').textContent = ordenData.creado_en;
+
+                const listaProductosEl = ordenCard.querySelector('.lista-productos');
+                listaProductosEl.innerHTML = '';
+
+                ordenData.productos.forEach(p => {
+                    const li = document.createElement('li');
+                    li.className = 'producto-item';
+                    if (p.estado === 'LISTO') li.classList.add('listo');
+                    li.innerHTML = `
+                        <div class="producto-info">
+                            <strong>${p.cantidad}x ${p.nombre}</strong>
+                            ${p.observaciones ? `<div class="obs">${p.observaciones}</div>` : ''}
+                        </div>
+                        <button class="btn btn-completar" data-producto-orden-id="${p.id}" ${p.estado === 'LISTO' ? 'disabled' : ''}>
+                            ${p.estado === 'LISTO' ? '✔ Listo' : 'Completar'}
+                        </button>
+                    `;
+                    listaProductosEl.appendChild(li);
+                });
+                
+                setTimeout(() => ordenCard.classList.remove('actualizando'), 500);
+            }
+
+            function renderizarOrdenes(ordenes) {
+                const idsEnPantalla = new Set([...document.querySelectorAll('.orden-card')].map(c => c.dataset.ordenId));
+                const idsNuevos = new Set(ordenes.map(o => String(o.id)));
+
+                ordenes.forEach(orden => actualizarOAnadirOrden(orden));
+                
+                idsEnPantalla.forEach(id => {
+                    if (!idsNuevos.has(id)) {
+                        const cardToRemove = document.querySelector(`.orden-card[data-orden-id="${id}"]`);
+                        if (cardToRemove) cardToRemove.remove();
+                    }
+                });
+
+                if (pendientesContainer.children.length <= 1) pendientesContainer.innerHTML = '<h2>Órdenes Pendientes</h2><p>No hay órdenes pendientes.</p>';
+                if (listasContainer.children.length <= 1) listasContainer.innerHTML = '<h2>Listas para Servir</h2>';
+            }
+
+            async function fetchOrdenes() {
+                try {
+                    const response = await fetch("{% url 'api_get_ordenes_cocina' %}");
+                    const data = await response.json();
+                    renderizarOrdenes(data);
+                } catch (error) { console.error("Error al obtener órdenes:", error); }
+            }
+
+            async function marcarProductoComoListo(productoOrdenId) {
+                try {
+                    const response = await fetch(`/api/cocina/producto/${productoOrdenId}/listo/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken }
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        fetchOrdenes();
+                    } else { alert(`Error: ${result.error}`); }
+                } catch (error) { console.error("Error al actualizar producto:", error); }
+            }
+
+            document.body.addEventListener('click', e => {
+                if (e.target.classList.contains('btn-completar')) {
+                    e.target.disabled = true;
+                    e.target.textContent = '...';
+                    marcarProductoComoListo(e.target.dataset.productoOrdenId);
+                }
+            });
+
+            fetchOrdenes();
+            setInterval(fetchOrdenes, 15000);
+        });
+    </script>
 </body>
 </html>
