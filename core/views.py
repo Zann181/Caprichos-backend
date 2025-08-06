@@ -19,8 +19,11 @@ from .models import Producto, CategoriaProducto, Mesa, Orden, OrdenProducto
 from .utils import (
     long_polling_cocina, long_polling_meseros, obtener_todas_ordenes_cocina,
     obtener_stock_productos, notificar_cambio_cocina, notificar_cambio_stock,
-    obtener_estadisticas_sistema, obtener_datos_completos_orden
+    obtener_estadisticas_sistema, obtener_datos_completos_orden,
+    calcular_total_orden  # ✅ AGREGAR ESTA IMPORTACIÓN
 )
+
+
 
 # === VISTAS DE AUTENTICACIÓN ===
 
@@ -578,7 +581,11 @@ def api_marcar_producto_listo_tiempo_real(request, producto_orden_id):
 @login_required
 @transaction.atomic
 def api_decrementar_producto_tiempo_real(request, producto_orden_id):
-    """LÓGICA CORREGIDA: Al decrementar, el producto pasa automáticamente a LISTO"""
+    """
+    LÓGICA CORREGIDA: Decrementar significa que el cocinero YA ENTREGÓ una unidad,
+    pero el producto se mantiene en estado PENDIENTE hasta completar todas las unidades.
+    Solo cuando se entreguen TODAS las unidades, el producto pasa a LISTO automáticamente.
+    """
     try:
         producto_orden = get_object_or_404(OrdenProducto, id=producto_orden_id)
         orden = producto_orden.orden
@@ -593,80 +600,46 @@ def api_decrementar_producto_tiempo_real(request, producto_orden_id):
                 'error': 'No se puede decrementar un producto ya completado'
             }, status=400)
         
-        producto_nombre = producto_orden.producto.nombre
+        if producto_orden.cantidad <= 1:
+            return JsonResponse({
+                'error': 'No se puede decrementar: solo queda 1 unidad. Usa "Marcar Listo" para completar.'
+            }, status=400)
         
-        if producto_orden.cantidad > 1:
-            # LÓGICA CORREGIDA: Decrementar cantidad y AUTOMÁTICAMENTE marcar como LISTO
-            producto_orden.cantidad -= 1
-            producto_orden.estado = 'LISTO'  # Pasa automáticamente a listo
-            producto_orden.listo_en = timezone.now()
-            producto_orden.save()
-            
-            # Devolver stock al inventario
-            producto = producto_orden.producto
-            producto.cantidad += 1
-            producto.save()
-            
-            # Verificar si todos los productos de la orden están listos
-            productos_pendientes = orden.productos_ordenados.filter(estado='PENDIENTE').count()
-            
-            mensaje = f'{producto_nombre} decrementado y automáticamente marcado como listo (quedan {producto_orden.cantidad})'
-            
-            if productos_pendientes == 0:
-                orden.estado = 'LISTA'
-                orden.listo_en = timezone.now()
-                orden.save()
-                mensaje += '. ¡Toda la orden está lista!'
-            
-            # Notificar cambios en tiempo real
-            notificar_cambio_cocina()
-            notificar_cambio_stock()
-            
-            return JsonResponse({
-                'success': True,
-                'nueva_cantidad': producto_orden.cantidad,
-                'producto_automaticamente_listo': True,  # Indicar que pasó a listo automáticamente
-                'orden_completa': productos_pendientes == 0,
-                'mensaje': mensaje,
-                'productos_pendientes_restantes': productos_pendientes,
-                'orden_data': obtener_datos_completos_orden(orden)
-            })
-        else:
-            # Si cantidad es 1, eliminar producto completamente y devolver stock
-            producto = producto_orden.producto
-            producto.cantidad += 1
-            producto.save()
-            
-            producto_orden.delete()
-            
-            # Verificar si quedan productos en la orden
-            if not orden.productos_ordenados.exists():
-                # Liberar mesa y eliminar orden
-                orden.mesa.estado = 'LIBRE'
-                orden.mesa.save()
-                orden.delete()
-                
-                notificar_cambio_cocina()
-                notificar_cambio_stock()
-                
-                return JsonResponse({
-                    'success': True,
-                    'orden_eliminada': True,
-                    'mensaje': f'Producto {producto_nombre} eliminado completamente. Orden cancelada por falta de productos.'
-                })
-            
-            notificar_cambio_cocina()
-            notificar_cambio_stock()
-            
-            return JsonResponse({
-                'success': True,
-                'producto_eliminado': True,
-                'mensaje': f'Producto {producto_nombre} eliminado completamente de la orden',
-                'orden_data': obtener_datos_completos_orden(orden)
-            })
+        producto_nombre = producto_orden.producto.nombre
+        cantidad_original = producto_orden.cantidad
+        
+        # LÓGICA CORREGIDA: Solo decrementar cantidad, mantener en PENDIENTE
+        producto_orden.cantidad -= 1
+        producto_orden.save()
+        
+        # Devolver 1 unidad al inventario
+        producto = producto_orden.producto
+        producto.cantidad += 1
+        producto.save()
+        
+        # Verificar si quedan productos pendientes en la orden
+        productos_pendientes = orden.productos_ordenados.filter(estado='PENDIENTE').count()
+        
+        mensaje = f'{producto_nombre} decrementado: queda {producto_orden.cantidad} por preparar (entregaste 1 de {cantidad_original})'
+        
+        # Notificar cambios en tiempo real
+        notificar_cambio_cocina()
+        notificar_cambio_stock()
+        
+        return JsonResponse({
+            'success': True,
+            'nueva_cantidad': producto_orden.cantidad,
+            'cantidad_entregada': cantidad_original - producto_orden.cantidad,
+            'producto_sigue_pendiente': True,  # Siempre sigue pendiente hasta completar todo
+            'mensaje': mensaje,
+            'productos_pendientes_restantes': productos_pendientes,
+            'orden_data': obtener_datos_completos_orden(orden)
+        })
             
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
 
 # === LONG POLLING (TIEMPO REAL) ===
 
@@ -756,8 +729,8 @@ def api_marcar_orden_entregada(request, orden_id):
                 'error': f'Aún hay {productos_pendientes} productos pendientes'
             }, status=400)
         
-        # Calcular total manualmente (sin método en modelo)
-        total_orden = sum(item.cantidad * item.precio_unitario for item in orden.productos_ordenados.all())
+        # Calcular total
+        total_orden = calcular_total_orden(orden)
         
         # Marcar como servida
         orden.estado = 'SERVIDA'
@@ -768,22 +741,28 @@ def api_marcar_orden_entregada(request, orden_id):
         mesa.estado = 'LIBRE'
         mesa.save()
         
-        # Crear o actualizar factura como NO_PAGADA
+        # ✅ CORREGIDO: Gestionar factura sin duplicados
         from .models import Factura
-        factura, created = Factura.objects.get_or_create(
-            orden=orden,
-            defaults={
-                'subtotal': total_orden,
-                'total': total_orden,
-                'estado_pago': 'NO_PAGADA'
-            }
-        )
         
-        if not created:
+        try:
+            # Intentar obtener factura existente
+            factura = Factura.objects.get(orden=orden)
+            # Si existe, actualizar estado a NO_PAGADA
             factura.estado_pago = 'NO_PAGADA'
             factura.subtotal = total_orden
             factura.total = total_orden
             factura.save()
+            print(f"✅ Factura existente actualizada para orden {orden_id}")
+            
+        except Factura.DoesNotExist:
+            # Si no existe, crear nueva
+            factura = Factura.objects.create(
+                orden=orden,
+                subtotal=total_orden,
+                total=total_orden,
+                estado_pago='NO_PAGADA'
+            )
+            print(f"✅ Nueva factura creada para orden {orden_id}")
         
         # Notificar cambios
         notificar_cambio_cocina()
@@ -797,5 +776,5 @@ def api_marcar_orden_entregada(request, orden_id):
         })
         
     except Exception as e:
+        print(f"❌ Error en api_marcar_orden_entregada: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
-        

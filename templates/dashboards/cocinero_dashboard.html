@@ -3,21 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Cocina</title>
+    <title>Panel de Cocina - Caprichos Criollos</title>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Inter:wght@400;600&display=swap');
         :root {
             --naranja-tostado: #E8772E; --naranja-oscuro: #C0581B; --crema-palido: #FDF6E3;
             --carbon-suave: #4F4A45; --gris-piedra: #D4C5A3; --blanco-hueso: #FEFBF3;
-            --verde-listo: #28a745; --fuente-titulos: 'DM Sans', sans-serif; --fuente-cuerpo: 'Inter', sans-serif;
+            --verde-listo: #28a745; --rojo-error: #dc3545; --azul-info: #17a2b8;
+            --fuente-titulos: 'DM Sans', sans-serif; --fuente-cuerpo: 'Inter', sans-serif;
         }
+        
         body { font-family: var(--fuente-cuerpo); background-color: var(--crema-palido); color: var(--carbon-suave); margin: 0; padding: 1rem; }
         .container { max-width: 1400px; margin: 0 auto; }
-        .card { background-color: var(--blanco-hueso); border: 1px solid var(--gris-piedra); border-radius: 8px; padding: 1.5rem; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        .card { background-color: var(--blanco-hueso); border: 1px solid var(--gris-piedra); border-radius: 8px; padding: 1.5rem; box-shadow: 0 4px 8px rgba(0,0,0,0.05); margin-top: 1rem; }
         .btn { background-color: var(--naranja-tostado); color: white; padding: 10px 20px; border: none; border-radius: 5px; font-family: var(--fuente-titulos); font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .btn:hover { opacity: 0.85; }
         .btn:active { background-color: var(--naranja-oscuro); transform: translateY(1px); }
+        .btn:disabled {
+            background-color: var(--gris-piedra);
+            opacity: 0.7;
+            cursor: wait;
+            transform: none;
+        }
         .dashboard-header { display: flex; justify-content: space-between; align-items: center; }
         .dashboard-grid { display: grid; grid-template-columns: 3fr 1fr; gap: 2rem; margin-top: 2rem; }
         .ordenes-columna h2 { border-bottom: 2px solid var(--gris-piedra); padding-bottom: 0.5rem; }
@@ -30,92 +38,61 @@
         .producto-info strong { font-size: 1.1em; }
         .producto-info .obs { font-size: 0.9em; color: var(--naranja-tostado); font-style: italic; font-weight: 600; margin-top: 5px; }
         .producto-item.listo .producto-info { text-decoration: line-through; color: #888; }
-        .btn-listo { background-color: var(--verde-listo); font-size: 12px; padding: 8px 15px; }
-        .btn-listo:disabled { background-color: var(--gris-piedra); cursor: not-allowed; }
+        .orden-card.lista { border-left: 4px solid #28a745; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15); }
+        .orden-card.lista .orden-header { background: linear-gradient(135deg, #28a745, #20c997); }
+        .controles-producto { display: flex; gap: 5px; align-items: center; }
+
+        /* === TOAST Y MODAL === */
+        #toast-container {
+            position: fixed; top: 20px; right: 20px; z-index: 1050;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .toast {
+            background-color: var(--carbon-suave); color: white; padding: 15px 20px;
+            border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-family: var(--fuente-cuerpo); font-size: 15px; opacity: 0;
+            animation: toast-fade-in 0.5s forwards; display: flex; align-items: center; gap: 10px;
+        }
+        .toast.hiding { animation: toast-fade-out 0.5s forwards; }
+        .toast.toast-success { background-color: var(--verde-listo); }
+        .toast.toast-error { background-color: var(--rojo-error); }
+        .toast.toast-info { background-color: var(--azul-info); }
+        @keyframes toast-fade-in { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes toast-fade-out { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(100%); } }
         
-        /* NUEVOS ESTILOS PARA SERVIDO */
-        .btn-servido {
-            background-color: #28a745 !important;
-            color: white;
-            font-size: 16px;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-weight: 700;
-            transition: all 0.3s ease;
+        #confirm-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5); z-index: 1040; display: none;
+            justify-content: center; align-items: center; animation: fade-in 0.3s;
         }
+        #confirm-modal {
+            background-color: var(--blanco-hueso); padding: 2rem; border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 90%; max-width: 450px;
+            text-align: center; transform: scale(0.9); animation: slide-up 0.3s forwards;
+        }
+        #confirm-message { font-size: 1.1rem; margin-bottom: 1.5rem; line-height: 1.5; }
+        #confirm-buttons { display: flex; justify-content: center; gap: 1rem; }
+        .confirm-btn { background-color: #ccc; color: var(--carbon-suave); padding: 10px 20px; }
+        .confirm-btn.ok { background-color: var(--naranja-tostado); color: white; }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slide-up { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
         
-        .btn-servido:hover {
-            background-color: #218838 !important;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
-        }
-        
-        .btn-servido:disabled {
-            background-color: var(--gris-piedra) !important;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        
-        /* Destacar órdenes listas */
-        .orden-card.lista {
-            border-left: 4px solid #28a745;
-            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15);
-        }
-        
-        .orden-card.lista .orden-header {
-            background: linear-gradient(135deg, #28a745, #20c997);
-        }
-        .btn-decremento { 
-            background-color: #dc3545; 
-            color: white; 
-            font-size: 12px; 
-            padding: 6px 10px; 
-            margin-right: 5px;
-            border-radius: 3px;
-        }
-        .btn-decremento:hover { background-color: #c82333; }
-        .btn-decremento:disabled { background-color: var(--gris-piedra); cursor: not-allowed; opacity: 0.6; }
-        
-        .controles-producto {
-            display: flex;
-            gap: 5px;
-            align-items: center;
-        }
-        
-        /* NUEVOS ESTILOS PARA OBSERVACIONES */
-        .orden-observaciones {
-            background-color: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 0 5px 5px 0;
-        }
-        
-        .orden-observaciones strong {
-            color: #856404;
-            font-size: 0.9em;
-        }
-        
-        .orden-observaciones-texto {
-            color: #856404;
-            font-style: italic;
-            margin-top: 5px;
-        }
-        
-        .mesero-info {
-            font-size: 0.9em;
-            opacity: 0.9;
-        }
-        
-        @media (max-width: 900px) { 
-            .dashboard-grid { grid-template-columns: 1fr; } 
-            .controles-producto { flex-direction: column; gap: 3px; }
-            .producto-item { grid-template-columns: 1fr; gap: 0.5rem; }
-        }
+        @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
+    <div id="toast-container"></div>
+    
+    <div id="confirm-overlay">
+        <div id="confirm-modal">
+            <p id="confirm-message"></p>
+            <div id="confirm-buttons">
+                <button id="confirm-btn-cancel" class="btn confirm-btn">Cancelar</button>
+                <button id="confirm-btn-ok" class="btn confirm-btn ok">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="card">
             <div class="dashboard-header">
@@ -147,10 +124,6 @@
                 <span class="hora">Hora</span>
             </div>
             <div class="orden-body">
-                <div class="orden-observaciones" style="display: none;">
-                    <strong>📝 Observaciones de la orden:</strong>
-                    <div class="orden-observaciones-texto"></div>
-                </div>
                 <ul class="lista-productos"></ul>
             </div>
         </div>
@@ -162,12 +135,55 @@
             const pendientesContainer = document.getElementById('ordenes-pendientes');
             const listasContainer = document.getElementById('ordenes-listas');
             const orderTemplate = document.getElementById('order-card-template');
+            const buttonsOnCooldown = new Set(); // <--- Set para controlar botones en enfriamiento
+
+            // === SISTEMA DE NOTIFICACIONES Y MODAL ===
+            const toastContainer = document.getElementById('toast-container');
+            const confirmOverlay = document.getElementById('confirm-overlay');
+            const confirmMessage = document.getElementById('confirm-message');
+            const confirmBtnOk = document.getElementById('confirm-btn-ok');
+            const confirmBtnCancel = document.getElementById('confirm-btn-cancel');
+            let confirmResolve = null;
+
+            window.showToast = function(message, type = 'info', duration = 4000) {
+                const toast = document.createElement('div');
+                toast.className = `toast toast-${type}`;
+                toast.innerHTML = `<span>${message}</span>`;
+                toastContainer.appendChild(toast);
+                setTimeout(() => {
+                    toast.classList.add('hiding');
+                    toast.addEventListener('animationend', () => toast.remove());
+                }, duration);
+            };
+
+            window.showConfirm = function(message) {
+                return new Promise((resolve) => {
+                    confirmResolve = resolve;
+                    confirmMessage.innerHTML = message;
+                    confirmOverlay.style.display = 'flex';
+                });
+            };
+
+            confirmBtnOk.addEventListener('click', () => {
+                if (confirmResolve) confirmResolve(true);
+                confirmOverlay.style.display = 'none';
+            });
+
+            confirmBtnCancel.addEventListener('click', () => {
+                if (confirmResolve) confirmResolve(false);
+                confirmOverlay.style.display = 'none';
+            });
+            
+            window.alert = (message) => window.showToast(message, 'info');
+            window.confirm = (message) => window.showConfirm(message);
+
+            // === LÓGICA DE LA APLICACIÓN ===
 
             function renderizarOrdenes(ordenes) {
                 pendientesContainer.innerHTML = '<h2>Órdenes Pendientes</h2>';
                 listasContainer.innerHTML = '<h2>Listas para Servir</h2>';
 
-                if (ordenes.length === 0) {
+                if (!ordenes || ordenes.length === 0) {
                     pendientesContainer.innerHTML += '<p>No hay órdenes pendientes.</p>';
                     listasContainer.innerHTML += '<p>No hay órdenes listas.</p>';
                     return;
@@ -181,60 +197,29 @@
                     const ordenCard = card.querySelector('.orden-card');
                     ordenCard.dataset.ordenId = orden.id;
                     
-                    // Información básica
                     card.querySelector('.mesa').textContent = `Mesa #${orden.mesa}`;
                     card.querySelector('.mesero-nombre').textContent = orden.mesero;
                     card.querySelector('.hora').textContent = orden.creado_en;
-
-                    // ✅ NUEVO: Mostrar observaciones de la orden
-                    const obsContainer = card.querySelector('.orden-observaciones');
-                    const obsTexto = card.querySelector('.orden-observaciones-texto');
-                    if (orden.observaciones && orden.observaciones.trim()) {
-                        obsContainer.style.display = 'block';
-                        obsTexto.textContent = orden.observaciones;
-                    } else {
-                        obsContainer.style.display = 'none';
-                    }
 
                     const listaProductosEl = card.querySelector('.lista-productos');
                     orden.productos.forEach(p => {
                         const li = document.createElement('li');
                         li.className = 'producto-item';
-                        if (p.estado === 'LISTO') {
-                            li.classList.add('listo');
-                        }
+                        if (p.estado === 'LISTO') li.classList.add('listo');
 
-                        // ✅ NUEVO: Mostrar observaciones del producto y controles
-                        const observacionesHTML = p.observaciones && p.observaciones.trim() 
-                            ? `<div class="obs">📝 ${p.observaciones}</div>` 
-                            : '';
-
-                        // ✅ CORREGIDO: Controles diferentes según si la orden está completa
+                        const observacionesHTML = p.observaciones ? `<div class="obs">📝 ${p.observaciones}</div>` : '';
+                        
                         let controlesHTML = '';
-                        if (orden.completada) {
-                            // Si la orden está completa, solo mostrar estado
-                            controlesHTML = `
-                                <div class="controles-producto">
-                                    <span style="color: var(--verde-listo); font-weight: 600;">✅ Listo</span>
-                                </div>
-                            `;
+                        if (orden.completada || p.estado === 'LISTO') {
+                            controlesHTML = `<div class="controles-producto"><span style="color: var(--verde-listo); font-weight: 600;">✅ Entregado</span></div>`;
                         } else {
-                            // Si está pendiente, mostrar controles normales
+                            // ✅ CAMBIO: Botón "Marcar Listo" eliminado. Solo queda "Entregar 1".
+                            const decrementoId = `d-${p.id}`;
+                            const enCooldown = buttonsOnCooldown.has(decrementoId);
                             controlesHTML = `
                                 <div class="controles-producto">
-                                    <button class="btn btn-decremento" 
-                                            data-producto-orden-id="${p.id}" 
-                                            data-action="decrement"
-                                            ${p.estado === 'LISTO' || p.cantidad <= 1 ? 'disabled' : ''}>
-                                        − Quitar
-                                    </button>
-                                    <button class="btn btn-listo" 
-                                            data-producto-orden-id="${p.id}" 
-                                            ${p.estado === 'LISTO' ? 'disabled' : ''}>
-                                        ${p.estado === 'LISTO' ? '✔ Listo' : 'Marcar Listo'}
-                                    </button>
-                                </div>
-                            `;
+                                    <button class="btn btn-decremento" data-producto-orden-id="${p.id}" data-cooldown-id="${decrementoId}" ${enCooldown ? 'disabled' : ''}>Entregar 1</button>
+                                </div>`;
                         }
 
                         li.innerHTML = `
@@ -242,28 +227,20 @@
                                 <strong>${p.cantidad}x ${p.nombre}</strong>
                                 ${observacionesHTML}
                             </div>
-                            ${controlesHTML}
-                        `;
+                            ${controlesHTML}`;
                         listaProductosEl.appendChild(li);
                     });
 
-                    // ✅ CORREGIDO: Separar órdenes según su estado
                     if (orden.completada) {
-                        // ✅ NUEVO: Agregar clase especial y botón "Servido" para órdenes completas
                         ordenCard.classList.add('lista');
-                        
                         const ordenBody = card.querySelector('.orden-body');
                         const botonServido = document.createElement('div');
                         botonServido.style.textAlign = 'center';
                         botonServido.style.marginTop = '15px';
-                        botonServido.innerHTML = `
-                            <button class="btn btn-servido" 
-                                    data-orden-id="${orden.id}">
-                                🍽️ Marcar como Servido
-                            </button>
-                        `;
+                        const servidoId = `s-${orden.id}`;
+                        const enCooldown = buttonsOnCooldown.has(servidoId);
+                        botonServido.innerHTML = `<button class="btn btn-servido" data-orden-id="${orden.id}" data-cooldown-id="${servidoId}" ${enCooldown ? 'disabled' : ''}>🍽️ Marcar como Servido</button>`;
                         ordenBody.appendChild(botonServido);
-                        
                         listasContainer.appendChild(card);
                         hayListas = true;
                     } else {
@@ -272,141 +249,78 @@
                     }
                 });
 
-                // Mostrar mensajes si no hay órdenes
-                if (!hayPendientes) {
-                    pendientesContainer.innerHTML += '<p style="color: #888; text-align: center; padding: 2rem;">No hay órdenes pendientes.</p>';
-                }
-                if (!hayListas) {
-                    listasContainer.innerHTML += '<p style="color: #888; text-align: center; padding: 2rem;">No hay órdenes listas para servir.</p>';
-                }
+                if (!hayPendientes) pendientesContainer.innerHTML += '<p style="color: #888; text-align: center; padding: 2rem;">No hay órdenes pendientes.</p>';
+                if (!hayListas) listasContainer.innerHTML += '<p style="color: #888; text-align: center; padding: 2rem;">No hay órdenes listas para servir.</p>';
             }
 
             async function fetchOrdenes() {
                 try {
                     const response = await fetch("{% url 'api_get_ordenes_cocina' %}");
+                    if (!response.ok) throw new Error('No se pudo conectar al servidor');
                     const data = await response.json();
-                    console.log('Órdenes obtenidas:', data); // Debug
                     renderizarOrdenes(data);
                 } catch (error) {
                     console.error("Error al obtener órdenes:", error);
+                    showToast('Error al cargar las órdenes.', 'error');
                 }
             }
 
-            async function marcarProductoComoListo(productoOrdenId) {
+            async function manejarAccionProducto(url, successMessage, errorMessage) {
                 try {
-                    const response = await fetch(`/api/cocina/producto/${productoOrdenId}/listo/`, {
+                    const response = await fetch(url, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrfToken
-                        }
+                        headers: { 'X-CSRFToken': csrfToken }
                     });
                     const result = await response.json();
-                    console.log('Respuesta marcar listo:', result); // Debug
-                    
                     if (result.success) {
-                        if (result.orden_completa) {
-                            alert(`🎉 ${result.mensaje}`);
-                        }
-                        fetchOrdenes(); // Actualizar toda la pantalla
+                        showToast(result.mensaje || successMessage, 'success');
                     } else {
-                        alert(`Error: ${result.error}`);
+                        showToast(result.error || errorMessage, 'error');
                     }
                 } catch (error) {
-                    console.error("Error al actualizar producto:", error);
-                    alert('Error de conexión al marcar producto como listo');
+                    console.error("Error en la acción:", error);
+                    showToast('Error de conexión.', 'error');
+                } finally {
+                    fetchOrdenes();
                 }
             }
 
-            // ✅ NUEVA FUNCIÓN: Decrementar producto
-            async function decrementarProducto(productoOrdenId) {
-                try {
-                    console.log('Decrementando producto:', productoOrdenId); // Debug
-                    
-                    const response = await fetch(`/api/cocina/producto/${productoOrdenId}/decrementar/`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrfToken
-                        }
-                    });
-                    const result = await response.json();
-                    console.log('Respuesta decrementar:', result); // Debug
-                    
-                    if (result.success) {
-                        if (result.orden_eliminada) {
-                            alert(`⚠️ ${result.mensaje}`);
-                        } else if (result.producto_eliminado) {
-                            alert(`ℹ️ ${result.mensaje}`);
-                        }
-                        fetchOrdenes(); // Actualizar toda la pantalla
-                    } else {
-                        alert(`Error: ${result.error}`);
-                    }
-                } catch (error) {
-                    console.error("Error al decrementar producto:", error);
-                    alert('Error de conexión al decrementar producto');
-                }
-            }
+            document.body.addEventListener('click', async (e) => {
+                const target = e.target;
+                const cooldownId = target.dataset.cooldownId;
 
-            // ✅ NUEVA FUNCIÓN: Marcar orden como servida
-            async function marcarOrdenComoServida(ordenId) {
-                try {
-                    console.log('Marcando orden como servida:', ordenId); // Debug
-                    
-                    const response = await fetch(`/api/cocina/orden/${ordenId}/servida/`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrfToken
-                        }
-                    });
-                    const result = await response.json();
-                    console.log('Respuesta marcar servida:', result); // Debug
-                    
-                    if (result.success) {
-                        alert(`✅ Mesa ${result.mesa} marcada como servida. ¡Mesa liberada!`);
-                        fetchOrdenes(); // Actualizar toda la pantalla
-                    } else {
-                        alert(`Error: ${result.error}`);
-                    }
-                } catch (error) {
-                    console.error("Error al marcar orden como servida:", error);
-                    alert('Error de conexión al marcar como servida');
+                // ✅ CAMBIO: Lógica de enfriamiento
+                if (cooldownId && buttonsOnCooldown.has(cooldownId)) {
+                    e.preventDefault();
+                    return;
                 }
-            }
-
-            // ✅ MEJORADO: Event listener para todos los botones
-            document.body.addEventListener('click', e => {
-                if (e.target.classList.contains('btn-listo')) {
-                    e.target.disabled = true;
-                    e.target.textContent = '⏳ Procesando...';
-                    const productoOrdenId = e.target.dataset.productoOrdenId;
-                    marcarProductoComoListo(productoOrdenId);
-                } 
-                else if (e.target.classList.contains('btn-decremento')) {
-                    // Confirmar antes de decrementar
-                    if (confirm('¿Estás seguro de que quieres quitar una unidad de este producto?')) {
-                        e.target.disabled = true;
-                        e.target.textContent = '⏳...';
-                        const productoOrdenId = e.target.dataset.productoOrdenId;
-                        decrementarProducto(productoOrdenId);
+                
+                if (target.classList.contains('btn-decremento')) {
+                    const productoName = target.closest('.producto-item').querySelector('strong').textContent;
+                    const confirmed = await showConfirm(`¿Confirmas que YA ENTREGASTE 1 unidad de "<b>${productoName}</b>" al mesero?`);
+                    if (confirmed) {
+                        buttonsOnCooldown.add(cooldownId);
+                        target.disabled = true;
+                        const productoOrdenId = target.dataset.productoOrdenId;
+                        await manejarAccionProducto(`/api/cocina/producto/${productoOrdenId}/decrementar/`, 'Producto entregado.', 'No se pudo entregar el producto.');
+                        setTimeout(() => buttonsOnCooldown.delete(cooldownId), 3000);
                     }
                 }
-                else if (e.target.classList.contains('btn-servido')) {
-                    // ✅ NUEVO: Confirmar antes de marcar como servida
-                    if (confirm('¿Confirmas que esta orden ha sido servida al cliente?')) {
-                        e.target.disabled = true;
-                        e.target.textContent = '⏳ Marcando...';
-                        const ordenId = e.target.dataset.ordenId;
-                        marcarOrdenComoServida(ordenId);
-                    }
+                
+                else if (target.classList.contains('btn-servido')) {
+                    const confirmed = await showConfirm('¿Confirmas que la orden completa fue servida? Esta acción no se puede deshacer.');
+                     if (confirmed) {
+                        buttonsOnCooldown.add(cooldownId);
+                        target.disabled = true;
+                        const ordenId = target.dataset.ordenId;
+                        await manejarAccionProducto(`/api/cocina/orden/${ordenId}/servida/`, '¡Orden servida! La mesa ha sido liberada.', 'No se pudo marcar la orden como servida.');
+                        setTimeout(() => buttonsOnCooldown.delete(cooldownId), 3000);
+                     }
                 }
             });
 
-            // Iniciar el polling
-            fetchOrdenes(); // Carga inicial
-            setInterval(fetchOrdenes, 15000); // Polling cada 15 segundos
+            fetchOrdenes();
+            setInterval(fetchOrdenes, 5000);
         });
     </script>
 </body>

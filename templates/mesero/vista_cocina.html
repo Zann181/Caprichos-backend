@@ -1,426 +1,156 @@
+<!-- mesero_vista_cocina.html -->
 <style>
-    /* Estilos específicos para vista de cocina del mesero */
-    .ordenes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-    .ordenes-columna h3 { border-bottom: 2px solid var(--gris-piedra); padding-bottom: 0.5rem; margin-bottom: 1rem; }
-    .orden-card { border: 1px solid var(--gris-piedra); border-radius: 8px; margin-bottom: 1.5rem; background: #fff; transition: all 0.3s ease; }
-    .orden-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-2px); }
-    .orden-header { background-color: var(--carbon-suave); color: white; padding: 0.75rem 1rem; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center; }
-    .orden-body { padding: 1rem; }
-    .lista-productos { list-style: none; padding: 0; margin: 0; }
-    .producto-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #eee; }
-    .producto-item:last-child { border-bottom: none; }
-    .producto-info strong { font-size: 1em; }
-    .producto-info .obs { font-size: 0.8em; color: var(--naranja-tostado); font-style: italic; margin-top: 3px; }
-    
-    /* Estados de productos */
-    .producto-item.listo { color: var(--verde-listo); font-weight: 600; }
-    .producto-item.listo .producto-info strong::after { content: " ✅"; }
-    .producto-item.nuevo-agregado { 
-        background-color: rgba(255, 193, 7, 0.1); 
-        border-left: 4px solid var(--amarillo-modificado); 
-        padding: 0.5rem;
-        border-radius: 4px;
-        margin: 0.25rem 0;
-        position: relative;
+    .vista-cocina-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
     }
-    .producto-item.nuevo-agregado::before { 
-        content: "🆕 NUEVO"; 
-        position: absolute; 
-        top: 2px; 
-        right: 5px; 
-        background: var(--amarillo-modificado); 
-        color: white; 
-        font-size: 9px; 
-        padding: 2px 4px; 
-        border-radius: 8px; 
-        font-weight: 700; 
+    .columna-cocina h3 {
+        border-bottom: 2px solid var(--gris-piedra);
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+        color: var(--carbon-suave);
     }
-    
-    /* Estados de órdenes */
-    .orden-card.lista { border-left: 4px solid #28a745; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15); }
-    .orden-card.lista .orden-header { background: linear-gradient(135deg, #28a745, #20c997); }
-    .orden-card.modificada { border-left: 4px solid var(--amarillo-modificado); box-shadow: 0 4px 12px rgba(255, 193, 7, 0.15); }
-    .orden-card.modificada .orden-header { background: linear-gradient(135deg, var(--amarillo-modificado), #e0a800); }
-    
-    /* Botón de servido */
-    .btn-servido { 
-        background-color: #28a745 !important; 
-        color: white; 
-        font-size: 14px; 
-        padding: 8px 16px; 
-        border-radius: 6px; 
-        font-weight: 700; 
-        transition: all 0.3s ease; 
-        width: 100%;
-        margin-top: 10px;
+    .orden-card-cocina {
+        background: #fff;
+        border: 1px solid var(--gris-piedra);
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    .btn-servido:hover { 
-        background-color: #218838 !important; 
-        transform: translateY(-1px); 
-        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3); 
+    .orden-header-cocina {
+        background-color: var(--carbon-suave);
+        color: white;
+        padding: 0.75rem 1rem;
+        border-radius: 8px 8px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
-    .btn-servido:disabled { 
-        background-color: var(--gris-piedra) !important; 
-        cursor: not-allowed; 
-        transform: none; 
-        box-shadow: none; 
+    .orden-card-cocina.lista .orden-header-cocina {
+        background: linear-gradient(135deg, #28a745, #20c997);
     }
-    
-    /* Observaciones */
-    .orden-observaciones { 
-        background-color: #fff3cd; 
-        border-left: 4px solid #ffc107; 
-        padding: 8px; 
-        margin-bottom: 10px; 
-        border-radius: 0 4px 4px 0; 
-        font-size: 0.9em;
+    .lista-productos-cocina {
+        list-style: none;
+        padding: 0.5rem 1rem 1rem 1rem;
+        margin: 0;
     }
-    .orden-observaciones strong { color: #856404; }
-    .orden-observaciones-texto { color: #856404; font-style: italic; margin-top: 3px; }
-    
-    /* Información del mesero */
-    .mesero-info { font-size: 0.85em; opacity: 0.9; }
-    
-    /* Notificación de actualización */
-    .actualizacion-indicator { 
-        position: fixed; 
-        top: 20px; 
-        right: 20px; 
-        background: var(--verde-listo); 
-        color: white; 
-        padding: 10px 15px; 
-        border-radius: 6px; 
-        font-size: 14px; 
+    .producto-item-cocina {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .producto-item-cocina:last-child {
+        border-bottom: none;
+    }
+    .producto-item-cocina .estado-listo {
+        color: var(--verde-listo);
         font-weight: 600;
-        z-index: 1000;
-        animation: fadeInOut 3s ease-in-out;
     }
-    
-    @keyframes fadeInOut { 
-        0% { opacity: 0; transform: translateX(100%); } 
-        20%, 80% { opacity: 1; transform: translateX(0); } 
-        100% { opacity: 0; transform: translateX(100%); } 
-    }
-    
-    /* Responsive */
-    @media (max-width: 900px) {
-        .ordenes-grid { grid-template-columns: 1fr; }
+    .producto-item-cocina .estado-pendiente {
+        color: var(--naranja-tostado);
+        font-weight: 600;
     }
 </style>
 
-<h2>👨‍🍳 Vista de Cocina</h2>
-<p>Monitor en tiempo real del estado de todas las órdenes en la cocina:</p>
-
-<!-- Indicador de última actualización -->
-<div style="text-align: right; margin-bottom: 1rem; font-size: 0.9em; color: #666;">
-    <span id="ultima-actualizacion">Última actualización: --</span>
-    <button id="btn-actualizar-manual" class="btn" style="margin-left: 1rem; padding: 6px 12px; font-size: 12px;">🔄 Actualizar</button>
-</div>
-
-<!-- Grid de órdenes -->
-<div class="ordenes-grid">
-    <div id="ordenes-pendientes-mesero" class="ordenes-columna">
-        <h3>⏳ Órdenes en Preparación</h3>
-        <div id="container-pendientes-mesero">
-            <div style="text-align: center; padding: 2rem; color: #666;">
-                🔄 Cargando órdenes...
-            </div>
+<div id="vista-cocina-container">
+    <div class="vista-cocina-grid">
+        <div id="cocina-pendientes" class="columna-cocina">
+            <h3>🍳 En Preparación</h3>
+            <div class="loading">Cargando...</div>
         </div>
-    </div>
-    
-    <div id="ordenes-listas-mesero" class="ordenes-columna">
-        <h3>✅ Listas para Servir</h3>
-        <div id="container-listas-mesero">
-            <div style="text-align: center; padding: 2rem; color: #666;">
-                🔄 Cargando órdenes...
-            </div>
+        <div id="cocina-listas" class="columna-cocina">
+            <h3>🍽️ Listo para Servir</h3>
+            <div class="loading">Cargando...</div>
         </div>
     </div>
 </div>
+
+<template id="cocina-card-template">
+    <div class="orden-card-cocina">
+        <div class="orden-header-cocina">
+            <span class="mesa-cocina font-bold">Mesa #</span>
+            <span class="hora-cocina text-sm"></span>
+        </div>
+        <ul class="lista-productos-cocina"></ul>
+    </div>
+</template>
 
 <script>
-// Función de inicialización para vista de cocina
-window.inicializar_vista_cocina = function() {
-    let ultimaActualizacion = null;
-    let intervalId = null;
+    function inicializar_vista_cocina() {
+        const pendientesContainer = document.getElementById('cocina-pendientes');
+        const listasContainer = document.getElementById('cocina-listas');
+        const template = document.getElementById('cocina-card-template');
 
-    // === CARGAR VISTA DE COCINA ===
-    async function cargarVistaCocinaMesero() {
-        try {
-            const response = await fetch('/api/cocina/ordenes/');
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            
-            const ordenes = await response.json();
-            renderizarOrdenesParaMesero(ordenes);
-            
-            // Actualizar timestamp
-            ultimaActualizacion = new Date();
-            document.getElementById('ultima-actualizacion').textContent = 
-                `Última actualización: ${ultimaActualizacion.toLocaleTimeString()}`;
-            
-        } catch (error) {
-            console.error('Error cargando vista cocina:', error);
-            mostrarError('Error al cargar las órdenes de la cocina');
-        }
-    }
+        const renderizarVistaCocina = (ordenes) => {
+            pendientesContainer.innerHTML = '<h3>🍳 En Preparación</h3>';
+            listasContainer.innerHTML = '<h3>🍽️ Listo para Servir</h3>';
 
-    // === RENDERIZAR ÓRDENES ===
-    function renderizarOrdenesParaMesero(ordenes) {
-        const pendientesContainer = document.getElementById('container-pendientes-mesero');
-        const listasContainer = document.getElementById('container-listas-mesero');
-        
-        pendientesContainer.innerHTML = '';
-        listasContainer.innerHTML = '';
-        
-        if (ordenes.length === 0) {
-            pendientesContainer.innerHTML = '<p style="color: #888; text-align: center; padding: 2rem;">😊 No hay órdenes pendientes</p>';
-            listasContainer.innerHTML = '<p style="color: #888; text-align: center; padding: 2rem;">😊 No hay órdenes listas</p>';
-            return;
-        }
-        
-        let hayPendientes = false;
-        let hayListas = false;
-        
-        ordenes.forEach(orden => {
-            const ordenCard = crearTarjetaOrden(orden);
-            
-            if (orden.completada) {
-                listasContainer.appendChild(ordenCard);
-                hayListas = true;
-            } else {
-                pendientesContainer.appendChild(ordenCard);
-                hayPendientes = true;
-            }
-        });
-        
-        // Mostrar mensajes si no hay órdenes
-        if (!hayPendientes) {
-            pendientesContainer.innerHTML = '<p style="color: #888; text-align: center; padding: 2rem;">😊 No hay órdenes en preparación</p>';
-        }
-        if (!hayListas) {
-            listasContainer.innerHTML = '<p style="color: #888; text-align: center; padding: 2rem;">😊 No hay órdenes listas para servir</p>';
-        }
-    }
+            let hayPendientes = false;
+            let hayListas = false;
 
-    // === CREAR TARJETA DE ORDEN ===
-    function crearTarjetaOrden(orden) {
-        const ordenCard = document.createElement('div');
-        ordenCard.className = 'orden-card';
-        
-        // Aplicar clases especiales
-        if (orden.completada) {
-            ordenCard.classList.add('lista');
-        }
-        if (orden.tiene_agregados) {
-            ordenCard.classList.add('modificada');
-        }
-        
-        // Crear lista de productos
-        let productosHtml = '';
-        orden.productos.forEach(p => {
-            let claseProducto = '';
-            let estadoIcon = '⏳';
-            let agregadoIcon = '';
-            
-            if (p.estado === 'LISTO') {
-                claseProducto = 'listo';
-                estadoIcon = '✅';
+            if (!ordenes || ordenes.length === 0) {
+                pendientesContainer.innerHTML += '<p>No hay órdenes en preparación.</p>';
+                listasContainer.innerHTML += '<p>No hay órdenes listas.</p>';
+                return;
             }
-            
-            if (p.agregado_despues) {
-                claseProducto += ' nuevo-agregado';
-                agregadoIcon = '🆕';
-            }
-            
-            productosHtml += `
-                <li class="producto-item ${claseProducto}">
-                    <div class="producto-info">
-                        <strong>${estadoIcon} ${p.cantidad}x ${p.nombre} ${agregadoIcon}</strong>
-                        ${p.observaciones ? `<div class="obs">📝 ${p.observaciones}</div>` : ''}
-                    </div>
-                </li>
-            `;
-        });
-        
-        // Crear observaciones de la orden
-        let observacionesHtml = '';
-        if (orden.observaciones && orden.observaciones.trim()) {
-            observacionesHtml = `
-                <div class="orden-observaciones">
-                    <strong>📝 Observaciones de la orden:</strong>
-                    <div class="orden-observaciones-texto">${orden.observaciones}</div>
-                </div>
-            `;
-        }
-        
-        // Crear botón de servido si está lista
-        let botonServidoHtml = '';
-        if (orden.completada) {
-            botonServidoHtml = `
-                <button class="btn btn-servido" 
-                        data-orden-id="${orden.id}"
-                        onclick="marcarComoServido(${orden.id})">
-                    🍽️ Marcar como Servido
-                </button>
-            `;
-        }
-        
-        // Construir HTML completo
-        ordenCard.innerHTML = `
-            <div class="orden-header">
-                <div>
-                    <span>Mesa #${orden.mesa}</span>
-                    <div class="mesero-info">Mesero: ${orden.mesero}</div>
-                </div>
-                <span>${orden.creado_en}</span>
-            </div>
-            <div class="orden-body">
-                ${observacionesHtml}
-                <ul class="lista-productos">
-                    ${productosHtml}
-                </ul>
-                ${botonServidoHtml}
-            </div>
-        `;
-        
-        return ordenCard;
-    }
 
-    // === MARCAR COMO SERVIDO ===
-    window.marcarComoServido = async function(ordenId) {
-        if (!confirm('¿Confirmas que esta orden ha sido servida al cliente?')) {
-            return;
-        }
-        
-        const btn = document.querySelector(`[data-orden-id="${ordenId}"]`);
-        const textoOriginal = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = '⏳ Marcando...';
-        
-        try {
-            const response = await fetch(`/api/orden/${ordenId}/servida/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': window.csrfToken
+            ordenes.forEach(orden => {
+                const cardNode = document.importNode(template.content, true);
+                const card = cardNode.querySelector('.orden-card-cocina');
+                
+                card.querySelector('.mesa-cocina').textContent = `Mesa #${orden.mesa}`;
+                card.querySelector('.hora-cocina').textContent = orden.creado_en;
+                
+                const productosList = card.querySelector('.lista-productos-cocina');
+                productosList.innerHTML = ''; // Limpiar lista
+
+                orden.productos.forEach(p => {
+                    const li = document.createElement('li');
+                    li.className = 'producto-item-cocina';
+                    const estadoHTML = p.estado === 'LISTO' 
+                        ? `<span class="estado-listo">✔ Listo</span>`
+                        : `<span class="estado-pendiente">Cocinando...</span>`;
+                    
+                    li.innerHTML = `<span>${p.cantidad}x ${p.nombre}</span> ${estadoHTML}`;
+                    productosList.appendChild(li);
+                });
+
+                if (orden.completada) {
+                    card.classList.add('lista');
+                    listasContainer.appendChild(card);
+                    hayListas = true;
+                } else {
+                    pendientesContainer.appendChild(card);
+                    hayPendientes = true;
                 }
             });
-            
-            const result = await response.json();
-            
-            if (response.ok) {
-                window.mostrarNotificacion(
-                    `✅ Mesa ${result.mesa} marcada como servida. ¡Mesa liberada!`, 
-                    'success'
-                );
-                
-                // Actualizar vista inmediatamente
-                cargarVistaCocinaMesero();
-                
-                // Mostrar indicador de actualización
-                mostrarIndicadorActualizacion('Orden servida exitosamente');
-                
-            } else {
-                window.mostrarNotificacion(`❌ Error: ${result.error}`, 'error');
-                btn.disabled = false;
-                btn.textContent = textoOriginal;
+
+            if (!hayPendientes) pendientesContainer.innerHTML += '<p>No hay órdenes en preparación.</p>';
+            if (!hayListas) listasContainer.innerHTML += '<p>No hay órdenes listas.</p>';
+        };
+
+        window.actualizar_vista_cocina = async () => {
+            try {
+                const response = await fetch("{% url 'api_get_ordenes_cocina' %}");
+                if (!response.ok) throw new Error('Error de red');
+                const data = await response.json();
+                renderizarVistaCocina(data);
+            } catch (error) {
+                console.error("Error al actualizar vista de cocina:", error);
+                pendientesContainer.innerHTML = '<p class="error-message">No se pudo cargar la vista de cocina.</p>';
+                listasContainer.innerHTML = '';
             }
-            
-        } catch (error) {
-            console.error('Error marcando como servida:', error);
-            window.mostrarNotificacion('🔌 Error de conexión', 'error');
-            btn.disabled = false;
-            btn.textContent = textoOriginal;
-        }
-    };
+        };
 
-    // === MOSTRAR ERROR ===
-    function mostrarError(mensaje) {
-        const errorHtml = `
-            <div style="text-align: center; padding: 2rem;">
-                <div style="background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 5px; padding: 15px;">
-                    <strong>❌ ${mensaje}</strong><br>
-                    <button class="btn" onclick="window.inicializar_vista_cocina()" style="margin-top: 10px;">🔄 Reintentar</button>
-                </div>
-            </div>
-        `;
-        
-        document.getElementById('container-pendientes-mesero').innerHTML = errorHtml;
-        document.getElementById('container-listas-mesero').innerHTML = '';
+        // Carga inicial
+        window.actualizar_vista_cocina();
     }
-
-    // === INDICADOR DE ACTUALIZACIÓN ===
-    function mostrarIndicadorActualizacion(mensaje) {
-        const indicator = document.createElement('div');
-        indicator.className = 'actualizacion-indicator';
-        indicator.textContent = `🔄 ${mensaje}`;
-        document.body.appendChild(indicator);
-        
-        setTimeout(() => {
-            if (indicator.parentElement) {
-                indicator.remove();
-            }
-        }, 3000);
-    }
-
-    // === ACTUALIZACIÓN MANUAL ===
-    document.getElementById('btn-actualizar-manual').addEventListener('click', () => {
-        cargarVistaCocinaMesero();
-        mostrarIndicadorActualizacion('Vista actualizada manualmente');
-    });
-
-    // === ACTUALIZACIÓN AUTOMÁTICA ===
-    function iniciarActualizacionAutomatica() {
-        // Limpiar interval anterior si existe
-        if (intervalId) {
-            clearInterval(intervalId);
-        }
-        
-        // Actualizar cada 10 segundos
-        intervalId = setInterval(() => {
-            cargarVistaCocinaMesero();
-        }, 10000);
-    }
-
-    // === INICIALIZACIÓN ===
-    cargarVistaCocinaMesero(); // Carga inicial
-    iniciarActualizacionAutomatica(); // Iniciar polling
     
-    console.log('✅ Vista cocina inicializada');
-    
-    // Cleanup cuando se cambie de pestaña
-    return function cleanup() {
-        if (intervalId) {
-            clearInterval(intervalId);
-            intervalId = null;
-        }
-    };
-};
-
-// Función de actualización (llamada por long polling)
-window.actualizar_vista_cocina = function() {
-    // Recargar vista de cocina cuando hay cambios
-    if (window.inicializar_vista_cocina) {
-        const container1 = document.getElementById('container-pendientes-mesero');
-        const container2 = document.getElementById('container-listas-mesero');
-        
-        if (container1 && container2) {
-            // Solo actualizar si la pestaña está visible
-            const tabContent = document.getElementById('tab-vista-cocina');
-            if (tabContent && tabContent.classList.contains('active')) {
-                // Realizar actualización
-                fetch('/api/cocina/ordenes/')
-                    .then(response => response.json())
-                    .then(ordenes => {
-                        // Lógica de renderizado aquí (simplificada para long polling)
-                        console.log('🔄 Vista cocina actualizada por long polling');
-                    })
-                    .catch(error => console.error('Error en actualización automática:', error));
-            }
-        }
+    // Ejecutar la inicialización si la función no existe ya (para evitar re-ejecución)
+    if (typeof inicializar_vista_cocina === 'function') {
+        inicializar_vista_cocina();
     }
-};
 </script>

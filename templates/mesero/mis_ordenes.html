@@ -1,3 +1,4 @@
+<!-- mesero_mis_ordenes.html -->
 <style>
     /* Estilos específicos para mis órdenes */
     .mis-ordenes-grid { display: grid; gap: 1.5rem; }
@@ -13,21 +14,11 @@
         transform: translateY(-2px); 
     }
     
-    /* Estados especiales de órdenes */
-    .orden-card.necesita-atencion { 
-        border-left: 4px solid #28a745; 
-        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15);
-        animation: pulseGreen 2s infinite;
-    }
-    @keyframes pulseGreen {
-        0%, 100% { box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15); }
-        50% { box-shadow: 0 6px 20px rgba(40, 167, 69, 0.25); }
-    }
-    
-    .orden-card.en-preparacion { 
-        border-left: 4px solid var(--amarillo-modificado); 
-        box-shadow: 0 4px 12px rgba(255, 193, 7, 0.15); 
-    }
+    /* Estados de las órdenes */
+    .orden-card.status-EN-ESPERA { border-left: 4px solid var(--amarillo-modificado, #ffc107); }
+    .orden-card.status-ENTREGADO { border-left: 4px solid var(--azul-info, #17a2b8); }
+    .orden-card.status-POR-FACTURAR { border-left: 4px solid var(--naranja-tostado, #E8772E); }
+    .orden-card.status-FACTURADO { border-left: 4px solid var(--verde-listo, #28a745); }
     
     /* Header de la orden */
     .orden-header { 
@@ -39,69 +30,14 @@
         justify-content: space-between; 
         align-items: center; 
     }
-    .orden-header.lista { background: linear-gradient(135deg, #28a745, #20c997); }
-    .orden-header.parcial { background: linear-gradient(135deg, var(--amarillo-modificado), #e0a800); }
+    .orden-header.status-EN-ESPERA { background: linear-gradient(135deg, var(--amarillo-modificado, #ffc107), #e0a800); }
+    .orden-header.status-ENTREGADO { background: linear-gradient(135deg, var(--azul-info, #17a2b8), #138496); }
+    .orden-header.status-POR-FACTURAR { background: linear-gradient(135deg, var(--naranja-tostado, #E8772E), var(--naranja-oscuro, #C0581B)); }
+    .orden-header.status-FACTURADO { background: linear-gradient(135deg, var(--verde-listo, #28a745), #218838); }
     
     .mesa-info { font-size: 1.2em; font-weight: 700; }
-    .estado-general { font-size: 0.9em; opacity: 0.9; margin-top: 4px; }
     .tiempo-transcurrido { font-size: 0.85em; opacity: 0.8; }
-    
-    /* Cuerpo de la orden */
     .orden-body { padding: 1.5rem; }
-    
-    /* Resumen de estado */
-    .estado-resumen { 
-        display: grid; 
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
-        gap: 1rem; 
-        margin-bottom: 1.5rem; 
-        padding: 1rem; 
-        background-color: rgba(232, 119, 46, 0.05); 
-        border-radius: 6px; 
-        border: 1px solid rgba(232, 119, 46, 0.1);
-    }
-    .estado-item { text-align: center; }
-    .estado-numero { 
-        font-size: 1.5em; 
-        font-weight: 700; 
-        color: var(--naranja-tostado); 
-        display: block; 
-    }
-    .estado-label { font-size: 0.8em; color: #666; margin-top: 2px; }
-    
-    /* Lista de productos */
-    .productos-existentes { border-top: 1px solid #eee; padding-top: 1rem; }
-    .producto-existente { 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center;
-        padding: 0.75rem 0; 
-        border-bottom: 1px solid #f0f0f0;
-    }
-    .producto-existente:last-child { border-bottom: none; }
-    
-    .producto-existente.listo { 
-        color: var(--verde-listo); 
-        font-weight: 600; 
-    }
-    .producto-existente.agregado-despues { 
-        background-color: rgba(255, 193, 7, 0.1);
-        padding: 0.75rem;
-        border-radius: 4px;
-        margin: 0.25rem 0;
-        border-left: 4px solid var(--amarillo-modificado);
-    }
-    
-    .producto-nombre { flex: 1; }
-    .producto-estado { 
-        font-size: 0.9em; 
-        padding: 4px 8px; 
-        border-radius: 12px; 
-        font-weight: 600;
-    }
-    .producto-estado.listo { background-color: #d4edda; color: #155724; }
-    .producto-estado.pendiente { background-color: #fff3cd; color: #856404; }
-    .producto-estado.nuevo { background-color: #ffeaa7; color: #b2900f; }
     
     /* Total y acciones */
     .orden-footer { 
@@ -114,66 +50,6 @@
     }
     .orden-total { font-size: 1.2em; font-weight: 700; color: var(--carbon-suave); }
     
-    /* Notificación de atención */
-    .alerta-atencion { 
-        background: linear-gradient(135deg, #28a745, #20c997); 
-        color: white; 
-        padding: 0.75rem; 
-        border-radius: 6px; 
-        margin-top: 1rem; 
-        font-weight: 600;
-        text-align: center;
-        animation: pulseNotification 1.5s infinite;
-    }
-    @keyframes pulseNotification {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.02); }
-    }
-    
-    /* Botones de acción */
-    .acciones-orden { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-    .btn-pequeño { 
-        padding: 10px 16px; 
-        font-size: 14px; 
-        border-radius: 6px; 
-        font-weight: 600;
-        transition: all 0.3s ease;
-        border: none;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 100px;
-    }
-    .btn-modificar { 
-        background-color: var(--azul-info); 
-        color: white; 
-    }
-    .btn-modificar:hover { 
-        background-color: #138496; 
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
-    }
-    .btn-entregar {
-        background-color: #28a745;
-        color: white;
-    }
-    .btn-entregar:hover {
-        background-color: #218838;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
-    }
-    .btn-ver-cocina {
-        background-color: #17a2b8;
-        color: white;
-    }
-    .btn-ver-cocina:hover {
-        background-color: #138496;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
-    }
-    
     /* Estados vacíos */
     .estado-vacio { 
         text-align: center; 
@@ -185,12 +61,17 @@
     }
     
     /* Filtros */
-    .filtros-ordenes { 
-        display: flex; 
-        gap: 1rem; 
+    .filtros-container { 
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 1.5rem; 
         margin-bottom: 2rem; 
+        align-items: end;
+    }
+    .filtros-estados {
+        display: flex; 
+        gap: 0.5rem; 
         flex-wrap: wrap; 
-        align-items: center;
     }
     .filtro-btn { 
         padding: 8px 16px; 
@@ -206,374 +87,216 @@
         color: white; 
         border-color: var(--naranja-tostado); 
     }
+    #filtro-mesa {
+        padding: 8px;
+        border-radius: 5px;
+        border: 1px solid var(--gris-piedra);
+        background-color: white;
+        min-width: 150px;
+    }
+
+    /* Paginación */
+    #paginacion-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    .pagina-btn {
+        padding: 8px 16px;
+    }
+    .pagina-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
     
     @media (max-width: 768px) {
-        .estado-resumen { grid-template-columns: repeat(2, 1fr); }
-        .orden-footer { flex-direction: column; gap: 1rem; align-items: stretch; }
-        .acciones-orden { justify-content: center; flex-direction: column; }
-        .btn-pequeño { width: 100%; }
+        .filtros-container { grid-template-columns: 1fr; }
     }
 </style>
 
-<h2>📋 Mis Órdenes Activas</h2>
-<p>Órdenes que tienes asignadas y necesitan tu atención:</p>
+<h2>📋 Mis Órdenes</h2>
+<p>Revisa el historial y estado de todas tus órdenes.</p>
 
 <!-- Filtros de órdenes -->
-<div class="filtros-ordenes">
-    <span style="font-weight: 600;">Filtrar por estado:</span>
-    <button class="filtro-btn active" data-filtro="todas">Todas</button>
-    <button class="filtro-btn" data-filtro="necesita-atencion">🔔 Necesitan Atención</button>
-    <button class="filtro-btn" data-filtro="en-preparacion">⏳ En Preparación</button>
-    <button class="filtro-btn" data-filtro="listas">✅ Listas</button>
-</div>
-
-<!-- Contenedor de órdenes -->
-<div id="mis-ordenes-container" class="mis-ordenes-grid">
-    <div style="text-align: center; padding: 2rem; color: #666;">
-        🔄 Cargando tus órdenes activas...
+<div class="filtros-container">
+    <div>
+        <label style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Filtrar por estado:</label>
+        <div class="filtros-estados">
+            <button class="filtro-btn active" data-filtro="TODAS">Todas</button>
+            <button class="filtro-btn" data-filtro="EN ESPERA">En Espera</button>
+            <button class="filtro-btn" data-filtro="ENTREGADO">Entregado</button>
+            <button class="filtro-btn" data-filtro="POR FACTURAR">Por Facturar</button>
+            <button class="filtro-btn" data-filtro="FACTURADO">Facturado</button>
+        </div>
+    </div>
+    <div>
+        <label for="filtro-mesa" style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Filtrar por mesa:</label>
+        <select id="filtro-mesa">
+            <option value="TODAS">Todas las mesas</option>
+        </select>
     </div>
 </div>
 
-<script>
-// Función de inicialización para mis órdenes
-window.inicializar_mis_ordenes = function() {
-    let ordenesData = [];
-    let filtroActual = 'todas';
+<!-- Contenedor de órdenes -->
+<div id="mis-ordenes-container" class="mis-ordenes-grid"></div>
+<div id="paginacion-container"></div>
 
-    // === CARGAR MIS ÓRDENES ===
-    async function cargarMisOrdenes() {
+<script>
+window.inicializar_mis_ordenes = function() {
+    let todasLasOrdenes = [];
+    let filtroEstado = 'TODAS';
+    let filtroMesa = 'TODAS';
+    let paginaActual = 1;
+    const ORDENES_POR_PAGINA = 10;
+
+    const container = document.getElementById('mis-ordenes-container');
+    const paginacionContainer = document.getElementById('paginacion-container');
+    const filtroMesaSelect = document.getElementById('filtro-mesa');
+
+    const mostrarError = (mensaje) => {
+        container.innerHTML = `<div class="estado-vacio" style="border-color: var(--rojo-error, #dc3545);"><h3 style="color: var(--rojo-error, #dc3545);">❌ ${mensaje}</h3><p>Hubo un problema al contactar al servidor.</p><button class="btn" onclick="window.inicializar_mis_ordenes()">🔄 Reintentar</button></div>`;
+        paginacionContainer.innerHTML = '';
+    };
+
+    const cargarOrdenes = async () => {
+        container.innerHTML = `<div class="loading" style="text-align: center; padding: 2rem; color: #666;">🔄 Cargando órdenes...</div>`;
         try {
-            const response = await fetch('/api/mesero/ordenes/');
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            
-            ordenesData = await response.json();
-            aplicarFiltroYRenderizar();
-            
+            const response = await fetch('/api/mesero/ordenes/'); // Asume que esta URL trae TODAS las órdenes del mesero
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            todasLasOrdenes = await response.json();
+            poblarFiltroMesas();
+            aplicarFiltrosYRenderizar();
         } catch (error) {
             console.error('Error cargando mis órdenes:', error);
-            mostrarError('Error al cargar tus órdenes activas');
+            mostrarError('Error al cargar tus órdenes');
         }
-    }
+    };
 
-    // === APLICAR FILTRO Y RENDERIZAR ===
-    function aplicarFiltroYRenderizar() {
-        let ordenesFiltradas = ordenesData;
-        
-        // Aplicar filtro
-        switch(filtroActual) {
-            case 'necesita-atencion':
-                ordenesFiltradas = ordenesData.filter(orden => orden.necesita_atencion);
-                break;
-            case 'en-preparacion':
-                ordenesFiltradas = ordenesData.filter(orden => 
-                    orden.productos_pendientes_count > 0 && orden.productos_listos_count === 0
-                );
-                break;
-            case 'listas':
-                ordenesFiltradas = ordenesData.filter(orden => 
-                    orden.productos_pendientes_count === 0 && orden.productos_listos_count > 0
-                );
-                break;
-            default: // 'todas'
-                ordenesFiltradas = ordenesData;
+    const poblarFiltroMesas = () => {
+        const mesasUnicas = [...new Set(todasLasOrdenes.map(o => o.mesa.numero))].sort((a, b) => a - b);
+        filtroMesaSelect.innerHTML = '<option value="TODAS">Todas las mesas</option>'; // Reset
+        mesasUnicas.forEach(numMesa => {
+            const option = document.createElement('option');
+            option.value = numMesa;
+            option.textContent = `Mesa ${numMesa}`;
+            filtroMesaSelect.appendChild(option);
+        });
+    };
+
+    const aplicarFiltrosYRenderizar = () => {
+        let ordenesFiltradas = todasLasOrdenes;
+
+        if (filtroEstado !== 'TODAS') {
+            ordenesFiltradas = ordenesFiltradas.filter(o => o.estado === filtroEstado);
         }
-        
-        renderizarMisOrdenes(ordenesFiltradas);
-    }
+        if (filtroMesa !== 'TODAS') {
+            ordenesFiltradas = ordenesFiltradas.filter(o => String(o.mesa.numero) === filtroMesa);
+        }
 
-    // === RENDERIZAR ÓRDENES ===
-    function renderizarMisOrdenes(ordenes) {
-        const container = document.getElementById('mis-ordenes-container');
-        
+        renderizarPagina(ordenesFiltradas);
+        renderizarPaginacion(ordenesFiltradas.length);
+    };
+
+    const renderizarPagina = (ordenes) => {
+        container.innerHTML = '';
         if (ordenes.length === 0) {
-            let mensajeVacio = '';
-            switch(filtroActual) {
-                case 'necesita-atencion':
-                    mensajeVacio = '😊 No tienes órdenes que necesiten atención en este momento';
-                    break;
-                case 'en-preparacion':
-                    mensajeVacio = '😊 No tienes órdenes en preparación';
-                    break;
-                case 'listas':
-                    mensajeVacio = '😊 No tienes órdenes listas para servir';
-                    break;
-                default:
-                    mensajeVacio = '😊 No tienes órdenes activas en este momento';
-            }
-            
-            container.innerHTML = `
-                <div class="estado-vacio">
-                    <h3>${mensajeVacio}</h3>
-                    <p>Las nuevas órdenes aparecerán aquí automáticamente.</p>
-                    <button class="btn" onclick="window.recargarPestana('nuevo-pedido')">➕ Crear Nueva Orden</button>
-                </div>
-            `;
+            container.innerHTML = `<div class="estado-vacio"><h3>🤷‍♂️ No se encontraron órdenes</h3><p>Prueba con otros filtros o crea una nueva orden.</p></div>`;
             return;
         }
-        
-        container.innerHTML = '';
-        
-        ordenes.forEach(orden => {
-            const ordenCard = crearTarjetaOrden(orden);
-            container.appendChild(ordenCard);
-        });
-    }
 
-    // === CREAR TARJETA DE ORDEN ===
-    function crearTarjetaOrden(orden) {
-        const ordenCard = document.createElement('div');
-        ordenCard.className = 'orden-card';
-        
-        // Determinar estado y clases
-        let estadoGeneral = '';
-        let claseHeader = '';
-        let claseCard = '';
-        
-        if (orden.necesita_atencion) {
-            claseCard = 'necesita-atencion';
-            claseHeader = 'lista';
-            estadoGeneral = '🔔 ¡Productos listos para servir!';
-        } else if (orden.productos_listos_count > 0 && orden.productos_pendientes_count > 0) {
-            claseCard = 'en-preparacion';
-            claseHeader = 'parcial';
-            estadoGeneral = `🔄 Parcialmente lista (${orden.productos_listos_count}/${orden.productos_listos_count + orden.productos_pendientes_count})`;
-        } else if (orden.productos_listos_count > 0) {
-            claseHeader = 'lista';
-            estadoGeneral = '✅ Lista para servir';
-        } else {
-            estadoGeneral = '⏳ En preparación';
-        }
-        
-        ordenCard.className += ` ${claseCard}`;
-        
-        // Calcular tiempo transcurrido
-        const tiempoCreacion = new Date(orden.creado_en.replace(' ', 'T'));
-        const ahora = new Date();
-        const minutosTranscurridos = Math.floor((ahora - tiempoCreacion) / (1000 * 60));
-        let tiempoTexto = '';
-        
-        if (minutosTranscurridos < 60) {
-            tiempoTexto = `${minutosTranscurridos} min`;
-        } else {
-            const horas = Math.floor(minutosTranscurridos / 60);
-            const mins = minutosTranscurridos % 60;
-            tiempoTexto = `${horas}h ${mins}m`;
-        }
-        
-        // Crear lista de productos
-        let productosHtml = '';
-        orden.productos.forEach(p => {
-            let claseProducto = '';
-            let estadoProducto = '';
-            let iconoEstado = '';
-            
-            if (p.estado === 'LISTO') {
-                claseProducto = 'listo';
-                estadoProducto = 'listo';
-                iconoEstado = '✅';
-            } else {
-                estadoProducto = 'pendiente';
-                iconoEstado = '⏳';
-            }
-            
-            if (p.agregado_despues) {
-                claseProducto += ' agregado-despues';
-                estadoProducto = 'nuevo';
-                iconoEstado = '🆕';
-            }
-            
-            productosHtml += `
-                <div class="producto-existente ${claseProducto}">
-                    <div class="producto-nombre">
-                        ${iconoEstado} ${p.cantidad}x ${p.nombre}
-                        ${p.observaciones ? `<div style="font-size: 0.8em; color: var(--naranja-tostado); font-style: italic; margin-top: 2px;">📝 ${p.observaciones}</div>` : ''}
-                    </div>
-                    <span class="producto-estado ${estadoProducto}">
-                        ${p.estado === 'LISTO' ? 'Listo' : (p.agregado_despues ? 'Nuevo' : 'Pendiente')}
-                    </span>
-                </div>
-            `;
+        const inicio = (paginaActual - 1) * ORDENES_POR_PAGINA;
+        const fin = inicio + ORDENES_POR_PAGINA;
+        const ordenesDeLaPagina = ordenes.slice(inicio, fin);
+
+        ordenesDeLaPagina.forEach(orden => {
+            container.appendChild(crearTarjetaOrden(orden));
         });
-        
-        // Crear alerta de atención si es necesario
-        let alertaAtencionHtml = '';
-        if (orden.necesita_atencion) {
-            alertaAtencionHtml = `
-                <div class="alerta-atencion">
-                    🔔 ¡Esta orden tiene productos listos para servir!
-                </div>
-            `;
-        }
-        
-        // Construir HTML completo
+    };
+
+    const renderizarPaginacion = (totalOrdenes) => {
+        paginacionContainer.innerHTML = '';
+        const totalPaginas = Math.ceil(totalOrdenes / ORDENES_POR_PAGINA);
+
+        if (totalPaginas <= 1) return;
+
+        paginacionContainer.innerHTML = `
+            <button class="btn pagina-btn" id="pagina-anterior" ${paginaActual === 1 ? 'disabled' : ''}>Anterior</button>
+            <span>Página ${paginaActual} de ${totalPaginas}</span>
+            <button class="btn pagina-btn" id="pagina-siguiente" ${paginaActual === totalPaginas ? 'disabled' : ''}>Siguiente</button>
+        `;
+
+        document.getElementById('pagina-anterior').addEventListener('click', () => {
+            if (paginaActual > 1) {
+                paginaActual--;
+                aplicarFiltrosYRenderizar();
+            }
+        });
+        document.getElementById('pagina-siguiente').addEventListener('click', () => {
+            if (paginaActual < totalPaginas) {
+                paginaActual++;
+                aplicarFiltrosYRenderizar();
+            }
+        });
+    };
+
+    const crearTarjetaOrden = (orden) => {
+        const ordenCard = document.createElement('div');
+        const estadoClase = `status-${orden.estado.replace(' ', '-')}`;
+        ordenCard.className = `orden-card ${estadoClase}`;
+
+        const tiempoCreacion = new Date(orden.creado_en.replace(' ', 'T'));
+        const minutosTranscurridos = Math.floor((new Date() - tiempoCreacion) / 60000);
+        const tiempoTexto = minutosTranscurridos < 60 ? `${minutosTranscurridos} min` : `${Math.floor(minutosTranscurridos / 60)}h ${minutosTranscurridos % 60}m`;
+
         ordenCard.innerHTML = `
-            <div class="orden-header ${claseHeader}">
-                <div>
-                    <div class="mesa-info">Mesa #${orden.mesa.numero}</div>
-                    <div class="estado-general">${estadoGeneral}</div>
-                </div>
-                <div class="tiempo-transcurrido">⏱️ ${tiempoTexto}</div>
+            <div class="orden-header ${estadoClase}">
+                <div class="mesa-info">Mesa #${orden.mesa.numero}</div>
+                <div class="tiempo-transcurrido">⏱️ Hace ${tiempoTexto}</div>
             </div>
             <div class="orden-body">
-                <div class="estado-resumen">
-                    <div class="estado-item">
-                        <span class="estado-numero">${orden.productos_listos_count}</span>
-                        <div class="estado-label">Listos</div>
-                    </div>
-                    <div class="estado-item">
-                        <span class="estado-numero">${orden.productos_pendientes_count}</span>
-                        <div class="estado-label">Pendientes</div>
-                    </div>
-                    <div class="estado-item">
-                        <span class="estado-numero">${orden.productos_agregados_count || 0}</span>
-                        <div class="estado-label">Agregados</div>
-                    </div>
-                    <div class="estado-item">
-                        <span class="estado-numero">${orden.total.toLocaleString()}</span>
-                        <div class="estado-label">Total</div>
-                    </div>
-                </div>
-                
-                <div class="productos-existentes">
-                    ${productosHtml}
-                </div>
-                
-                ${alertaAtencionHtml}
-                
+                <p><strong>Estado:</strong> ${orden.estado}</p>
                 <div class="orden-footer">
-                    <div class="orden-total">
-                        Total: ${orden.total.toLocaleString()}
-                    </div>
+                    <div class="orden-total">Total: ${orden.total.toLocaleString()}</div>
                     <div class="acciones-orden">
-                        <button class="btn btn-pequeño btn-modificar" 
-                                onclick="modificarOrden(${orden.mesa.id})">
-                            ✏️ Modificar
-                        </button>
-                        ${orden.necesita_atencion ? `
-                            <button class="btn btn-pequeño btn-entregar" 
-                                    onclick="entregarOrden(${orden.orden_id})">
-                                🍽️ Entregar
-                            </button>
-                            <button class="btn btn-pequeño btn-ver-cocina" 
-                                    onclick="irAVistaCocina()">
-                                👨‍🍳 Ver Cocina
-                            </button>
-                        ` : ''}
+                        <!-- Aquí podrías agregar botones de acción si son necesarios -->
                     </div>
                 </div>
-            </div>
-        `;
-        
+            </div>`;
         return ordenCard;
-    }
-
-    // === FUNCIONES DE ACCIÓN ===
-    window.modificarOrden = function(mesaId) {
-        // Cambiar a pestaña de modificar orden y preseleccionar mesa
-        document.querySelector('[data-tab="modificar-orden"]').click();
-        
-        // Dar tiempo para que la pestaña se cargue y luego seleccionar la mesa
-        setTimeout(() => {
-            const mesaBtn = document.querySelector(`[data-mesa-id="${mesaId}"]`);
-            if (mesaBtn) {
-                mesaBtn.click();
-            }
-        }, 500);
     };
 
-    window.entregarOrden = async function(ordenId) {
-        if (!confirm('¿Confirmas que esta orden ha sido entregada al cliente?\n\nSe generará una factura pendiente de pago.')) {
-            return;
-        }
-        
-        try {
-            const response = await fetch(`/api/mesero/orden/${ordenId}/entregar/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': window.csrfToken
-                }
-            });
-            
-            const result = await response.json();
-            
-            if (response.ok) {
-                window.mostrarNotificacion(
-                    `✅ ${result.mensaje}\n💰 Factura generada por ${result.total.toLocaleString()}`, 
-                    'success'
-                );
-                
-                // Recargar la lista
-                cargarMisOrdenes();
-                
-            } else {
-                window.mostrarNotificacion(`❌ Error: ${result.error}`, 'error');
-            }
-            
-        } catch (error) {
-            console.error('Error entregando orden:', error);
-            window.mostrarNotificacion('🔌 Error de conexión', 'error');
-        }
-    };
-
-    window.irAVistaCocina = function() {
-        document.querySelector('[data-tab="vista-cocina"]').click();
-    };
-
-    // === MOSTRAR ERROR ===
-    function mostrarError(mensaje) {
-        const container = document.getElementById('mis-ordenes-container');
-        container.innerHTML = `
-            <div class="estado-vacio">
-                <h3>❌ ${mensaje}</h3>
-                <p>Hubo un problema al cargar la información.</p>
-                <button class="btn" onclick="window.inicializar_mis_ordenes()">🔄 Reintentar</button>
-            </div>
-        `;
-    }
-
-    // === FILTROS ===
+    // Event Listeners para filtros
     document.querySelectorAll('.filtro-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            // Actualizar botón activo
             document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            
-            // Cambiar filtro y renderizar
-            filtroActual = btn.dataset.filtro;
-            aplicarFiltroYRenderizar();
+            filtroEstado = btn.dataset.filtro;
+            paginaActual = 1; // Resetear a la primera página
+            aplicarFiltrosYRenderizar();
         });
     });
 
-    // === INICIALIZACIÓN ===
-    cargarMisOrdenes(); // Carga inicial
-    
-    // Actualización automática cada 15 segundos
-    const intervalId = setInterval(cargarMisOrdenes, 15000);
-    
-    console.log('✅ Mis órdenes inicializado');
-    
-    // Cleanup cuando se cambie de pestaña
-    return function cleanup() {
-        clearInterval(intervalId);
-    };
+    filtroMesaSelect.addEventListener('change', (e) => {
+        filtroMesa = e.target.value;
+        paginaActual = 1; // Resetear a la primera página
+        aplicarFiltrosYRenderizar();
+    });
+
+    // Carga inicial
+    cargarOrdenes();
 };
 
-// Función de actualización (llamada por long polling)
-window.actualizar_mis_ordenes = function() {
-    // Recargar mis órdenes cuando hay cambios
+// Función de actualización llamada por el long polling
+window.actualizar_mis_ordenes = () => {
     if (document.getElementById('mis-ordenes-container')) {
-        fetch('/api/mesero/ordenes/')
-            .then(response => response.json())
-            .then(ordenes => {
-                console.log('🔄 Mis órdenes actualizadas por long polling');
-                // Aquí podrías implementar una actualización más inteligente
-                // comparando con los datos actuales
-            })
-            .catch(error => console.error('Error en actualización automática:', error));
+        console.log('🔄 Actualizando mis órdenes por notificación...');
+        window.inicializar_mis_ordenes();
     }
 };
+
+if (typeof window.inicializar_mis_ordenes === 'function') {
+    window.inicializar_mis_ordenes();
+}
 </script>

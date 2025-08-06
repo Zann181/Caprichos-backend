@@ -33,45 +33,76 @@ def generar_hash_stock():
     stock_string = '|'.join([f"{p.id}:{p.cantidad}" for p in productos])
     return hashlib.md5(stock_string.encode()).hexdigest()
 
+
+# ✅ ACTUALIZAR: obtener_datos_completos_orden EXISTENTE
 def obtener_datos_completos_orden(orden):
-    """
-    Obtiene todos los datos de una orden completos
-    """
-    productos_data = []
-    for po in orden.productos_ordenados.all():
-        productos_data.append({
-            'id': po.id,
-            'nombre': po.producto.nombre,
-            'cantidad': po.cantidad,
-            'precio_unitario': float(po.precio_unitario),
-            'observaciones': po.observaciones or '',
-            'estado': po.estado,
-            'listo_en': po.listo_en.isoformat() if po.listo_en else None
-        })
-    
-    return {
-        'orden_id': orden.id,
-        'numero_orden': orden.numero_orden,
-        'mesa': {
-            'id': orden.mesa.id,
-            'numero': orden.mesa.numero,
-            'ubicacion': orden.mesa.ubicacion,
-            'capacidad': orden.mesa.capacidad
-        },
-        'mesero': {
-            'id': orden.mesero.id,
-            'nombre': orden.mesero.nombre,
-            'email': orden.mesero.email
-        },
-        'estado': orden.estado,
-        'observaciones': orden.observaciones or '',
-        'productos': productos_data,
-        'creado_en': orden.creado_en.isoformat(),
-        'confirmado_en': orden.confirmado_en.isoformat() if orden.confirmado_en else None,
-        'listo_en': orden.listo_en.isoformat() if orden.listo_en else None,
-        'total': sum(p['cantidad'] * p['precio_unitario'] for p in productos_data),
-        'completada': all(p['estado'] == 'LISTO' for p in productos_data)
-    }
+    """Obtiene todos los datos de una orden para enviar al frontend"""
+    try:
+        productos_data = []
+        for po in orden.productos_ordenados.all():
+            # Detectar si es agregado después
+            agregado_despues = po.observaciones and 'AGREGADO_DESPUES' in po.observaciones
+            
+            # Limpiar observaciones para mostrar
+            obs_limpia = ''
+            if po.observaciones:
+                if 'AGREGADO_DESPUES' in po.observaciones:
+                    parts = po.observaciones.split('|')
+                    if len(parts) > 1:
+                        obs_limpia = parts[1]  # Obtener la observación real
+                else:
+                    obs_limpia = po.observaciones
+            
+            productos_data.append({
+                'id': po.id,
+                'nombre': po.producto.nombre,
+                'cantidad': po.cantidad,
+                'precio_unitario': float(po.precio_unitario),
+                'observaciones': obs_limpia,
+                'estado': po.estado,
+                'agregado_despues': agregado_despues,
+                'listo_en': po.listo_en.isoformat() if po.listo_en else None
+            })
+        
+        # ✅ USAR FUNCIÓN UTILITARIA
+        total_orden = calcular_total_orden(orden)
+        
+        # Obtener nombre del mesero
+        mesero_nombre = orden.mesero.nombre if hasattr(orden.mesero, 'nombre') else orden.mesero.username
+        
+        return {
+            'orden_id': orden.id,
+            'numero_orden': orden.numero_orden,
+            'mesa': {
+                'id': orden.mesa.id,
+                'numero': orden.mesa.numero,
+                'ubicacion': orden.mesa.ubicacion,
+                'capacidad': orden.mesa.capacidad
+            },
+            'mesero': {
+                'id': orden.mesero.id,
+                'nombre': mesero_nombre,
+                'email': orden.mesero.email
+            },
+            'estado': orden.estado,
+            'observaciones': orden.observaciones or '',
+            'productos': productos_data,
+            'creado_en': orden.creado_en.isoformat(),
+            'confirmado_en': orden.confirmado_en.isoformat() if orden.confirmado_en else None,
+            'listo_en': orden.listo_en.isoformat() if orden.listo_en else None,
+            'total': float(total_orden),
+            'completada': all(p['estado'] == 'LISTO' for p in productos_data)
+        }
+    except Exception as e:
+        print(f"Error en obtener_datos_completos_orden: {str(e)}")
+        return {
+            'orden_id': orden.id if orden else 0,
+            'error': str(e),
+            'total': 0,
+            'productos': [],
+            'completada': False
+        }
+
 
 def obtener_todas_ordenes_cocina():
     """
@@ -194,3 +225,21 @@ def obtener_estadisticas_sistema():
         'ultima_act_stock': cache.get('ultima_actualizacion_stock', 'N/A'),
         'timestamp': timezone.now().isoformat()
     }
+
+
+# core/utils.py - AGREGAR ESTA FUNCIÓN AL ARCHIVO EXISTENTE
+
+def calcular_total_orden(orden):
+    """
+    Función utilitaria para calcular el total de una orden
+    Reemplaza el método calcular_total() que no existe en el modelo
+    """
+    try:
+        total = sum(
+            item.cantidad * item.precio_unitario 
+            for item in orden.productos_ordenados.all()
+        )
+        return total
+    except Exception as e:
+        print(f"Error calculando total de orden {orden.id}: {str(e)}")
+        return 0
