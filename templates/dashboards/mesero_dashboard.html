@@ -10,7 +10,7 @@
         :root {
             --naranja-tostado: #E8772E; --naranja-oscuro: #C0581B; --crema-palido: #FDF6E3;
             --carbon-suave: #4F4A45; --gris-piedra: #D4C5A3; --blanco-hueso: #FEFBF3;
-            --verde-listo: #28a745; --rojo-error: #dc3545; --azul-info: #17a2b8;
+            --verde-listo: #28a745; --amarillo-modificado: #ffc107; --azul-info: #17a2b8;
             --fuente-titulos: 'DM Sans', sans-serif; --fuente-cuerpo: 'Inter', sans-serif;
         }
         
@@ -30,7 +30,6 @@
             border-radius: 8px; 
             padding: 1.5rem; 
             box-shadow: 0 4px 8px rgba(0,0,0,0.05); 
-            margin-top: 1rem;
         }
         
         .btn { 
@@ -53,7 +52,7 @@
         .dashboard-header { display: flex; justify-content: space-between; align-items: center; }
         
         /* === SISTEMA DE PESTAÑAS === */
-        .tabs-container { margin-top: 1rem; }
+        .tabs-container { margin-top: 2rem; }
         .tabs-header { 
             display: flex; 
             border-bottom: 2px solid var(--gris-piedra); 
@@ -62,11 +61,18 @@
         }
         
         .tab-button { 
-            background: none; border: none; padding: 1rem 2rem; 
-            font-family: var(--fuente-titulos); font-size: 16px; font-weight: 600; 
-            cursor: pointer; border-bottom: 3px solid transparent; 
-            transition: all 0.3s; color: var(--carbon-suave);
-            white-space: nowrap; min-width: fit-content;
+            background: none; 
+            border: none; 
+            padding: 1rem 2rem; 
+            font-family: var(--fuente-titulos); 
+            font-size: 16px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            border-bottom: 3px solid transparent; 
+            transition: all 0.3s; 
+            color: var(--carbon-suave);
+            white-space: nowrap;
+            min-width: fit-content;
         }
         
         .tab-button:hover { background-color: rgba(232, 119, 46, 0.1); }
@@ -76,136 +82,102 @@
             background-color: rgba(232, 119, 46, 0.1); 
         }
         
-        .tab-content { display: none; padding: 2rem 0; min-height: 400px; }
+        .tab-content { 
+            display: none; 
+            padding: 2rem 0; 
+            min-height: 400px;
+        }
+        
         .tab-content.active { display: block; }
         .loading { text-align: center; padding: 3rem; color: #666; }
         .loading::after {
-            content: ''; display: inline-block; width: 20px; height: 20px;
-            border: 2px solid var(--gris-piedra); border-radius: 50%;
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--gris-piedra);
+            border-radius: 50%;
             border-top: 2px solid var(--naranja-tostado);
-            animation: spin 1s linear infinite; margin-left: 10px;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
         }
         
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* === TOAST Y MODAL === */
-        #toast-container {
+        /* === NOTIFICACIONES DISCRETAS === */
+        .notificacion { 
             position: fixed;
             top: 20px;
             right: 20px;
-            z-index: 1050;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .toast {
-            background-color: var(--carbon-suave);
+            max-width: 350px;
+            padding: 12px 16px; 
+            border-radius: 6px; 
             color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 1000;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            font-family: var(--fuente-cuerpo);
-            font-size: 15px;
-            opacity: 0;
-            animation: toast-fade-in 0.5s forwards;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            animation: slideInRight 0.3s ease-out, fadeOut 0.5s ease-in 4.5s forwards;
+            cursor: pointer;
         }
-
-        .toast.hiding {
-            animation: toast-fade-out 0.5s forwards;
+        
+        .notificacion.success { background: linear-gradient(135deg, #28a745, #20c997); }
+        .notificacion.info { background: linear-gradient(135deg, #17a2b8, #138496); }
+        .notificacion.warning { background: linear-gradient(135deg, #ffc107, #e0a800); color: #212529; }
+        .notificacion.error { background: linear-gradient(135deg, #dc3545, #c82333); }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
-
-        .toast.toast-success { background-color: var(--verde-listo); }
-        .toast.toast-error { background-color: var(--rojo-error); }
-        .toast.toast-info { background-color: var(--azul-info); }
-
-        @keyframes toast-fade-in {
-            from { opacity: 0; transform: translateX(100%); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes toast-fade-out {
+        
+        @keyframes fadeOut {
             from { opacity: 1; transform: translateX(0); }
             to { opacity: 0; transform: translateX(100%); }
         }
-
-        #confirm-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            z-index: 1040;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            animation: fade-in 0.3s;
-        }
-        #confirm-modal {
-            background-color: var(--blanco-hueso);
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            width: 90%;
-            max-width: 450px;
-            text-align: center;
-            transform: scale(0.9);
-            animation: slide-up 0.3s forwards;
-        }
-        #confirm-message {
-            font-size: 1.1rem;
-            margin-bottom: 1.5rem;
-            line-height: 1.5;
-        }
-        #confirm-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-        }
-        .confirm-btn {
-            background-color: #ccc;
-            color: var(--carbon-suave);
-            padding: 10px 20px;
-        }
-        .confirm-btn.ok {
-            background-color: var(--naranja-tostado);
-            color: white;
-        }
-
-        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slide-up { 
-            from { opacity: 0; transform: translateY(20px) scale(0.95); } 
-            to { opacity: 1; transform: translateY(0) scale(1); } 
+        
+        .notificacion:hover {
+            animation-play-state: paused;
         }
         
+        /* === ERROR Y ESTADOS === */
         .error-message { 
-            background-color: #f8d7da; color: #721c24; 
-            border: 1px solid #f5c6cb; border-radius: 5px; 
-            padding: 15px; margin: 15px 0; 
+            background-color: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb; 
+            border-radius: 5px; 
+            padding: 15px; 
+            margin: 15px 0; 
         }
         
+        .success-message { 
+            background-color: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb; 
+            border-radius: 5px; 
+            padding: 15px; 
+            margin: 15px 0; 
+        }
+        
+        /* === RESPONSIVE === */
         @media (max-width: 768px) {
-            .tabs-header { flex-wrap: wrap; }
-            .tab-button { padding: 0.75rem 1.5rem; font-size: 14px; flex: 1; min-width: auto; }
+            .tabs-header { 
+                flex-wrap: wrap; 
+            }
+            .tab-button { 
+                padding: 0.75rem 1.5rem; 
+                font-size: 14px; 
+                flex: 1;
+                min-width: auto;
+            }
             .container { padding: 0.5rem; }
             .card { padding: 1rem; }
         }
     </style>
 </head>
 <body>
-    <div id="toast-container"></div>
-    
-    <div id="confirm-overlay">
-        <div id="confirm-modal">
-            <p id="confirm-message"></p>
-            <div id="confirm-buttons">
-                <button id="confirm-btn-cancel" class="btn confirm-btn">Cancelar</button>
-                <button id="confirm-btn-ok" class="btn confirm-btn ok">Aceptar</button>
-            </div>
-        </div>
-    </div>
-
     <div class="container">
+        <!-- HEADER PRINCIPAL -->
         <div class="card">
             <div class="dashboard-header">
                 <div>
@@ -216,151 +188,200 @@
             </div>
         </div>
 
+        <!-- CONTENEDOR DE NOTIFICACIONES (oculto, las notificaciones son fixed) -->
+        <div id="notificaciones-container" style="display: none;"></div>
+
+        <!-- SISTEMA DE PESTAÑAS -->
         <div class="tabs-container card">
             <div class="tabs-header">
-                <button class="tab-button active" data-tab="nuevo-pedido" data-url="{% url 'mesero_nuevo_pedido' %}">
+                <button class="tab-button active" data-tab="nuevo-pedido">
                     🍽️ Nuevo Pedido
                 </button>
-                <button class="tab-button" data-tab="modificar-orden" data-url="{% url 'mesero_modificar_orden' %}">
+                <button class="tab-button" data-tab="modificar-orden">
                     ✏️ Modificar Orden
                 </button>
-                <button class="tab-button" data-tab="vista-cocina" data-url="{% url 'mesero_vista_cocina' %}">
+                <button class="tab-button" data-tab="vista-cocina">
                     👨‍🍳 Vista Cocina
                 </button>
-                <button class="tab-button" data-tab="mis-ordenes" data-url="{% url 'mesero_mis_ordenes' %}">
+                <button class="tab-button" data-tab="mis-ordenes">
                     📋 Mis Órdenes
                 </button>
             </div>
 
-            <div id="tab-nuevo-pedido" class="tab-content active"><div class="loading"></div></div>
-            <div id="tab-modificar-orden" class="tab-content"><div class="loading"></div></div>
-            <div id="tab-vista-cocina" class="tab-content"><div class="loading"></div></div>
-            <div id="tab-mis-ordenes" class="tab-content"><div class="loading"></div></div>
+            <!-- CONTENIDO DE LAS PESTAÑAS -->
+            <div id="tab-nuevo-pedido" class="tab-content active">
+                <div class="loading">Cargando nuevo pedido...</div>
+            </div>
+
+            <div id="tab-modificar-orden" class="tab-content">
+                <div class="loading">Cargando modificación de órdenes...</div>
+            </div>
+
+            <div id="tab-vista-cocina" class="tab-content">
+                <div class="loading">Cargando vista de cocina...</div>
+            </div>
+
+            <div id="tab-mis-ordenes" class="tab-content">
+                <div class="loading">Cargando mis órdenes...</div>
+            </div>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Dashboard mesero iniciando...');
+            
+            // Variables globales
             const csrfToken = '{{ csrf_token }}';
             let currentHash = null;
             let loadedTabs = new Set();
-            const buttonsOnCooldown = new Set(); // <--- Set para controlar botones en enfriamiento
+            let tabCleanupFunctions = {};
 
-            // === LÓGICA DE ENFRIAMIENTO DE BOTONES (COOLDOWN) ===
-            // Se ejecuta en la fase de "captura" para interceptar el clic antes que otros listeners.
-            document.body.addEventListener('click', (e) => {
-                const button = e.target.closest('.btn');
-
-                // Aplicar solo a botones de acción, no a los de las pestañas o modales.
-                if (button && !button.classList.contains('tab-button') && !button.classList.contains('confirm-btn')) {
-                    if (buttonsOnCooldown.has(button)) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        showToast('Por favor espera un momento.', 'info', 2000);
-                        return;
-                    }
-
-                    buttonsOnCooldown.add(button);
-                    button.style.opacity = '0.65';
-                    
-                    setTimeout(() => {
-                        buttonsOnCooldown.delete(button);
-                        button.style.opacity = '1';
-                    }, 3000); // 3 segundos de enfriamiento
-                }
-            }, true);
-
-
-            // === SISTEMA DE NOTIFICACIONES Y MODAL ===
-            const toastContainer = document.getElementById('toast-container');
-            const confirmOverlay = document.getElementById('confirm-overlay');
-            const confirmMessage = document.getElementById('confirm-message');
-            const confirmBtnOk = document.getElementById('confirm-btn-ok');
-            const confirmBtnCancel = document.getElementById('confirm-btn-cancel');
-            let confirmResolve = null;
-            
-            window.showToast = function(message, type = 'info', duration = 4000) {
-                const toast = document.createElement('div');
-                toast.className = `toast toast-${type}`;
-                toast.innerHTML = `<span>${message}</span>`;
-                toastContainer.appendChild(toast);
-                setTimeout(() => {
-                    toast.classList.add('hiding');
-                    toast.addEventListener('animationend', () => toast.remove());
-                }, duration);
+            // === MAPPING DE URLs DE PESTAÑAS ===
+            const tabUrls = {
+                'nuevo-pedido': '{% url "mesero_nuevo_pedido" %}',
+                'modificar-orden': '{% url "mesero_modificar_orden" %}', 
+                'vista-cocina': '{% url "mesero_vista_cocina" %}',
+                'mis-ordenes': '{% url "mesero_mis_ordenes" %}'
             };
-
-            window.showConfirm = function(message) {
-                return new Promise((resolve) => {
-                    confirmResolve = resolve;
-                    confirmMessage.innerHTML = message;
-                    confirmOverlay.style.display = 'flex';
-                });
-            };
-
-            confirmBtnOk.addEventListener('click', () => {
-                if (confirmResolve) confirmResolve(true);
-                confirmOverlay.style.display = 'none';
-            });
-
-            confirmBtnCancel.addEventListener('click', () => {
-                if (confirmResolve) confirmResolve(false);
-                confirmOverlay.style.display = 'none';
-            });
-            
-            window.alert = (message) => window.showToast(message, 'info');
-            window.confirm = (message) => window.showConfirm(message);
-
 
             // === SISTEMA DE PESTAÑAS CON CARGA DINÁMICA ===
             document.querySelectorAll('.tab-button').forEach(button => {
                 button.addEventListener('click', async () => {
-                    const tabName = button.dataset.tab;
-                    const tabUrl = button.dataset.url;
+                    console.log('🖱️ Click en pestaña:', button.dataset.tab);
                     
+                    const tabName = button.dataset.tab;
+                    const tabUrl = tabUrls[tabName];
+                    
+                    if (!tabUrl) {
+                        console.error('❌ URL no encontrada para pestaña:', tabName);
+                        return;
+                    }
+                    
+                    // Actualizar UI de pestañas
                     document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
                     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
                     
                     button.classList.add('active');
-                    document.getElementById(`tab-${tabName}`).classList.add('active');
+                    const targetContent = document.getElementById(`tab-${tabName}`);
+                    targetContent.classList.add('active');
                     
+                    // Ejecutar cleanup de la pestaña anterior si existe
+                    Object.values(tabCleanupFunctions).forEach(cleanup => {
+                        if (typeof cleanup === 'function') {
+                            try { cleanup(); } catch(e) { console.warn('Error en cleanup:', e); }
+                        }
+                    });
+                    tabCleanupFunctions = {};
+                    
+                    // Cargar contenido si no se ha cargado antes
                     if (!loadedTabs.has(tabName)) {
                         await cargarContenidoPestana(tabName, tabUrl);
                         loadedTabs.add(tabName);
-                    } else {
-                        if (window[`inicializar_${tabName.replace(/-/g, '_')}`]) {
-                            window[`inicializar_${tabName.replace(/-/g, '_')}`]();
+                    }
+                    
+                    // Ejecutar función de inicialización específica de la pestaña
+                    const initFunctionName = `inicializar_${tabName.replace('-', '_')}`;
+                    if (window[initFunctionName]) {
+                        console.log('🔧 Ejecutando inicializador:', initFunctionName);
+                        try {
+                            const cleanup = window[initFunctionName]();
+                            if (typeof cleanup === 'function') {
+                                tabCleanupFunctions[tabName] = cleanup;
+                            }
+                        } catch (error) {
+                            console.error(`❌ Error ejecutando ${initFunctionName}:`, error);
                         }
+                    } else {
+                        console.warn('⚠️ Función de inicialización no encontrada:', initFunctionName);
                     }
                 });
             });
 
+            // === FUNCIÓN PARA CARGAR CONTENIDO DE PESTAÑAS ===
             async function cargarContenidoPestana(tabName, url) {
                 const container = document.getElementById(`tab-${tabName}`);
+                console.log('📥 Cargando pestaña:', tabName, 'desde:', url);
+                
                 try {
-                    container.innerHTML = '<div class="loading">Cargando...</div>';
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    container.innerHTML = '<div class="loading">Cargando contenido...</div>';
+                    
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': csrfToken
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
                     
                     const html = await response.text();
                     container.innerHTML = html;
                     
+                    // Ejecutar scripts dentro del contenido cargado
                     const scripts = container.querySelectorAll('script');
                     scripts.forEach(script => {
                         try {
-                            const func = new Function('csrfToken', script.innerHTML);
-                            func(csrfToken);
+                            const newScript = document.createElement('script');
+                            if (script.src) {
+                                newScript.src = script.src;
+                            } else {
+                                newScript.innerHTML = script.innerHTML;
+                            }
+                            document.head.appendChild(newScript);
+                            setTimeout(() => newScript.remove(), 100); // Limpiar después de ejecutar
                         } catch (error) {
-                            console.error('Error ejecutando script de pestaña:', error);
+                            console.error('❌ Error ejecutando script:', error);
                         }
                         script.remove();
                     });
                     
+                    console.log('✅ Pestaña cargada exitosamente:', tabName);
+                    
                 } catch (error) {
-                    console.error(`Error cargando pestaña ${tabName}:`, error);
-                    container.innerHTML = `<div class="error-message"><strong>Error al cargar:</strong> ${error.message}</div>`;
+                    console.error(`❌ Error cargando pestaña ${tabName}:`, error);
+                    container.innerHTML = `
+                        <div class="error-message">
+                            <strong>❌ Error al cargar el contenido</strong><br>
+                            ${error.message}<br>
+                            <button class="btn" onclick="location.reload()" style="margin-top: 10px;">🔄 Recargar página</button>
+                            <button class="btn" onclick="window.recargarPestana('${tabName}')" style="margin-top: 10px; margin-left: 10px;">🔄 Reintentar pestaña</button>
+                        </div>
+                    `;
                 }
             }
+
+            // === SISTEMA DE NOTIFICACIONES DISCRETAS ===
+            window.mostrarNotificacion = function(mensaje, tipo = 'info', duracion = 5000) {
+                // Remover notificación anterior si existe
+                const notifExistente = document.querySelector('.notificacion');
+                if (notifExistente) {
+                    notifExistente.remove();
+                }
+                
+                const notif = document.createElement('div');
+                notif.className = `notificacion ${tipo}`;
+                notif.textContent = mensaje;
+                
+                // Cerrar al hacer click
+                notif.addEventListener('click', () => {
+                    notif.style.animation = 'fadeOut 0.3s ease-in forwards';
+                    setTimeout(() => notif.remove(), 300);
+                });
+                
+                document.body.appendChild(notif);
+                
+                // Auto-eliminar después de duración
+                setTimeout(() => {
+                    if (notif.parentElement) {
+                        notif.style.animation = 'fadeOut 0.3s ease-in forwards';
+                        setTimeout(() => notif.remove(), 300);
+                    }
+                }, duracion);
+            };
 
             // === LONG POLLING PARA NOTIFICACIONES EN TIEMPO REAL ===
             async function iniciarLongPolling() {
@@ -368,47 +389,90 @@
                     try {
                         const url = `/api/longpolling/meseros/${currentHash ? `?hash_stock=${currentHash}` : ''}`;
                         const response = await fetch(url);
-                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
                         
                         const data = await response.json();
                         
                         if (data.cambios) {
                             currentHash = data.hash_stock;
                             
+                            // Procesar notificaciones específicas para meseros
                             if (data.notificaciones_mesero && data.notificaciones_mesero.length > 0) {
                                 data.notificaciones_mesero.forEach(notif => {
                                     if (notif.todos_listos) {
-                                        showToast(`🍽️ ¡Orden completa en Mesa ${notif.mesa} lista!`, 'success');
+                                        window.mostrarNotificacion(
+                                            `🍽️ ¡Orden completa en Mesa ${notif.mesa} lista para servir!`,
+                                            'success'
+                                        );
                                     } else {
-                                        showToast(`🍳 Productos listos en Mesa ${notif.mesa}: ${notif.productos_listos.join(', ')}`, 'info');
+                                        window.mostrarNotificacion(
+                                            `🍳 Productos listos en Mesa ${notif.mesa}: ${notif.productos_listos.join(', ')}`,
+                                            'info'
+                                        );
                                     }
                                 });
                             }
                             
-                            const activeTab = document.querySelector('.tab-button.active').dataset.tab;
-                            if (loadedTabs.has(activeTab) && window[`actualizar_${activeTab.replace(/-/g, '_')}`]) {
-                                window[`actualizar_${activeTab.replace(/-/g, '_')}`]();
+                            // Actualizar pestañas cargadas si es necesario
+                            const activeTabButton = document.querySelector('.tab-button.active');
+                            if (activeTabButton) {
+                                const activeTabName = activeTabButton.dataset.tab;
+                                const updateFunctionName = `actualizar_${activeTabName.replace('-', '_')}`;
+                                if (window[updateFunctionName]) {
+                                    window[updateFunctionName]();
+                                }
                             }
                         }
+                        
+                        // Pequeño delay antes del siguiente poll
                         await new Promise(resolve => setTimeout(resolve, 1000));
+                        
                     } catch (error) {
-                        console.error('Error en long polling:', error);
-                        await new Promise(resolve => setTimeout(resolve, 5000));
+                        console.error('❌ Error en long polling:', error);
+                        await new Promise(resolve => setTimeout(resolve, 5000)); // Esperar 5s antes de reintentar
                     }
                 }
             }
 
+            // === FUNCIONES GLOBALES ÚTILES ===
+            window.csrfToken = csrfToken;
+            
+            window.recargarPestana = function(tabName) {
+                console.log('🔄 Recargando pestaña:', tabName);
+                loadedTabs.delete(tabName);
+                
+                // Hacer click en la pestaña para recargarla
+                const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
+                if (tabButton) {
+                    tabButton.click();
+                }
+            };
+
             // === INICIALIZACIÓN ===
-            const firstTab = document.querySelector('.tab-button.active');
-            if (firstTab) {
-                firstTab.click();
-            }
             
-            iniciarLongPolling();
-            
+            // Cargar la primera pestaña automáticamente
             setTimeout(() => {
-                showToast('🎉 ¡Bienvenido! Sistema listo.', 'success', 5000);
+                const firstTab = document.querySelector('.tab-button.active');
+                if (firstTab) {
+                    console.log('🔄 Cargando pestaña inicial...');
+                    firstTab.click();
+                }
+            }, 500);
+            
+            // Iniciar long polling para notificaciones
+            setTimeout(() => {
+                iniciarLongPolling();
+            }, 2000);
+            
+            // Mensaje de bienvenida discreto
+            setTimeout(() => {
+                window.mostrarNotificacion('🎉 Sistema de meseros activo', 'success', 3000);
             }, 1000);
+            
+            console.log('✅ Dashboard mesero inicializado correctamente');
         });
     </script>
 </body>

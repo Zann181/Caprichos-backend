@@ -46,7 +46,17 @@ urlpatterns = [
     path('api/longpolling/meseros/', views.api_longpolling_meseros, name='api_longpolling_meseros'),
     
     # === API MESERO ===
+    path('api/mesero/ordenes/', views.api_get_ordenes_mesero, name='api_get_ordenes_mesero'),
+    path('api/mesero/todas-ordenes/', views.api_get_todas_ordenes_mesero, name='api_get_todas_ordenes_mesero'),
+    path('api/mesero/orden/<int:orden_id>/marcar-lista/', views.api_marcar_orden_lista_manual, name='api_marcar_orden_lista_manual'),
     path('api/mesero/orden/<int:orden_id>/entregar/', views.api_marcar_orden_entregada, name='api_marcar_orden_entregada'),
+    path('api/mesero/mesas-ocupadas/', views.api_get_mesas_ocupadas, name='api_get_mesas_ocupadas'),
+    # En la sección === API MESERO === agregar:
+    path('api/mesero/todas-ordenes/', views.api_get_todas_ordenes_mesero, name='api_get_todas_ordenes_mesero'),
+    path('api/mesero/orden/<int:orden_id>/marcar-lista/', views.api_marcar_orden_lista_manual, name='api_marcar_orden_lista_manual'),
+
+    # En la sección === API FACTURAS === agregar (crear esta sección si no existe):
+        path('api/factura/orden/<int:orden_id>/', views.api_get_factura_por_orden, name='api_get_factura_por_orden'),
 
     # === SISTEMA Y DEBUG ===
     path('api/sistema/estadisticas/', views.api_estadisticas_sistema, name='api_estadisticas_sistema'),

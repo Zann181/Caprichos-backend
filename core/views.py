@@ -778,3 +778,835 @@ def api_marcar_orden_entregada(request, orden_id):
     except Exception as e:
         print(f"❌ Error en api_marcar_orden_entregada: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
+
+
+# AGREGAR ESTAS FUNCIONES AL FINAL DEL ARCHIVO core/views.py
+
+# === FUNCIÓN UTILITARIA PARA TIEMPO ===
+def calcular_tiempo_transcurrido(fecha_creacion):
+    """Calcula el tiempo transcurrido desde la creación"""
+    from django.utils import timezone
+    ahora = timezone.now()
+    if timezone.is_naive(fecha_creacion):
+        fecha_creacion = timezone.make_aware(fecha_creacion)
+    
+    delta = ahora - fecha_creacion
+    minutos = int(delta.total_seconds() / 60)
+    
+    if minutos < 60:
+        return f"{minutos}min"
+    else:
+        horas = minutos // 60
+        mins = minutos % 60
+        return f"{horas}h {mins}m"
+
+# === API PARA MARCAR ORDEN COMO LISTA (MANUALMENTE) ===
+@require_POST
+@login_required
+@transaction.atomic
+def api_marcar_orden_lista_manual(request, orden_id):
+    """API para que el mesero marque manualmente una orden como lista"""
+    try:
+        orden = get_object_or_404(Orden, id=orden_id)
+        
+        # Verificar que sea el mesero de la orden
+        if orden.mesero != request.user and not request.user.is_superuser:
+            return JsonResponse({'error': 'Solo puedes marcar como lista tus propias órdenes'}, status=403)
+        
+        if orden.estado == 'LISTA':
+            return JsonResponse({'error': 'La orden ya está marcada como lista'}, status=400)
+        
+        if orden.estado == 'SERVIDA':
+            return JsonResponse({'error': 'No se puede modificar una orden ya servida'}, status=400)
+        
+        # Marcar todos los productos como listos
+        productos_actualizados = 0
+        for producto_orden in orden.productos_ordenados.filter(estado='PENDIENTE'):
+            producto_orden.estado = 'LISTO'
+            producto_orden.listo_en = timezone.now()
+            producto_orden.save()
+            productos_actualizados += 1
+        
+        # Marcar orden como lista
+        orden.estado = 'LISTA'
+        orden.listo_en = timezone.now()
+        orden.save()
+        
+        # Notificar cambios
+        notificar_cambio_cocina()
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Orden #{orden_id} marcada como lista exitosamente',
+            'productos_actualizados': productos_actualizados,
+            'orden_data': obtener_datos_completos_orden(orden)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# === API PARA OBTENER TODAS LAS ÓRDENES DEL MESERO (INCLUYENDO SERVIDAS) ===
+@login_required
+def api_get_todas_ordenes_mesero(request):
+    """API para obtener todas las órdenes del mesero (activas y servidas recientes)"""
+    try:
+        # Obtener filtro desde query params
+        filtro = request.GET.get('filtro', 'todas')
+        
+        # Base query para órdenes del mesero
+        ordenes_query = Orden.objects.filter(mesero=request.user)
+        
+        # Aplicar filtros
+        if filtro == 'activas':
+            ordenes_query = ordenes_query.filter(estado__in=['EN_PROCESO', 'LISTA'])
+        elif filtro == 'servidas':
+            ordenes_query = ordenes_query.filter(estado='SERVIDA')
+        elif filtro == 'listas':
+            ordenes_query = ordenes_query.filter(estado='LISTA')
+        elif filtro == 'en-preparacion':
+            ordenes_query = ordenes_query.filter(estado='EN_PROCESO')
+        # Para 'todas' no aplicamos filtro adicional, pero limitamos a recientes
+        
+        # Ordenar por fecha (más recientes primero) y limitar
+        if filtro == 'todas':
+            # Para "todas" limitamos a órdenes de los últimos 7 días
+            from datetime import timedelta
+            fecha_limite = timezone.now() - timedelta(days=7)
+            ordenes_query = ordenes_query.filter(creado_en__gte=fecha_limite)
+            
+        ordenes = ordenes_query.order_by('-creado_en')[:50]  # Limitar a 50 órdenes
+        
+        ordenes_data = []
+        for orden in ordenes:
+            orden_data = obtener_datos_completos_orden(orden)
+            
+            # Contar productos por estado
+            productos_listos = orden.productos_ordenados.filter(estado='LISTO').count()
+            productos_pendientes = orden.productos_ordenados.filter(estado='PENDIENTE').count()
+            productos_agregados = orden.productos_ordenados.filter(
+                observaciones__icontains='AGREGADO_DESPUES'
+            ).count()
+            
+            # Marcar productos agregados después en la lista de productos
+            productos_con_info = []
+            for po in orden.productos_ordenados.all():
+                agregado_despues = po.observaciones and 'AGREGADO_DESPUES' in po.observaciones
+                
+                # Limpiar observaciones para mostrar
+                obs_limpia = ''
+                if po.observaciones:
+                    if 'AGREGADO_DESPUES' in po.observaciones:
+                        parts = po.observaciones.split('|')
+                        obs_limpia = parts[1] if len(parts) > 1 else ''
+                    else:
+                        obs_limpia = po.observaciones
+                
+                productos_con_info.append({
+                    'id': po.id,
+                    'nombre': po.producto.nombre,
+                    'cantidad': po.cantidad,
+                    'precio_unitario': float(po.precio_unitario),
+                    'observaciones': obs_limpia,
+                    'estado': po.estado,
+                    'listo_en': po.listo_en.isoformat() if po.listo_en else None,
+                    'agregado_despues': agregado_despues
+                })
+            
+            # Reemplazar productos en orden_data
+            orden_data['productos'] = productos_con_info
+            
+            # Agregar información adicional para meseros
+            orden_data.update({
+                'tiene_productos_listos': productos_listos > 0,
+                'productos_listos_count': productos_listos,
+                'productos_pendientes_count': productos_pendientes,
+                'productos_agregados_count': productos_agregados,
+                'necesita_atencion': productos_listos > 0 and orden.estado != 'SERVIDA',
+                'puede_marcar_lista': productos_pendientes == 0 and orden.estado == 'EN_PROCESO',
+                'puede_entregar': orden.estado == 'LISTA',
+                'tiempo_transcurrido': calcular_tiempo_transcurrido(orden.creado_en),
+            })
+            
+            ordenes_data.append(orden_data)
+        
+        return JsonResponse(ordenes_data, safe=False)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# === API PARA OBTENER FACTURA POR ORDEN ===
+@login_required
+def api_get_factura_por_orden(request, orden_id):
+    """API para obtener la factura de una orden específica"""
+    try:
+        orden = get_object_or_404(Orden, id=orden_id)
+        
+        # Verificar que sea del mesero o admin
+        if orden.mesero != request.user and not request.user.is_superuser:
+            return JsonResponse({'error': 'No tienes permisos para ver esta factura'}, status=403)
+        
+        # Buscar factura asociada
+        try:
+            factura = Factura.objects.get(orden=orden)
+        except Factura.DoesNotExist:
+            return JsonResponse({'error': 'No se encontró factura para esta orden'}, status=404)
+        
+        # Obtener productos de la orden
+        productos_factura = []
+        for producto_orden in orden.productos_ordenados.all():
+            subtotal = producto_orden.cantidad * producto_orden.precio_unitario
+            
+            # Limpiar observaciones
+            obs_limpia = ''
+            if producto_orden.observaciones:
+                if 'AGREGADO_DESPUES' in producto_orden.observaciones:
+                    parts = producto_orden.observaciones.split('|')
+                    obs_limpia = parts[1] if len(parts) > 1 else ''
+                else:
+                    obs_limpia = producto_orden.observaciones
+            
+            productos_factura.append({
+                'nombre': producto_orden.producto.nombre,
+                'cantidad': producto_orden.cantidad,
+                'precio_unitario': float(producto_orden.precio_unitario),
+                'subtotal': float(subtotal),
+                'observaciones': obs_limpia
+            })
+        
+        factura_data = {
+            'id': factura.id,
+            'numero_factura': factura.numero_factura or f"FAC-{factura.id}",
+            'orden': {
+                'id': orden.id,
+                'numero_orden': orden.numero_orden,
+                'mesa': {
+                    'numero': orden.mesa.numero,
+                    'ubicacion': orden.mesa.ubicacion,
+                    'capacidad': orden.mesa.capacidad
+                },
+                'mesero': {
+                    'nombre': orden.mesero.nombre,
+                    'email': orden.mesero.email
+                },
+                'estado': orden.estado,
+                'observaciones': orden.observaciones,
+                'creado_en': orden.creado_en.isoformat(),
+            },
+            'productos': productos_factura,
+            'subtotal': float(factura.subtotal),
+            'impuesto': float(factura.impuesto),
+            'descuento': float(factura.descuento),
+            'total': float(factura.total),
+            'estado_pago': factura.estado_pago,
+            'metodo_pago': factura.metodo_pago,
+            'cliente_nombre': factura.cliente_nombre,
+            'cliente_identificacion': factura.cliente_identificacion,
+            'cliente_telefono': factura.cliente_telefono,
+            'observaciones': factura.observaciones,
+            'creado_en': factura.creado_en.isoformat(),
+            'pagado_en': factura.pagado_en.isoformat() if factura.pagado_en else None,
+        }
+        
+        return JsonResponse(factura_data)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+
+# AGREGAR ESTAS FUNCIONES AL FINAL DEL ARCHIVO core/views.py
+
+# === FUNCIÓN UTILITARIA PARA TIEMPO ===
+def calcular_tiempo_transcurrido(fecha_creacion):
+    """Calcula el tiempo transcurrido desde la creación"""
+    from django.utils import timezone
+    ahora = timezone.now()
+    if timezone.is_naive(fecha_creacion):
+        fecha_creacion = timezone.make_aware(fecha_creacion)
+    
+    delta = ahora - fecha_creacion
+    minutos = int(delta.total_seconds() / 60)
+    
+    if minutos < 60:
+        return f"{minutos}min"
+    else:
+        horas = minutos // 60
+        mins = minutos % 60
+        return f"{horas}h {mins}m"
+
+# === API PARA MARCAR ORDEN COMO LISTA (MANUALMENTE) ===
+@require_POST
+@login_required
+@transaction.atomic
+def api_marcar_orden_lista_manual(request, orden_id):
+    """API para que el mesero marque manualmente una orden como lista"""
+    try:
+        orden = get_object_or_404(Orden, id=orden_id)
+        
+        # Verificar que sea el mesero de la orden
+        if orden.mesero != request.user and not request.user.is_superuser:
+            return JsonResponse({'error': 'Solo puedes marcar como lista tus propias órdenes'}, status=403)
+        
+        if orden.estado == 'LISTA':
+            return JsonResponse({'error': 'La orden ya está marcada como lista'}, status=400)
+        
+        if orden.estado == 'SERVIDA':
+            return JsonResponse({'error': 'No se puede modificar una orden ya servida'}, status=400)
+        
+        # Marcar todos los productos como listos
+        productos_actualizados = 0
+        for producto_orden in orden.productos_ordenados.filter(estado='PENDIENTE'):
+            producto_orden.estado = 'LISTO'
+            producto_orden.listo_en = timezone.now()
+            producto_orden.save()
+            productos_actualizados += 1
+        
+        # Marcar orden como lista
+        orden.estado = 'LISTA'
+        orden.listo_en = timezone.now()
+        orden.save()
+        
+        # Notificar cambios
+        notificar_cambio_cocina()
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Orden #{orden_id} marcada como lista exitosamente',
+            'productos_actualizados': productos_actualizados,
+            'orden_data': obtener_datos_completos_orden(orden)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# === API PARA OBTENER TODAS LAS ÓRDENES DEL MESERO (INCLUYENDO SERVIDAS) ===
+# REEMPLAZAR/AGREGAR ESTAS FUNCIONES EN core/views.py
+
+# === API MEJORADA PARA OBTENER TODAS LAS ÓRDENES DEL MESERO ===
+@login_required
+def api_get_todas_ordenes_mesero(request):
+    """API mejorada para obtener todas las órdenes del mesero"""
+    try:
+        # Obtener filtro desde query params
+        filtro = request.GET.get('filtro', 'todas')
+        
+        # Base query para órdenes del mesero
+        ordenes_query = Orden.objects.filter(mesero=request.user)
+        
+        # Aplicar filtros mejorados
+        if filtro == 'activas':
+            ordenes_query = ordenes_query.filter(estado__in=['EN_PROCESO', 'LISTA'])
+        elif filtro == 'servidas':
+            ordenes_query = ordenes_query.filter(estado='SERVIDA').filter(
+                factura__estado_pago='PAGADA'
+            )
+        elif filtro == 'listas':
+            ordenes_query = ordenes_query.filter(estado='LISTA')
+        elif filtro == 'en-preparacion':
+            ordenes_query = ordenes_query.filter(estado='EN_PROCESO')
+        elif filtro == 'no-pagadas':
+            # NUEVO: Órdenes servidas pero con factura pendiente
+            ordenes_query = ordenes_query.filter(
+                estado='SERVIDA',
+                factura__estado_pago__in=['NO_PAGADA', 'PARCIAL']
+            )
+        # Para 'todas' limitamos a recientes
+        
+        # Ordenar por fecha y limitar
+        if filtro == 'todas':
+            from datetime import timedelta
+            fecha_limite = timezone.now() - timedelta(days=7)
+            ordenes_query = ordenes_query.filter(creado_en__gte=fecha_limite)
+            
+        ordenes = ordenes_query.order_by('-creado_en')[:50]
+        
+        ordenes_data = []
+        for orden in ordenes:
+            orden_data = obtener_datos_completos_orden(orden)
+            
+            # Contar productos por estado
+            productos_listos = orden.productos_ordenados.filter(estado='LISTO').count()
+            productos_pendientes = orden.productos_ordenados.filter(estado='PENDIENTE').count()
+            productos_agregados = orden.productos_ordenados.filter(
+                observaciones__icontains='AGREGADO_DESPUES'
+            ).count()
+            productos_post_factura = orden.productos_ordenados.filter(
+                observaciones__icontains='AGREGADO_POST_FACTURA'
+            ).count()
+            
+            # Marcar productos con información especial
+            productos_con_info = []
+            for po in orden.productos_ordenados.all():
+                agregado_despues = po.observaciones and 'AGREGADO_DESPUES' in po.observaciones
+                agregado_post_factura = po.observaciones and 'AGREGADO_POST_FACTURA' in po.observaciones
+                
+                # Limpiar observaciones para mostrar
+                obs_limpia = ''
+                if po.observaciones:
+                    if 'AGREGADO_POST_FACTURA' in po.observaciones:
+                        parts = po.observaciones.split('|')
+                        obs_limpia = parts[1] if len(parts) > 1 else ''
+                    elif 'AGREGADO_DESPUES' in po.observaciones:
+                        parts = po.observaciones.split('|')
+                        obs_limpia = parts[1] if len(parts) > 1 else ''
+                    else:
+                        obs_limpia = po.observaciones
+                
+                productos_con_info.append({
+                    'id': po.id,
+                    'nombre': po.producto.nombre,
+                    'cantidad': po.cantidad,
+                    'precio_unitario': float(po.precio_unitario),
+                    'observaciones': obs_limpia,
+                    'estado': po.estado,
+                    'listo_en': po.listo_en.isoformat() if po.listo_en else None,
+                    'agregado_despues': agregado_despues,
+                    'agregado_post_factura': agregado_post_factura
+                })
+            
+            # Reemplazar productos en orden_data
+            orden_data['productos'] = productos_con_info
+            
+            # Determinar estados especiales
+            tiene_factura_pendiente = False
+            factura_info = None
+            
+            try:
+                factura = orden.factura
+                if factura.estado_pago in ['NO_PAGADA', 'PARCIAL']:
+                    tiene_factura_pendiente = True
+                    factura_info = {
+                        'id': factura.id,
+                        'numero': factura.numero_factura or f"FAC-{factura.id}",
+                        'total': float(factura.total),
+                        'estado_pago': factura.estado_pago,
+                        'metodo_pago': factura.metodo_pago
+                    }
+            except:
+                pass
+            
+            # Determinar si es domicilio
+            es_domicilio = orden.mesa.numero == 0
+            
+            # Agregar información adicional para meseros
+            orden_data.update({
+                'tiene_productos_listos': productos_listos > 0,
+                'productos_listos_count': productos_listos,
+                'productos_pendientes_count': productos_pendientes,
+                'productos_agregados_count': productos_agregados,
+                'productos_post_factura_count': productos_post_factura,
+                'necesita_atencion': productos_listos > 0 and orden.estado != 'SERVIDA',
+                'puede_marcar_lista': productos_pendientes == 0 and orden.estado == 'EN_PROCESO',
+                'puede_entregar': orden.estado == 'LISTA',
+                'puede_modificar': orden.estado != 'SERVIDA' or tiene_factura_pendiente,
+                'tiene_factura_pendiente': tiene_factura_pendiente,
+                'factura_info': factura_info,
+                'es_domicilio': es_domicilio,
+                'tiempo_transcurrido': calcular_tiempo_transcurrido(orden.creado_en),
+            })
+            
+            ordenes_data.append(orden_data)
+        
+        return JsonResponse(ordenes_data, safe=False)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# === API PARA MARCAR ORDEN COMO LISTA DESDE MODIFICAR ===
+@require_POST
+@login_required
+@transaction.atomic
+def api_marcar_lista_desde_modificar(request, orden_id):
+    """API para marcar orden como lista desde la pantalla de modificar"""
+    try:
+        orden = get_object_or_404(Orden, id=orden_id)
+        
+        if orden.mesero != request.user and not request.user.is_superuser:
+            return JsonResponse({'error': 'Solo puedes confirmar tus propias órdenes'}, status=403)
+        
+        if orden.estado not in ['EN_PROCESO']:
+            return JsonResponse({'error': f'La orden debe estar en proceso. Estado actual: {orden.estado}'}, status=400)
+        
+        # Marcar todos los productos pendientes como listos
+        productos_actualizados = 0
+        for producto_orden in orden.productos_ordenados.filter(estado='PENDIENTE'):
+            producto_orden.estado = 'LISTO'
+            producto_orden.listo_en = timezone.now()
+            producto_orden.save()
+            productos_actualizados += 1
+        
+        # Marcar orden como lista
+        orden.estado = 'LISTA'
+        orden.listo_en = timezone.now()
+        orden.save()
+        
+        # Si ya tiene factura, crear nueva factura con productos agregados
+        tiene_factura_existente = hasattr(orden, 'factura')
+        nueva_factura_creada = False
+        
+        if not tiene_factura_existente:
+            # Calcular total y crear factura
+            total_orden = sum(item.cantidad * item.precio_unitario for item in orden.productos_ordenados.all())
+            
+            Factura.objects.create(
+                orden=orden,
+                subtotal=total_orden,
+                total=total_orden,
+                estado_pago='NO_PAGADA'
+            )
+            nueva_factura_creada = True
+        
+        # Notificar cambios
+        notificar_cambio_cocina()
+        
+        respuesta = {
+            'success': True,
+            'mensaje': f'Orden #{orden_id} confirmada como lista',
+            'productos_actualizados': productos_actualizados,
+            'nueva_factura_creada': nueva_factura_creada,
+            'orden_data': obtener_datos_completos_orden(orden)
+        }
+        
+        if nueva_factura_creada:
+            respuesta['mensaje'] += ' y factura generada'
+            
+        return JsonResponse(respuesta)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# === API MEJORADA PARA AGREGAR PRODUCTOS A ORDEN FACTURADA ===
+@require_POST
+@login_required
+@transaction.atomic
+def api_agregar_productos_orden_facturada(request, orden_id):
+    """API mejorada para agregar productos a orden con factura"""
+    try:
+        orden = get_object_or_404(Orden, id=orden_id)
+        
+        if orden.mesero != request.user and not request.user.is_superuser:
+            return JsonResponse({'error': 'Solo puedes modificar tus propias órdenes'}, status=403)
+        
+        # Verificar que tenga factura pendiente
+        try:
+            factura = orden.factura
+            if factura.estado_pago not in ['NO_PAGADA', 'PARCIAL']:
+                return JsonResponse({'error': 'La factura ya está pagada, no se puede modificar'}, status=400)
+        except:
+            return JsonResponse({'error': 'Esta orden no tiene factura'}, status=404)
+        
+        data = json.loads(request.body)
+        productos_nuevos = data.get('productos', [])
+        confirmar_automatico = data.get('confirmar_automatico', False)  # NUEVO
+        
+        if not productos_nuevos:
+            return JsonResponse({'error': 'No hay productos para agregar'}, status=400)
+        
+        # Validar stock
+        for item in productos_nuevos:
+            producto = Producto.objects.get(id=item['id'])
+            if producto.cantidad < item['cantidad']:
+                return JsonResponse({'error': f'Stock insuficiente para {producto.nombre}.'}, status=400)
+        
+        # Agregar productos nuevos
+        productos_agregados = []
+        total_agregado = 0
+        
+        for item in productos_nuevos:
+            producto = Producto.objects.get(id=item['id'])
+            
+            # Marcar como agregado post-factura
+            obs_producto = item.get('observaciones', '')
+            if obs_producto:
+                obs_final = f"AGREGADO_POST_FACTURA|{obs_producto}"
+            else:
+                obs_final = "AGREGADO_POST_FACTURA"
+            
+            # Estado inicial según confirmación automática
+            estado_inicial = 'LISTO' if confirmar_automatico else 'PENDIENTE'
+            listo_en = timezone.now() if confirmar_automatico else None
+            
+            nuevo_producto_orden = OrdenProducto.objects.create(
+                orden=orden,
+                producto=producto,
+                cantidad=item['cantidad'],
+                precio_unitario=producto.precio,
+                observaciones=obs_final,
+                estado=estado_inicial,
+                listo_en=listo_en
+            )
+            
+            productos_agregados.append(nuevo_producto_orden)
+            total_agregado += item['cantidad'] * producto.precio
+            
+            # Descontar stock
+            producto.cantidad -= item['cantidad']
+            producto.save()
+        
+        # Actualizar la factura existente
+        factura.subtotal += total_agregado
+        factura.total += total_agregado
+        factura.save()
+        
+        # Actualizar estado de la orden según confirmación
+        if confirmar_automatico:
+            # Si se confirma automático, mantener como LISTA si todos están listos
+            productos_pendientes = orden.productos_ordenados.filter(estado='PENDIENTE').count()
+            if productos_pendientes == 0:
+                orden.estado = 'LISTA'
+                orden.listo_en = timezone.now()
+            else:
+                orden.estado = 'EN_PROCESO'
+                orden.listo_en = None
+        else:
+            # Si no se confirma automático, volver a EN_PROCESO
+            orden.estado = 'EN_PROCESO'
+            orden.listo_en = None
+        
+        orden.save()
+        
+        # Notificar cambios
+        notificar_cambio_cocina()
+        notificar_cambio_stock()
+        
+        mensaje = f'Se agregaron {len(productos_nuevos)} productos a la orden facturada'
+        if confirmar_automatico:
+            mensaje += ' y se confirmaron automáticamente'
+        else:
+            mensaje += '. La orden fue enviada a cocina para confirmación'
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': mensaje,
+            'productos_agregados': len(productos_agregados),
+            'total_agregado': float(total_agregado),
+            'nueva_factura_total': float(factura.total),
+            'confirmado_automatico': confirmar_automatico,
+            'orden_data': obtener_datos_completos_orden(orden)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# === API PARA OBTENER MESAS OCUPADAS (INCLUYENDO DOMICILIO) ===
+@login_required
+def api_get_mesas_ocupadas(request):
+    """API mejorada para obtener mesas ocupadas incluyendo órdenes de domicilio"""
+    try:
+        # Obtener todas las mesas con órdenes activas (incluyendo mesa 0 para domicilio)
+        mesas_con_ordenes = Mesa.objects.filter(
+            is_active=True
+        ).filter(
+            models.Q(estado='OCUPADA') | 
+            models.Q(numero=0)  # Mesa 0 siempre disponible para domicilio
+        ).distinct()
+        
+        mesas_data = []
+        for mesa in mesas_con_ordenes:
+            # Obtener órdenes activas de la mesa
+            ordenes_activas = Orden.objects.filter(
+                mesa=mesa,
+                estado__in=['EN_PROCESO', 'LISTA', 'NUEVA']
+            )
+            
+            # Para domicilio, también incluir órdenes no pagadas
+            if mesa.numero == 0:
+                ordenes_no_pagadas = Orden.objects.filter(
+                    mesa=mesa,
+                    estado='SERVIDA',
+                    factura__estado_pago__in=['NO_PAGADA', 'PARCIAL']
+                )
+                ordenes_activas = ordenes_activas.union(ordenes_no_pagadas)
+            
+            if ordenes_activas.exists() or mesa.numero == 0:
+                orden_principal = ordenes_activas.first()
+                productos_count = 0
+                if orden_principal:
+                    productos_count = orden_principal.productos_ordenados.count()
+                
+                mesa_info = {
+                    'id': mesa.id,
+                    'numero': mesa.numero,
+                    'ubicacion': mesa.ubicacion if mesa.numero != 0 else 'Domicilio',
+                    'capacidad': mesa.capacidad,
+                    'productos_count': productos_count,
+                    'tiene_orden': orden_principal is not None,
+                    'orden_id': orden_principal.id if orden_principal else None,
+                    'es_domicilio': mesa.numero == 0,
+                    'ordenes_count': ordenes_activas.count()
+                }
+                
+                mesas_data.append(mesa_info)
+        
+        return JsonResponse(mesas_data, safe=False)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+        
+# === API PARA OBTENER FACTURA POR ORDEN ===
+@login_required
+def api_get_factura_por_orden(request, orden_id):
+    """API para obtener la factura de una orden específica"""
+    try:
+        orden = get_object_or_404(Orden, id=orden_id)
+        
+        # Verificar que sea del mesero o admin
+        if orden.mesero != request.user and not request.user.is_superuser:
+            return JsonResponse({'error': 'No tienes permisos para ver esta factura'}, status=403)
+        
+        # Buscar factura asociada
+        try:
+            factura = Factura.objects.get(orden=orden)
+        except Factura.DoesNotExist:
+            return JsonResponse({'error': 'No se encontró factura para esta orden'}, status=404)
+        
+        # Obtener productos de la orden
+        productos_factura = []
+        for producto_orden in orden.productos_ordenados.all():
+            subtotal = producto_orden.cantidad * producto_orden.precio_unitario
+            
+            # Limpiar observaciones
+            obs_limpia = ''
+            if producto_orden.observaciones:
+                if 'AGREGADO_DESPUES' in producto_orden.observaciones:
+                    parts = producto_orden.observaciones.split('|')
+                    obs_limpia = parts[1] if len(parts) > 1 else ''
+                else:
+                    obs_limpia = producto_orden.observaciones
+            
+            productos_factura.append({
+                'nombre': producto_orden.producto.nombre,
+                'cantidad': producto_orden.cantidad,
+                'precio_unitario': float(producto_orden.precio_unitario),
+                'subtotal': float(subtotal),
+                'observaciones': obs_limpia
+            })
+        
+        factura_data = {
+            'id': factura.id,
+            'numero_factura': factura.numero_factura or f"FAC-{factura.id}",
+            'orden': {
+                'id': orden.id,
+                'numero_orden': orden.numero_orden,
+                'mesa': {
+                    'numero': orden.mesa.numero,
+                    'ubicacion': orden.mesa.ubicacion,
+                    'capacidad': orden.mesa.capacidad
+                },
+                'mesero': {
+                    'nombre': orden.mesero.nombre,
+                    'email': orden.mesero.email
+                },
+                'estado': orden.estado,
+                'observaciones': orden.observaciones,
+                'creado_en': orden.creado_en.isoformat(),
+            },
+            'productos': productos_factura,
+            'subtotal': float(factura.subtotal),
+            'impuesto': float(factura.impuesto),
+            'descuento': float(factura.descuento),
+            'total': float(factura.total),
+            'estado_pago': factura.estado_pago,
+            'metodo_pago': factura.metodo_pago,
+            'cliente_nombre': factura.cliente_nombre,
+            'cliente_identificacion': factura.cliente_identificacion,
+            'cliente_telefono': factura.cliente_telefono,
+            'observaciones': factura.observaciones,
+            'creado_en': factura.creado_en.isoformat(),
+            'pagado_en': factura.pagado_en.isoformat() if factura.pagado_en else None,
+        }
+        
+        return JsonResponse(factura_data)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# === API PARA AGREGAR PRODUCTOS A ORDEN CON FACTURA EXISTENTE ===
+@require_POST
+@login_required
+@transaction.atomic
+def api_agregar_productos_orden_facturada(request, orden_id):
+    """API para agregar productos a una orden que ya tiene factura (cliente sigue en mesa)"""
+    try:
+        orden = get_object_or_404(Orden, id=orden_id)
+        
+        # Verificar que sea el mesero de la orden
+        if orden.mesero != request.user and not request.user.is_superuser:
+            return JsonResponse({'error': 'Solo puedes modificar tus propias órdenes'}, status=403)
+        
+        # Verificar que tenga factura pendiente
+        try:
+            factura = orden.factura
+            if factura.estado_pago not in ['NO_PAGADA', 'PARCIAL']:
+                return JsonResponse({'error': 'La factura ya está pagada, no se puede modificar'}, status=400)
+        except:
+            return JsonResponse({'error': 'Esta orden no tiene factura'}, status=404)
+        
+        data = json.loads(request.body)
+        productos_nuevos = data.get('productos', [])
+        
+        if not productos_nuevos:
+            return JsonResponse({'error': 'No hay productos para agregar'}, status=400)
+        
+        # Validar stock
+        for item in productos_nuevos:
+            producto = Producto.objects.get(id=item['id'])
+            if producto.cantidad < item['cantidad']:
+                return JsonResponse({'error': f'Stock insuficiente para {producto.nombre}.'}, status=400)
+        
+        # Agregar productos nuevos con marca especial
+        productos_agregados = []
+        total_agregado = 0
+        
+        for item in productos_nuevos:
+            producto = Producto.objects.get(id=item['id'])
+            
+            # Marcar como agregado después de facturar
+            obs_producto = item.get('observaciones', '')
+            if obs_producto:
+                obs_final = f"AGREGADO_POST_FACTURA|{obs_producto}"
+            else:
+                obs_final = "AGREGADO_POST_FACTURA"
+            
+            nuevo_producto_orden = OrdenProducto.objects.create(
+                orden=orden,
+                producto=producto,
+                cantidad=item['cantidad'],
+                precio_unitario=producto.precio,
+                observaciones=obs_final,
+                estado='PENDIENTE'
+            )
+            
+            productos_agregados.append(nuevo_producto_orden)
+            total_agregado += item['cantidad'] * producto.precio
+            
+            # Descontar stock
+            producto.cantidad -= item['cantidad']
+            producto.save()
+        
+        # Actualizar la factura existente
+        factura.subtotal += total_agregado
+        factura.total += total_agregado
+        factura.save()
+        
+        # Volver a poner la orden EN_PROCESO porque hay productos nuevos
+        orden.estado = 'EN_PROCESO'
+        orden.listo_en = None
+        orden.save()
+        
+        # Notificar cambios
+        notificar_cambio_cocina()
+        notificar_cambio_stock()
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Se agregaron {len(productos_nuevos)} productos a la orden facturada',
+            'productos_agregados': len(productos_agregados),
+            'total_agregado': float(total_agregado),
+            'nueva_factura_total': float(factura.total),
+            'orden_data': obtener_datos_completos_orden(orden)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
