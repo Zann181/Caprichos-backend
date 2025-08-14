@@ -1,6 +1,14 @@
+<!-- ARCHIVO COMPLETO: templates/mesero/modificar_orden.html -->
+
 <style>
     /* Estilos específicos para modificar orden */
-    .mesa-selector { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .mesa-selector { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+        gap: 1rem; 
+        margin-bottom: 2rem; 
+    }
+    
     .mesa-btn { 
         padding: 1.2rem; 
         border: 2px solid var(--gris-piedra); 
@@ -10,17 +18,34 @@
         text-align: center; 
         transition: all 0.3s; 
         position: relative;
+        min-height: 140px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
+    
     .mesa-btn:hover { 
         border-color: var(--naranja-tostado); 
         background-color: rgba(232, 119, 46, 0.1); 
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(232, 119, 46, 0.2);
     }
+    
     .mesa-btn.ocupada { 
         border-color: var(--amarillo-modificado); 
         background-color: rgba(255, 193, 7, 0.1); 
     }
+    
+    .mesa-btn.domicilio { 
+        border-color: #17a2b8; 
+        background-color: rgba(23, 162, 184, 0.1); 
+    }
+    
+    .mesa-btn.reserva { 
+        border-color: #6f42c1; 
+        background-color: rgba(111, 66, 193, 0.1); 
+    }
+    
     .mesa-btn.seleccionada { 
         border-color: var(--naranja-tostado); 
         background-color: var(--naranja-tostado); 
@@ -28,8 +53,32 @@
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(232, 119, 46, 0.4);
     }
-    .mesa-numero { font-size: 1.2em; font-weight: 700; margin-bottom: 0.5rem; }
-    .mesa-info { font-size: 0.8em; opacity: 0.8; }
+    
+    .mesa-numero { 
+        font-size: 1.1em; 
+        font-weight: 700; 
+        margin-bottom: 0.5rem; 
+    }
+    
+    .mesa-info { 
+        font-size: 0.75em; 
+        opacity: 0.8; 
+        margin-bottom: 0.25rem; 
+    }
+    
+    .cliente-info { 
+        font-size: 0.7em; 
+        font-weight: 600; 
+        color: var(--naranja-tostado); 
+        margin-top: 0.5rem; 
+        line-height: 1.2;
+    }
+    
+    .mesa-btn.seleccionada .cliente-info {
+        color: white;
+        opacity: 0.9;
+    }
+    
     .mesa-estado { 
         position: absolute; 
         top: 8px; 
@@ -37,13 +86,17 @@
         background: var(--amarillo-modificado); 
         color: white; 
         border-radius: 50%; 
-        width: 20px; 
-        height: 20px; 
+        width: 26px; 
+        height: 26px; 
         display: flex; 
         align-items: center; 
         justify-content: center; 
-        font-size: 10px; 
+        font-size: 12px; 
+        font-weight: bold;
     }
+    
+    .estado-domicilio { background: #17a2b8; }
+    .estado-reserva { background: #6f42c1; }
     
     .orden-existente { 
         background-color: rgba(23, 162, 184, 0.1); 
@@ -52,6 +105,7 @@
         padding: 1.5rem; 
         margin-bottom: 2rem; 
     }
+    
     .orden-existente h3 { 
         color: var(--azul-info); 
         margin-bottom: 1rem; 
@@ -59,7 +113,9 @@
         align-items: center;
         gap: 0.5rem;
     }
+    
     .productos-existentes { font-size: 0.9em; }
+    
     .producto-existente { 
         display: flex; 
         justify-content: space-between; 
@@ -67,8 +123,14 @@
         padding: 0.5rem 0; 
         border-bottom: 1px solid rgba(23, 162, 184, 0.2);
     }
+    
     .producto-existente:last-child { border-bottom: none; }
-    .producto-existente.listo { color: var(--verde-listo); font-weight: 600; }
+    
+    .producto-existente.listo { 
+        color: var(--verde-listo); 
+        font-weight: 600; 
+    }
+    
     .producto-existente.agregado-despues { 
         color: var(--amarillo-modificado); 
         font-weight: 600; 
@@ -76,19 +138,136 @@
         padding: 0.5rem;
         border-radius: 4px;
         margin: 0.25rem 0;
+        border-left: 4px solid var(--amarillo-modificado);
     }
     
-    .dashboard-grid-modificar { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-top: 1rem; }
-    .btn-agregar-disabled { opacity: 0.6; cursor: not-allowed; }
+    .dashboard-grid-modificar { 
+        display: grid; 
+        grid-template-columns: 2fr 1fr; 
+        gap: 2rem; 
+        margin-top: 1rem; 
+    }
+    
+    .btn-agregar-disabled { 
+        opacity: 0.6; 
+        cursor: not-allowed; 
+    }
+    
+    /* Estilos para categorías y productos */
+    .category-tabs { 
+        display: flex; 
+        flex-wrap: wrap; 
+        gap: 0.5rem; 
+        margin-bottom: 1.5rem; 
+        border-bottom: 2px solid var(--gris-piedra); 
+        padding-bottom: 1rem; 
+    }
+    
+    .category-btn { 
+        background-color: transparent; 
+        border: 1px solid var(--naranja-tostado); 
+        color: var(--naranja-tostado); 
+        padding: 0.5rem 1rem; 
+        border-radius: 20px; 
+        cursor: pointer; 
+        transition: all 0.2s; 
+        font-size: 14px;
+    }
+    
+    .category-btn:hover, .category-btn.active { 
+        background-color: var(--naranja-tostado); 
+        color: white; 
+    }
+    
+    .product-grid { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+        gap: 1.5rem; 
+    }
+    
+    .product-item { 
+        border: 1px solid var(--gris-piedra); 
+        border-radius: 8px; 
+        padding: 1rem; 
+        text-align: center; 
+        display: flex; 
+        flex-direction: column; 
+    }
+    
+    .product-item h4, .product-item p { margin: 0.25rem 0; }
+    
+    .quantity-selector { 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        margin: 1rem 0; 
+    }
+    
+    .quantity-btn { 
+        width: 40px; 
+        height: 40px; 
+        border: 1px solid var(--gris-piedra); 
+        background-color: #fff; 
+        font-size: 24px; 
+        font-weight: bold; 
+        cursor: pointer; 
+        border-radius: 50%; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        padding: 0; 
+        line-height: 1; 
+    }
+    
+    .quantity-value { 
+        width: 50px; 
+        font-size: 18px; 
+        font-weight: 600; 
+        text-align: center; 
+    }
+    
+    .observaciones-input { 
+        font-size: 12px; 
+        padding: 5px; 
+        margin-top: auto; 
+        border: 1px solid var(--gris-piedra); 
+        border-radius: 4px; 
+        width: 100%; 
+        box-sizing: border-box; 
+    }
+    
+    .order-item { 
+        display: grid; 
+        grid-template-columns: 1fr 120px; 
+        gap: 1rem; 
+        align-items: center; 
+        padding: 0.75rem 0; 
+        border-bottom: 1px solid #eee; 
+    }
+    
+    .order-item-info { font-weight: 600; }
+    .order-item-obs { 
+        font-size: 0.8em; 
+        color: #666; 
+        grid-column: 1 / 3; 
+    }
+    
+    .order-total { 
+        text-align: right; 
+        font-size: 1.2rem; 
+        font-family: var(--fuente-titulos); 
+        margin: 1rem 0; 
+    }
     
     @media (max-width: 900px) {
         .dashboard-grid-modificar { grid-template-columns: 1fr; }
-        .mesa-selector { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+        .mesa-selector { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+        .product-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
     }
 </style>
 
 <h2>🔧 Modificar Orden Existente</h2>
-<p>Selecciona una mesa ocupada para agregar productos a su orden actual:</p>
+<p>Selecciona una mesa, domicilio o reserva activa para agregar productos:</p>
 
 <!-- Selector de mesas ocupadas -->
 <div class="mesa-selector" id="mesas-ocupadas-container">
@@ -138,106 +317,143 @@
 </div>
 
 <script>
-// Función de inicialización para modificar orden
+// ✅ DEFINIR LA FUNCIÓN GLOBALMENTE PRIMERO
 window.inicializar_modificar_orden = function() {
+    console.log('🔧 Inicializando modificar orden...');
+    
     const ordenModificar = {}; // Para productos a agregar
     let ordenSeleccionadaId = null;
     let mesaSeleccionadaId = null;
 
     // === CARGAR MESAS OCUPADAS ===
-    async function cargarMesasOcupadas() {
+    function cargarMesasOcupadas() {
         const container = document.getElementById('mesas-ocupadas-container');
+        container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #666;">⏳ Cargando mesas ocupadas...</div>';
         
-        try {
-            container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #666;">⏳ Cargando mesas ocupadas...</div>';
-            
-            const response = await fetch('/api/mesero/mesas-ocupadas/');
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            
-            const mesas = await response.json();
-            
-            if (mesas.length === 0) {
+        fetch('/api/mesero/mesas-ocupadas/')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(mesas => {
+                console.log('🏠 Mesas cargadas:', mesas);
+                
+                if (mesas.length === 0) {
+                    container.innerHTML = `
+                        <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: #888;">
+                            <h3>😊 ¡No hay órdenes activas!</h3>
+                            <p>No hay mesas, domicilios o reservas para modificar en este momento.</p>
+                            <button class="btn" onclick="cargarMesasOcupadas()">🔄 Actualizar</button>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = '';
+                mesas.forEach(mesa => {
+                    const mesaBtn = document.createElement('div');
+                    let clases = 'mesa-btn ocupada';
+                    let iconoEstado = '🍽️';
+                    let clienteInfo = '';
+                    
+                    // ✅ DETERMINAR TIPO DE ORDEN
+                    if (mesa.es_domicilio) {
+                        clases += ' domicilio';
+                        iconoEstado = '🚚';
+                        if (mesa.cliente_nombre) {
+                            clienteInfo = `<div class="cliente-info">👤 ${mesa.cliente_nombre}</div>`;
+                            if (mesa.direccion && mesa.direccion.length > 0) {
+                                const direccionCorta = mesa.direccion.length > 30 ? 
+                                    mesa.direccion.substring(0, 30) + '...' : 
+                                    mesa.direccion;
+                                clienteInfo += `<div class="cliente-info">📍 ${direccionCorta}</div>`;
+                            }
+                            if (mesa.telefono) {
+                                clienteInfo += `<div class="cliente-info">📞 ${mesa.telefono}</div>`;
+                            }
+                        }
+                    } else if (mesa.es_reserva) {
+                        clases += ' reserva';
+                        iconoEstado = '📅';
+                        if (mesa.cliente_nombre) {
+                            clienteInfo = `<div class="cliente-info">👤 ${mesa.cliente_nombre}</div>`;
+                            if (mesa.telefono) {
+                                clienteInfo += `<div class="cliente-info">📞 ${mesa.telefono}</div>`;
+                            }
+                            if (mesa.fecha_reserva) {
+                                clienteInfo += `<div class="cliente-info">📅 ${mesa.fecha_reserva}</div>`;
+                            }
+                        }
+                    }
+                    
+                    mesaBtn.className = clases;
+                    mesaBtn.dataset.mesaId = mesa.mesa_real_id || mesa.id;
+                    mesaBtn.dataset.ordenId = mesa.orden_id;
+                    
+                    mesaBtn.innerHTML = `
+                        <div class="mesa-estado ${mesa.es_domicilio ? 'estado-domicilio' : (mesa.es_reserva ? 'estado-reserva' : '')}">${iconoEstado}</div>
+                        <div class="mesa-numero">${mesa.numero}</div>
+                        <div class="mesa-info">${mesa.ubicacion}</div>
+                        <div class="mesa-info">${mesa.productos_count} productos</div>
+                        ${clienteInfo}
+                    `;
+                    
+                    mesaBtn.addEventListener('click', () => seleccionarMesaParaModificar(mesa.orden_id, mesa.mesa_real_id || mesa.id));
+                    container.appendChild(mesaBtn);
+                });
+            })
+            .catch(error => {
+                console.error('❌ Error cargando mesas ocupadas:', error);
                 container.innerHTML = `
-                    <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: #888;">
-                        <h3>😊 ¡Todas las mesas están libres!</h3>
-                        <p>No hay órdenes activas para modificar en este momento.</p>
-                        <button class="btn" onclick="window.recargarPestana('modificar-orden')">🔄 Actualizar</button>
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 2rem;">
+                        <div class="error-message">
+                            <strong>❌ Error al cargar mesas</strong><br>
+                            ${error.message}<br>
+                            <button class="btn" onclick="cargarMesasOcupadas()">🔄 Reintentar</button>
+                        </div>
                     </div>
                 `;
-                return;
-            }
-            
-            container.innerHTML = '';
-            mesas.forEach(mesa => {
-                const mesaBtn = document.createElement('div');
-                mesaBtn.className = 'mesa-btn ocupada';
-                mesaBtn.dataset.mesaId = mesa.id;
-                
-                mesaBtn.innerHTML = `
-                    <div class="mesa-estado">🍽️</div>
-                    <div class="mesa-numero">Mesa ${mesa.numero}</div>
-                    <div class="mesa-info">${mesa.ubicacion}</div>
-                    <div class="mesa-info" style="margin-top: 0.5rem; font-weight: 600; color: var(--amarillo-modificado);">
-                        ${mesa.productos_count} productos
-                    </div>
-                `;
-                
-                mesaBtn.addEventListener('click', () => seleccionarMesaParaModificar(mesa.id));
-                container.appendChild(mesaBtn);
             });
-            
-        } catch (error) {
-            console.error('Error cargando mesas ocupadas:', error);
-            container.innerHTML = `
-                <div style="grid-column: 1 / -1; text-align: center; padding: 2rem;">
-                    <div class="error-message">
-                        <strong>❌ Error al cargar mesas</strong><br>
-                        ${error.message}<br>
-                        <button class="btn" onclick="window.inicializar_modificar_orden()">🔄 Reintentar</button>
-                    </div>
-                </div>
-            `;
-        }
     }
 
     // === SELECCIONAR MESA PARA MODIFICAR ===
-    async function seleccionarMesaParaModificar(mesaId) {
-        try {
-            // Actualizar UI de selección
-            document.querySelectorAll('.mesa-btn').forEach(btn => btn.classList.remove('seleccionada'));
-            document.querySelector(`[data-mesa-id="${mesaId}"]`).classList.add('seleccionada');
-            mesaSeleccionadaId = mesaId;
-            
-            // Mostrar loading
-            const infoContainer = document.getElementById('orden-actual-info');
-            infoContainer.style.display = 'block';
-            infoContainer.innerHTML = '<div style="text-align: center; padding: 1rem;">⏳ Cargando información de la orden...</div>';
-            
-            // Obtener orden actual de la mesa
-            const response = await fetch(`/api/mesa/${mesaId}/orden/`);
-            const ordenData = await response.json();
-            
-            if (response.ok) {
-                ordenSeleccionadaId = ordenData.orden_id;
+    function seleccionarMesaParaModificar(ordenId, mesaId) {
+        console.log('🎯 Seleccionando orden:', ordenId, 'mesa:', mesaId);
+        
+        // Actualizar UI de selección
+        document.querySelectorAll('.mesa-btn').forEach(btn => btn.classList.remove('seleccionada'));
+        document.querySelector(`[data-orden-id="${ordenId}"]`).classList.add('seleccionada');
+        mesaSeleccionadaId = mesaId;
+        ordenSeleccionadaId = ordenId;
+        
+        // Mostrar loading
+        const infoContainer = document.getElementById('orden-actual-info');
+        infoContainer.style.display = 'block';
+        infoContainer.innerHTML = '<div style="text-align: center; padding: 1rem;">⏳ Cargando información de la orden...</div>';
+        
+        // Obtener orden actual de la mesa
+        fetch(`/api/mesa/${mesaId}/orden/`)
+            .then(response => response.json())
+            .then(ordenData => {
+                if (ordenData.error) {
+                    throw new Error(ordenData.error);
+                }
+                console.log('📋 Orden cargada:', ordenData);
                 mostrarOrdenActual(ordenData);
                 prepararMenuModificacion();
                 document.getElementById('agregar-productos-container').style.display = 'block';
-            } else {
-                throw new Error(ordenData.error || 'Error desconocido');
-            }
-            
-        } catch (error) {
-            console.error('Error obteniendo orden:', error);
-            document.getElementById('orden-actual-info').innerHTML = `
-                <div class="error-message">
-                    <strong>❌ Error al cargar la orden</strong><br>
-                    ${error.message}
-                </div>
-            `;
-        }
+            })
+            .catch(error => {
+                console.error('❌ Error obteniendo orden:', error);
+                infoContainer.innerHTML = `
+                    <div class="error-message">
+                        <strong>❌ Error al cargar la orden</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            });
     }
 
     // === MOSTRAR ORDEN ACTUAL ===
@@ -250,6 +466,54 @@ window.inicializar_modificar_orden = function() {
         let productosOriginales = 0;
         let productosAgregados = 0;
         
+        // ✅ DETERMINAR TIPO DE ORDEN Y EXTRAER INFO CLIENTE
+        const esDomicilio = ordenData.mesa.numero === 0;
+        const esReserva = ordenData.mesa.numero === 50;
+        let tipoOrden = 'Mesa';
+        let iconoTipo = '🍽️';
+        let infoCliente = '';
+        
+        if (esDomicilio) {
+            tipoOrden = 'Domicilio';
+            iconoTipo = '🚚';
+            // Extraer info del cliente de observaciones
+            if (ordenData.observaciones) {
+                const clienteMatch = ordenData.observaciones.match(/Cliente:\s*([^,]+)/i);
+                const direccionMatch = ordenData.observaciones.match(/Dir(?:ección)?:\s*([^,\n]+)/i);
+                const telefonoMatch = ordenData.observaciones.match(/Tel(?:éfono)?:\s*([^,]+)/i);
+                
+                if (clienteMatch) {
+                    infoCliente = `<div style="background: rgba(23, 162, 184, 0.1); padding: 0.8rem; border-radius: 4px; margin-top: 0.5rem; border-left: 4px solid #17a2b8;">
+                        <strong>🚚 Información del Domicilio</strong><br>
+                        <strong>👤 Cliente:</strong> ${clienteMatch[1].trim()}<br>
+                        ${direccionMatch ? `<strong>📍 Dirección:</strong> ${direccionMatch[1].trim()}<br>` : ''}
+                        ${telefonoMatch ? `<strong>📞 Teléfono:</strong> ${telefonoMatch[1].trim()}` : ''}
+                    </div>`;
+                }
+            }
+        } else if (esReserva) {
+            tipoOrden = 'Reserva';
+            iconoTipo = '📅';
+            // Extraer info del cliente de observaciones
+            if (ordenData.observaciones) {
+                const clienteMatch = ordenData.observaciones.match(/(?:Reserva|Cliente):\s*([^,]+)/i);
+                const personasMatch = ordenData.observaciones.match(/Personas?:\s*(\d+)/i);
+                const fechaMatch = ordenData.observaciones.match(/Fecha:\s*([^,\n]+)/i);
+                const telefonoMatch = ordenData.observaciones.match(/Tel(?:éfono)?:\s*([^,]+)/i);
+                
+                if (clienteMatch) {
+                    infoCliente = `<div style="background: rgba(111, 66, 193, 0.1); padding: 0.8rem; border-radius: 4px; margin-top: 0.5rem; border-left: 4px solid #6f42c1;">
+                        <strong>📅 Información de la Reserva</strong><br>
+                        <strong>👤 Cliente:</strong> ${clienteMatch[1].trim()}<br>
+                        ${personasMatch ? `<strong>👥 Personas:</strong> ${personasMatch[1]}<br>` : ''}
+                        ${fechaMatch ? `<strong>📅 Fecha:</strong> ${fechaMatch[1].trim()}<br>` : ''}
+                        ${telefonoMatch ? `<strong>📞 Teléfono:</strong> ${telefonoMatch[1].trim()}` : ''}
+                    </div>`;
+                }
+            }
+        }
+        
+        // Procesar productos
         ordenData.productos.forEach(p => {
             const subtotal = p.cantidad * p.precio_unitario;
             totalOriginal += subtotal;
@@ -300,11 +564,13 @@ window.inicializar_modificar_orden = function() {
         container.innerHTML = `
             <div class="orden-existente">
                 <h3>
-                    📋 Orden Actual - Mesa ${ordenData.mesa.numero}
+                    ${iconoTipo} Orden Actual - ${tipoOrden} ${esDomicilio || esReserva ? '' : `#${ordenData.mesa.numero}`}
                     <span style="margin-left: auto; font-size: 0.8em; color: #666;">${estadoGeneral}</span>
                 </h3>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; font-size: 0.9em;">
+                ${infoCliente}
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; margin-top: 1rem; font-size: 0.9em;">
                     <div><strong>Productos originales:</strong> ${productosOriginales}</div>
                     <div><strong>Agregados después:</strong> ${productosAgregados}</div>
                     <div><strong>Total productos:</strong> ${ordenData.productos.length}</div>
@@ -319,9 +585,9 @@ window.inicializar_modificar_orden = function() {
                     <div style="font-size: 0.9em; color: #666;">Estado: ${ordenData.estado}</div>
                 </div>
                 
-                ${ordenData.observaciones ? `
+                ${ordenData.observaciones && !esDomicilio && !esReserva ? `
                     <div style="background: rgba(255, 193, 7, 0.1); padding: 0.8rem; border-radius: 4px; margin-top: 1rem; border-left: 4px solid var(--amarillo-modificado);">
-                        <strong>📝 Observaciones de la orden:</strong><br>
+                        <strong>📝 Observaciones adicionales:</strong><br>
                         <em>${ordenData.observaciones}</em>
                     </div>
                 ` : ''}
@@ -345,11 +611,11 @@ window.inicializar_modificar_orden = function() {
             menuModificar.querySelectorAll('.quantity-value').forEach(el => el.textContent = '0');
             menuModificar.querySelectorAll('.observaciones-input').forEach(el => el.value = '');
         } else {
-            // Si no hay menú original, crear productos básicos
+            // Si no hay menú original, crear mensaje de ayuda
             menuModificar.innerHTML = `
-                <p style="color: #666; text-align: center; grid-column: 1 / -1;">
+                <p style="color: #666; text-align: center; grid-column: 1 / -1; padding: 2rem;">
                     ⚠️ No se pudo cargar el menú de productos.<br>
-                    <button class="btn" onclick="window.recargarPestana('nuevo-pedido')">Cargar desde Nuevo Pedido</button>
+                    <button class="btn" onclick="window.recargarPestana('nuevo-pedido')" style="margin-top: 1rem;">🔄 Cargar desde Nuevo Pedido</button>
                 </p>
             `;
             return;
@@ -514,8 +780,8 @@ window.inicializar_modificar_orden = function() {
                 actualizarResumenModificacion();
                 
                 // Recargar la información de la orden
-                if (mesaSeleccionadaId) {
-                    await seleccionarMesaParaModificar(mesaSeleccionadaId);
+                if (ordenSeleccionadaId && mesaSeleccionadaId) {
+                    seleccionarMesaParaModificar(ordenSeleccionadaId, mesaSeleccionadaId);
                 }
                 
                 // Sugerir ir a vista de cocina
@@ -529,7 +795,7 @@ window.inicializar_modificar_orden = function() {
                 window.mostrarNotificacion(`❌ Error: ${result.error}`, 'error');
             }
         } catch (error) {
-            console.error('Error agregando productos:', error);
+            console.error('❌ Error agregando productos:', error);
             window.mostrarNotificacion('🔌 Error de conexión al agregar productos', 'error');
         } finally {
             // Rehabilitar botón
@@ -538,18 +804,35 @@ window.inicializar_modificar_orden = function() {
         }
     });
 
+    // === HACER FUNCIONES DISPONIBLES GLOBALMENTE ===
+    window.cargarMesasOcupadas = cargarMesasOcupadas;
+
     // === INICIALIZACIÓN ===
     cargarMesasOcupadas();
     
-    console.log('✅ Modificar orden inicializado');
+    console.log('✅ Modificar orden inicializado correctamente');
+    
+    // Retornar función de cleanup
+    return function cleanup() {
+        console.log('🧹 Limpiando modificar orden');
+        // Limpiar event listeners si es necesario
+        const container = document.getElementById('agregar-productos-container');
+        if (container) {
+            container.style.display = 'none';
+        }
+    };
 };
 
 // Función de actualización (llamada por long polling)
 window.actualizar_modificar_orden = function() {
     // Recargar mesas ocupadas si hay cambios
-    if (typeof cargarMesasOcupadas === 'function') {
-        cargarMesasOcupadas();
+    if (typeof window.cargarMesasOcupadas === 'function') {
+        console.log('🔄 Actualizando mesas ocupadas...');
+        window.cargarMesasOcupadas();
     }
-    console.log('🔄 Actualizando modificar orden...');
+    console.log('🔄 Actualizando modificar orden por long polling');
 };
+
+// Hacer la función de inicialización disponible globalmente antes de que se llame
+console.log('✅ Función inicializar_modificar_orden definida globalmente');
 </script>

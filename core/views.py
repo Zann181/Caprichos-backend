@@ -24,7 +24,7 @@ from .utils import (
 )
 
 
-
+from django.db.models import Q  # ✅ AGREGAR ESTA IMPORTACIÓN
 # === VISTAS DE AUTENTICACIÓN ===
 
 class UserLoginView(LoginView):
@@ -91,18 +91,22 @@ def acceso_denegado_view(request):
 
 # === VISTAS DE PESTAÑAS DE MESERO ===
 
+# ...existing code...
 @group_required(allowed_groups=['Meseros', 'Administradores'])
 def mesero_nuevo_pedido(request):
     """Renderiza la pestaña de nuevo pedido para meseros."""
     categorias = CategoriaProducto.objects.filter(is_active=True).prefetch_related('productos')
-    mesas = Mesa.objects.filter(is_active=True, estado='LIBRE')
+    # Mesas libres + 0 y 50 siempre disponibles
+    mesas_libres = Mesa.objects.filter(is_active=True, estado='LIBRE').exclude(numero__in=[0, 50])
+    mesas_domicilio = Mesa.objects.filter(is_active=True, numero__in=[0, 50])
+    mesas = list(mesas_libres) + list(mesas_domicilio)
     context = {
         'user': request.user,
         'categorias': categorias,
         'mesas': mesas
     }
     return render(request, 'mesero/nuevo_pedido.html', context)
-
+# ...existing code...
 @group_required(allowed_groups=['Meseros', 'Administradores'])
 def mesero_modificar_orden(request):
     """Renderiza la pestaña de modificar orden para meseros."""
@@ -427,13 +431,31 @@ def api_get_ordenes_mesero(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 @login_required
+# REEMPLAZAR LA FUNCIÓN api_get_mesas_ocupadas EN core/views.py
+
+@login_required
 def api_get_mesas_ocupadas(request):
-    """API para obtener mesas ocupadas con información básica"""
+    """API mejorada para obtener mesas ocupadas incluyendo órdenes de domicilio"""
     try:
-        mesas_ocupadas = Mesa.objects.filter(is_active=True, estado='OCUPADA')
+        # ✅ CORRECCIÓN: Cambiar __ne por exclude() y usar __in
+        # Obtener mesas físicas ocupadas (excluyendo mesas de domicilio 0 y 50)
+        mesas_fisicas_ocupadas = Mesa.objects.filter(
+            is_active=True,
+            estado='OCUPADA'
+        ).exclude(
+            numero__in=[0, 50]  # ✅ Usar exclude() con __in en lugar de __ne
+        )
+        
+        # Obtener mesas de domicilio (0 y 50) - siempre disponibles
+        mesas_domicilio = Mesa.objects.filter(
+            is_active=True,
+            numero__in=[0, 50]
+        )
         
         mesas_data = []
-        for mesa in mesas_ocupadas:
+        
+        # === PROCESAR MESAS FÍSICAS OCUPADAS ===
+        for mesa in mesas_fisicas_ocupadas:
             # Obtener la orden activa de la mesa
             orden = Orden.objects.filter(
                 mesa=mesa,
@@ -451,14 +473,177 @@ def api_get_mesas_ocupadas(request):
                 'capacidad': mesa.capacidad,
                 'productos_count': productos_count,
                 'tiene_orden': orden is not None,
-                'orden_id': orden.id if orden else None
+                'orden_id': orden.id if orden else None,
+                'es_domicilio': False,
+                'ordenes_count': 1 if orden else 0
             })
+        
+        # === PROCESAR MESAS DE DOMICILIO (0 y 50) ===
+        for mesa_domicilio in mesas_domicilio:
+            # Obtener TODAS las órdenes activas y no pagadas de domicilio
+            ordenes_activas = Orden.objects.filter(
+                mesa=mesa_domicilio,
+                estado__in=['EN_PROCESO', 'LISTA', 'NUEVA']
+            )
+            
+            # También incluir órdenes servidas pero no pagadas (factura pendiente)
+            try:
+                # ✅ MANEJO SEGURO: Verificar si existe la relación factura
+                ordenes_no_pagadas = Orden.objects.filter(
+                    mesa=mesa_domicilio,
+                    estado='SERVIDA'
+                ).filter(
+                    factura__estado_pago__in=['NO_PAGADA', 'PARCIAL']
+                )
+            except Exception as e:
+                print(f"⚠️ Error obteniendo órdenes no pagadas: {e}")
+                ordenes_no_pagadas = Orden.objects.none()  # QuerySet vacío
+            
+            # Combinar ambos tipos de órdenes usando union
+            try:
+                todas_las_ordenes = ordenes_activas.union(ordenes_no_pagadas)
+            except Exception as e:
+                print(f"⚠️ Error en union, usando solo órdenes activas: {e}")
+                todas_las_ordenes = ordenes_activas
+            
+            # Si hay órdenes, crear una entrada por cada orden O una entrada general
+            if todas_las_ordenes.exists():
+                # OPCIÓN 1: Mostrar como una sola mesa con múltiples órdenes
+                orden_principal = todas_las_ordenes.first()
+                total_productos = sum(orden.productos_ordenados.count() for orden in todas_las_ordenes)
+                
+                mesas_data.append({
+                    'id': mesa_domicilio.id,
+                    'numero': mesa_domicilio.numero,
+                    'ubicacion': 'Domicilio',
+                    'capacidad': 999,  # Capacidad ilimitada para domicilio
+                    'productos_count': total_productos,
+                    'tiene_orden': True,
+                    'orden_id': orden_principal.id,
+                    'es_domicilio': True,
+                    'ordenes_count': todas_las_ordenes.count(),
+                    'ordenes_multiples': True  # ✅ Nuevo campo para indicar múltiples órdenes
+                })
+            else:
+                # Si no hay órdenes, aún mostrar la mesa de domicilio como disponible
+                mesas_data.append({
+                    'id': mesa_domicilio.id,
+                    'numero': mesa_domicilio.numero,
+                    'ubicacion': 'Domicilio',
+                    'capacidad': 999,
+                    'productos_count': 0,
+                    'tiene_orden': False,
+                    'orden_id': None,
+                    'es_domicilio': True,
+                    'ordenes_count': 0,
+                    'ordenes_multiples': False
+                })
         
         return JsonResponse(mesas_data, safe=False)
         
     except Exception as e:
+        print(f"❌ Error en api_get_mesas_ocupadas: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
+
+# TAMBIÉN CORREGIR LA FUNCIÓN ALTERNATIVA api_get_mesas_ocupadas_detallado
+
+@login_required
+def api_get_mesas_ocupadas_detallado(request):
+    """Versión alternativa que muestra cada orden de domicilio por separado"""
+    try:
+        mesas_data = []
+        
+        # === MESAS FÍSICAS OCUPADAS ===
+        # ✅ CORRECCIÓN: Usar exclude() en lugar de __ne
+        mesas_fisicas_ocupadas = Mesa.objects.filter(
+            is_active=True,
+            estado='OCUPADA'
+        ).exclude(
+            numero__in=[0, 50]  # ✅ Cambio principal aquí
+        )
+        
+        for mesa in mesas_fisicas_ocupadas:
+            orden = Orden.objects.filter(
+                mesa=mesa,
+                estado__in=['EN_PROCESO', 'LISTA', 'NUEVA']
+            ).first()
+            
+            if orden:
+                mesas_data.append({
+                    'id': mesa.id,
+                    'numero': mesa.numero,
+                    'ubicacion': mesa.ubicacion,
+                    'capacidad': mesa.capacidad,
+                    'productos_count': orden.productos_ordenados.count(),
+                    'tiene_orden': True,
+                    'orden_id': orden.id,
+                    'es_domicilio': False,
+                    'ordenes_count': 1
+                })
+        
+        # === MESAS DE DOMICILIO - CADA ORDEN POR SEPARADO ===
+        mesas_domicilio = Mesa.objects.filter(
+            is_active=True,
+            numero__in=[0, 50]
+        )
+        
+        for mesa_domicilio in mesas_domicilio:
+            # Obtener todas las órdenes de domicilio
+            ordenes_activas = Orden.objects.filter(
+                mesa=mesa_domicilio,
+                estado__in=['EN_PROCESO', 'LISTA', 'NUEVA']
+            )
+            
+            try:
+                ordenes_no_pagadas = Orden.objects.filter(
+                    mesa=mesa_domicilio,
+                    estado='SERVIDA'
+                ).filter(
+                    factura__estado_pago__in=['NO_PAGADA', 'PARCIAL']
+                )
+            except Exception:
+                ordenes_no_pagadas = Orden.objects.none()
+            
+            try:
+                todas_las_ordenes = ordenes_activas.union(ordenes_no_pagadas)
+            except Exception:
+                todas_las_ordenes = ordenes_activas
+            
+            # Crear una entrada por cada orden
+            for i, orden in enumerate(todas_las_ordenes):
+                mesas_data.append({
+                    'id': f"{mesa_domicilio.id}-{orden.id}",  # ID único combinado
+                    'numero': f"{mesa_domicilio.numero}.{i+1}",  # Ej: "0.1", "0.2", "50.1"
+                    'ubicacion': f'Domicilio #{i+1}',
+                    'capacidad': 999,
+                    'productos_count': orden.productos_ordenados.count(),
+                    'tiene_orden': True,
+                    'orden_id': orden.id,
+                    'es_domicilio': True,
+                    'ordenes_count': 1,
+                    'mesa_real_id': mesa_domicilio.id  # ✅ ID real de la mesa para referencias
+                })
+            
+            # Si no hay órdenes, mostrar mesa domicilio disponible
+            if not todas_las_ordenes.exists():
+                mesas_data.append({
+                    'id': mesa_domicilio.id,
+                    'numero': mesa_domicilio.numero,
+                    'ubicacion': 'Domicilio (Disponible)',
+                    'capacidad': 999,
+                    'productos_count': 0,
+                    'tiene_orden': False,
+                    'orden_id': None,
+                    'es_domicilio': True,
+                    'ordenes_count': 0
+                })
+        
+        return JsonResponse(mesas_data, safe=False)
+        
+    except Exception as e:
+        print(f"❌ Error en api_get_mesas_ocupadas_detallado: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
 # === API COCINA ===
 
 @login_required
@@ -846,9 +1031,89 @@ def api_marcar_orden_lista_manual(request, orden_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 # === API PARA OBTENER TODAS LAS ÓRDENES DEL MESERO (INCLUYENDO SERVIDAS) ===
+
+# 2. AGREGAR FUNCIONES UTILITARIAS PARA EXTRAER INFORMACIÓN DE CLIENTE
+
+
+def extraer_info_cliente_domicilio(observaciones):
+    """Extrae información del cliente de domicilio de las observaciones"""
+    if not observaciones:
+        return {'nombre': 'Cliente Domicilio', 'direccion': '', 'telefono': ''}
+    
+    try:
+        # Buscar patrones en las observaciones
+        # Formato esperado: "Cliente: Juan Pérez, Tel: 123456789, Dir: Calle 123"
+        import re
+        
+        nombre_match = re.search(r'Cliente:\s*([^,]+)', observaciones, re.IGNORECASE)
+        telefono_match = re.search(r'Tel(?:éfono)?:\s*([^,]+)', observaciones, re.IGNORECASE)
+        direccion_match = re.search(r'Dir(?:ección)?:\s*([^,\n]+)', observaciones, re.IGNORECASE)
+        
+        return {
+            'nombre': nombre_match.group(1).strip() if nombre_match else 'Cliente Domicilio',
+            'telefono': telefono_match.group(1).strip() if telefono_match else '',
+            'direccion': direccion_match.group(1).strip() if direccion_match else observaciones[:50] + '...' if len(observaciones) > 50 else observaciones
+        }
+    except Exception:
+        return {'nombre': 'Cliente Domicilio', 'direccion': observaciones[:50], 'telefono': ''}
+
+def extraer_info_cliente_reserva(observaciones):
+    """Extrae información del cliente de reserva de las observaciones"""
+    if not observaciones:
+        return {'nombre': 'Cliente Reserva', 'personas': 2, 'telefono': '', 'fecha_reserva': '', 'observaciones': ''}
+    
+    try:
+        import re
+        
+        # Buscar patrones en las observaciones de reserva
+        # Formato esperado: "Reserva: María García, Tel: 987654321, Personas: 4, Fecha: 2025-08-15 19:00"
+        nombre_match = re.search(r'(?:Reserva|Cliente):\s*([^,]+)', observaciones, re.IGNORECASE)
+        telefono_match = re.search(r'Tel(?:éfono)?:\s*([^,]+)', observaciones, re.IGNORECASE)
+        personas_match = re.search(r'Personas?:\s*(\d+)', observaciones, re.IGNORECASE)
+        fecha_match = re.search(r'Fecha:\s*([^,\n]+)', observaciones, re.IGNORECASE)
+        
+        return {
+            'nombre': nombre_match.group(1).strip() if nombre_match else 'Cliente Reserva',
+            'telefono': telefono_match.group(1).strip() if telefono_match else '',
+            'personas': int(personas_match.group(1)) if personas_match else 2,
+            'fecha_reserva': fecha_match.group(1).strip() if fecha_match else '',
+            'observaciones': observaciones
+        }
+    except Exception:
+        return {'nombre': 'Cliente Reserva', 'personas': 2, 'telefono': '', 'fecha_reserva': '', 'observaciones': observaciones}
+
+
+
+def extraer_info_cliente_reserva(observaciones):
+    """Extrae información del cliente de reserva de las observaciones"""
+    if not observaciones:
+        return {'nombre': 'Cliente Reserva', 'personas': 2, 'telefono': '', 'fecha_reserva': '', 'observaciones': ''}
+    
+    try:
+        import re
+        
+        # Buscar patrones en las observaciones de reserva
+        # Formato esperado: "Reserva: María García, Tel: 987654321, Personas: 4, Fecha: 2025-08-15 19:00"
+        nombre_match = re.search(r'(?:Reserva|Cliente):\s*([^,]+)', observaciones, re.IGNORECASE)
+        telefono_match = re.search(r'Tel(?:éfono)?:\s*([^,]+)', observaciones, re.IGNORECASE)
+        personas_match = re.search(r'Personas?:\s*(\d+)', observaciones, re.IGNORECASE)
+        fecha_match = re.search(r'Fecha:\s*([^,\n]+)', observaciones, re.IGNORECASE)
+        
+        return {
+            'nombre': nombre_match.group(1).strip() if nombre_match else 'Cliente Reserva',
+            'telefono': telefono_match.group(1).strip() if telefono_match else '',
+            'personas': int(personas_match.group(1)) if personas_match else 2,
+            'fecha_reserva': fecha_match.group(1).strip() if fecha_match else '',
+            'observaciones': observaciones
+        }
+    except Exception:
+        return {'nombre': 'Cliente Reserva', 'personas': 2, 'telefono': '', 'fecha_reserva': '', 'observaciones': observaciones}
+
+
+
 @login_required
 def api_get_todas_ordenes_mesero(request):
-    """API para obtener todas las órdenes del mesero (activas y servidas recientes)"""
+    """API mejorada para obtener todas las órdenes del mesero incluyendo domicilios y reservas"""
     try:
         # Obtener filtro desde query params
         filtro = request.GET.get('filtro', 'todas')
@@ -856,29 +1121,49 @@ def api_get_todas_ordenes_mesero(request):
         # Base query para órdenes del mesero
         ordenes_query = Orden.objects.filter(mesero=request.user)
         
-        # Aplicar filtros
+        # Aplicar filtros mejorados
         if filtro == 'activas':
             ordenes_query = ordenes_query.filter(estado__in=['EN_PROCESO', 'LISTA'])
         elif filtro == 'servidas':
-            ordenes_query = ordenes_query.filter(estado='SERVIDA')
+            ordenes_query = ordenes_query.filter(estado='SERVIDA').filter(
+                factura__estado_pago='PAGADA'
+            )
         elif filtro == 'listas':
             ordenes_query = ordenes_query.filter(estado='LISTA')
         elif filtro == 'en-preparacion':
             ordenes_query = ordenes_query.filter(estado='EN_PROCESO')
-        # Para 'todas' no aplicamos filtro adicional, pero limitamos a recientes
+        elif filtro == 'no-pagadas':
+            ordenes_query = ordenes_query.filter(
+                estado='SERVIDA',
+                factura__estado_pago__in=['NO_PAGADA', 'PARCIAL']
+            )
+        elif filtro == 'domicilios':  # ✅ NUEVO FILTRO
+            ordenes_query = ordenes_query.filter(mesa__numero=0)
+        elif filtro == 'reservas':   # ✅ NUEVO FILTRO
+            ordenes_query = ordenes_query.filter(mesa__numero=50)
         
-        # Ordenar por fecha (más recientes primero) y limitar
+        # Ordenar por fecha y limitar
         if filtro == 'todas':
-            # Para "todas" limitamos a órdenes de los últimos 7 días
             from datetime import timedelta
             fecha_limite = timezone.now() - timedelta(days=7)
             ordenes_query = ordenes_query.filter(creado_en__gte=fecha_limite)
             
-        ordenes = ordenes_query.order_by('-creado_en')[:50]  # Limitar a 50 órdenes
+        ordenes = ordenes_query.order_by('-creado_en')[:50]
         
         ordenes_data = []
         for orden in ordenes:
             orden_data = obtener_datos_completos_orden(orden)
+            
+            # Determinar tipo de orden
+            es_domicilio = orden.mesa.numero == 0
+            es_reserva = orden.mesa.numero == 50
+            
+            # Extraer información del cliente según el tipo
+            cliente_info = {}
+            if es_domicilio:
+                cliente_info = extraer_info_cliente_domicilio(orden.observaciones)
+            elif es_reserva:
+                cliente_info = extraer_info_cliente_reserva(orden.observaciones)
             
             # Contar productos por estado
             productos_listos = orden.productos_ordenados.filter(estado='LISTO').count()
@@ -886,16 +1171,23 @@ def api_get_todas_ordenes_mesero(request):
             productos_agregados = orden.productos_ordenados.filter(
                 observaciones__icontains='AGREGADO_DESPUES'
             ).count()
+            productos_post_factura = orden.productos_ordenados.filter(
+                observaciones__icontains='AGREGADO_POST_FACTURA'
+            ).count()
             
-            # Marcar productos agregados después en la lista de productos
+            # Marcar productos con información especial
             productos_con_info = []
             for po in orden.productos_ordenados.all():
                 agregado_despues = po.observaciones and 'AGREGADO_DESPUES' in po.observaciones
+                agregado_post_factura = po.observaciones and 'AGREGADO_POST_FACTURA' in po.observaciones
                 
                 # Limpiar observaciones para mostrar
                 obs_limpia = ''
                 if po.observaciones:
-                    if 'AGREGADO_DESPUES' in po.observaciones:
+                    if 'AGREGADO_POST_FACTURA' in po.observaciones:
+                        parts = po.observaciones.split('|')
+                        obs_limpia = parts[1] if len(parts) > 1 else ''
+                    elif 'AGREGADO_DESPUES' in po.observaciones:
                         parts = po.observaciones.split('|')
                         obs_limpia = parts[1] if len(parts) > 1 else ''
                     else:
@@ -909,21 +1201,47 @@ def api_get_todas_ordenes_mesero(request):
                     'observaciones': obs_limpia,
                     'estado': po.estado,
                     'listo_en': po.listo_en.isoformat() if po.listo_en else None,
-                    'agregado_despues': agregado_despues
+                    'agregado_despues': agregado_despues,
+                    'agregado_post_factura': agregado_post_factura
                 })
             
             # Reemplazar productos en orden_data
             orden_data['productos'] = productos_con_info
             
-            # Agregar información adicional para meseros
+            # Determinar estados especiales
+            tiene_factura_pendiente = False
+            factura_info = None
+            
+            try:
+                factura = orden.factura
+                if factura.estado_pago in ['NO_PAGADA', 'PARCIAL']:
+                    tiene_factura_pendiente = True
+                    factura_info = {
+                        'id': factura.id,
+                        'numero': factura.numero_factura or f"FAC-{factura.id}",
+                        'total': float(factura.total),
+                        'estado_pago': factura.estado_pago,
+                        'metodo_pago': factura.metodo_pago
+                    }
+            except:
+                pass
+            
+            # ✅ AGREGAR INFORMACIÓN DE CLIENTE
             orden_data.update({
                 'tiene_productos_listos': productos_listos > 0,
                 'productos_listos_count': productos_listos,
                 'productos_pendientes_count': productos_pendientes,
                 'productos_agregados_count': productos_agregados,
+                'productos_post_factura_count': productos_post_factura,
                 'necesita_atencion': productos_listos > 0 and orden.estado != 'SERVIDA',
                 'puede_marcar_lista': productos_pendientes == 0 and orden.estado == 'EN_PROCESO',
                 'puede_entregar': orden.estado == 'LISTA',
+                'puede_modificar': orden.estado != 'SERVIDA' or tiene_factura_pendiente,
+                'tiene_factura_pendiente': tiene_factura_pendiente,
+                'factura_info': factura_info,
+                'es_domicilio': es_domicilio,
+                'es_reserva': es_reserva,
+                'cliente_info': cliente_info,  # ✅ NUEVA INFORMACIÓN
                 'tiempo_transcurrido': calcular_tiempo_transcurrido(orden.creado_en),
             })
             
@@ -1390,103 +1708,137 @@ def api_agregar_productos_orden_facturada(request, orden_id):
 
 
 # === API PARA OBTENER MESAS OCUPADAS (INCLUYENDO DOMICILIO) ===
-@login_required
-# === API PARA OBTENER MESAS OCUPADAS (INCLUYENDO DOMICILIO) ===
+
 @login_required
 def api_get_mesas_ocupadas(request):
-    """API mejorada para obtener mesas ocupadas incluyendo órdenes de domicilio"""
+    """API mejorada para mesas ocupadas - cada orden de domicilio/reserva por separado"""
     try:
-        from django.db import models  # ✅ AGREGAR ESTA IMPORTACIÓN
-        
-        # Obtener mesas físicas ocupadas (excluyendo mesas de domicilio 0 y 50)
-        mesas_fisicas_ocupadas = Mesa.objects.filter(
-            is_active=True,
-            estado='OCUPADA',
-            numero__gt=0,  # Excluir mesa 0
-            numero__ne=50  # Excluir mesa 50 si existe
-        )
-        
-        # Obtener mesas de domicilio (0 y 50) - siempre disponibles
-        mesas_domicilio = Mesa.objects.filter(
-            is_active=True,
-            numero__in=[0, 50]
-        )
-        
         mesas_data = []
         
-        # === PROCESAR MESAS FÍSICAS OCUPADAS ===
+        # === MESAS FÍSICAS NORMALES (1-49, excluyendo 0 y 50) ===
+        mesas_fisicas_ocupadas = Mesa.objects.filter(
+            is_active=True,
+            estado='OCUPADA'
+        ).exclude(
+            numero__in=[0, 50]  # ✅ Excluir domicilios y reservas
+        )
+        
         for mesa in mesas_fisicas_ocupadas:
-            # Obtener la orden activa de la mesa
             orden = Orden.objects.filter(
                 mesa=mesa,
                 estado__in=['EN_PROCESO', 'LISTA', 'NUEVA']
             ).first()
             
-            productos_count = 0
             if orden:
-                productos_count = orden.productos_ordenados.count()
-            
-            mesas_data.append({
-                'id': mesa.id,
-                'numero': mesa.numero,
-                'ubicacion': mesa.ubicacion,
-                'capacidad': mesa.capacidad,
-                'productos_count': productos_count,
-                'tiene_orden': orden is not None,
-                'orden_id': orden.id if orden else None,
-                'es_domicilio': False,
-                'ordenes_count': 1 if orden else 0
-            })
+                mesas_data.append({
+                    'id': mesa.id,
+                    'numero': mesa.numero,
+                    'ubicacion': mesa.ubicacion,
+                    'capacidad': mesa.capacidad,
+                    'productos_count': orden.productos_ordenados.count(),
+                    'tiene_orden': True,
+                    'orden_id': orden.id,
+                    'es_domicilio': False,
+                    'es_reserva': False,
+                    'ordenes_count': 1,
+                    'cliente_nombre': None
+                })
         
-        # === PROCESAR MESAS DE DOMICILIO (0 y 50) ===
-        for mesa_domicilio in mesas_domicilio:
-            # Obtener TODAS las órdenes activas y no pagadas de domicilio
-            ordenes_activas = Orden.objects.filter(
-                mesa=mesa_domicilio,
-                estado__in=['EN_PROCESO', 'LISTA', 'NUEVA']
-            )
+        # === MESA 0: DOMICILIOS - CADA ORDEN POR SEPARADO ===
+        mesa_domicilio = Mesa.objects.filter(is_active=True, numero=0).first()
+        
+        if mesa_domicilio:
+            # Obtener todas las órdenes activas de domicilio
+            try:
+                ordenes_domicilio_activas = Orden.objects.filter(
+                    mesa=mesa_domicilio,
+                    estado__in=['EN_PROCESO', 'LISTA', 'NUEVA']
+                )
+                
+                ordenes_domicilio_no_pagadas = Orden.objects.filter(
+                    mesa=mesa_domicilio,
+                    estado='SERVIDA',
+                    factura__estado_pago__in=['NO_PAGADA', 'PARCIAL']
+                )
+                
+                # Combinar usando union
+                ordenes_domicilio = ordenes_domicilio_activas.union(
+                    ordenes_domicilio_no_pagadas
+                ).order_by('-creado_en')
+                
+            except Exception as e:
+                print(f"⚠️ Error obteniendo órdenes de domicilio: {e}")
+                ordenes_domicilio = ordenes_domicilio_activas.order_by('-creado_en')
             
-            # También incluir órdenes servidas pero no pagadas (factura pendiente)
-            ordenes_no_pagadas = Orden.objects.filter(
-                mesa=mesa_domicilio,
-                estado='SERVIDA',
-                factura__estado_pago__in=['NO_PAGADA', 'PARCIAL']
-            )
-            
-            # Combinar ambos tipos de órdenes
-            todas_las_ordenes = ordenes_activas.union(ordenes_no_pagadas)
-            
-            # Si hay órdenes, crear una entrada por cada orden O una entrada general
-            if todas_las_ordenes.exists():
-                # OPCIÓN 1: Mostrar como una sola mesa con múltiples órdenes
-                orden_principal = todas_las_ordenes.first()
-                total_productos = sum(orden.productos_ordenados.count() for orden in todas_las_ordenes)
+            # Crear una entrada por cada orden de domicilio
+            for i, orden in enumerate(ordenes_domicilio):
+                # Extraer información del cliente de las observaciones
+                cliente_info = extraer_info_cliente_domicilio(orden.observaciones)
                 
                 mesas_data.append({
-                    'id': mesa_domicilio.id,
-                    'numero': mesa_domicilio.numero,
-                    'ubicacion': 'Domicilio',
-                    'capacidad': 999,  # Capacidad ilimitada para domicilio
-                    'productos_count': total_productos,
-                    'tiene_orden': True,
-                    'orden_id': orden_principal.id,
-                    'es_domicilio': True,
-                    'ordenes_count': todas_las_ordenes.count(),
-                    'ordenes_multiples': True  # ✅ NUEVO CAMPO para indicar múltiples órdenes
-                })
-            else:
-                # Si no hay órdenes, aún mostrar la mesa de domicilio como disponible
-                mesas_data.append({
-                    'id': mesa_domicilio.id,
-                    'numero': mesa_domicilio.numero,
-                    'ubicacion': 'Domicilio',
+                    'id': f"dom-{orden.id}",  # ID único para domicilio
+                    'numero': f"🏠D{i+1}",  # Ej: "🏠D1", "🏠D2"
+                    'ubicacion': f'Domicilio #{i+1}',
                     'capacidad': 999,
-                    'productos_count': 0,
-                    'tiene_orden': False,
-                    'orden_id': None,
+                    'productos_count': orden.productos_ordenados.count(),
+                    'tiene_orden': True,
+                    'orden_id': orden.id,
                     'es_domicilio': True,
-                    'ordenes_count': 0,
-                    'ordenes_multiples': False
+                    'es_reserva': False,
+                    'ordenes_count': 1,
+                    'mesa_real_id': mesa_domicilio.id,
+                    'cliente_nombre': cliente_info.get('nombre'),
+                    'direccion': cliente_info.get('direccion'),
+                    'telefono': cliente_info.get('telefono')
+                })
+        
+        # === MESA 50: RESERVAS - CADA RESERVA POR SEPARADO ===
+        mesa_reserva = Mesa.objects.filter(is_active=True, numero=50).first()
+        
+        if mesa_reserva:
+            # Obtener todas las reservas activas
+            try:
+                ordenes_reserva_activas = Orden.objects.filter(
+                    mesa=mesa_reserva,
+                    estado__in=['EN_PROCESO', 'LISTA', 'NUEVA']
+                )
+                
+                ordenes_reserva_no_pagadas = Orden.objects.filter(
+                    mesa=mesa_reserva,
+                    estado='SERVIDA',
+                    factura__estado_pago__in=['NO_PAGADA', 'PARCIAL']
+                )
+                
+                # Combinar usando union
+                ordenes_reserva = ordenes_reserva_activas.union(
+                    ordenes_reserva_no_pagadas
+                ).order_by('-creado_en')
+                
+            except Exception as e:
+                print(f"⚠️ Error obteniendo órdenes de reserva: {e}")
+                ordenes_reserva = ordenes_reserva_activas.order_by('-creado_en')
+            
+            # Crear una entrada por cada reserva
+            for i, orden in enumerate(ordenes_reserva):
+                # Extraer información del cliente de las observaciones de reserva
+                cliente_info = extraer_info_cliente_reserva(orden.observaciones)
+                
+                mesas_data.append({
+                    'id': f"res-{orden.id}",  # ID único para reserva
+                    'numero': f"📅R{i+1}",  # Ej: "📅R1", "📅R2"
+                    'ubicacion': f'Reserva #{i+1}',
+                    'capacidad': cliente_info.get('personas', 2),
+                    'productos_count': orden.productos_ordenados.count(),
+                    'tiene_orden': True,
+                    'orden_id': orden.id,
+                    'es_domicilio': False,
+                    'es_reserva': True,
+                    'ordenes_count': 1,
+                    'mesa_real_id': mesa_reserva.id,
+                    'cliente_nombre': cliente_info.get('nombre'),
+                    'telefono': cliente_info.get('telefono'),
+                    'fecha_reserva': cliente_info.get('fecha_reserva'),
+                    'observaciones_cliente': cliente_info.get('observaciones')
                 })
         
         return JsonResponse(mesas_data, safe=False)
@@ -1494,6 +1846,8 @@ def api_get_mesas_ocupadas(request):
     except Exception as e:
         print(f"❌ Error en api_get_mesas_ocupadas: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
+
+
 
 
 # === FUNCIÓN ALTERNATIVA SI QUIERES MOSTRAR CADA ORDEN DE DOMICILIO POR SEPARADO ===
@@ -1587,8 +1941,8 @@ def api_get_mesas_ocupadas_detallado(request):
     except Exception as e:
         print(f"❌ Error en api_get_mesas_ocupadas_detallado: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
-    
-          
+
+
 # === API PARA OBTENER FACTURA POR ORDEN ===
 @login_required
 def api_get_factura_por_orden(request, orden_id):
