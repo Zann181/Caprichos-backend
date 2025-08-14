@@ -15,12 +15,12 @@ from django.utils import timezone
 # Se importan los formularios, decoradores y modelos necesarios
 from .forms import CustomAuthenticationForm
 from .decorators import group_required 
-from .models import Producto, CategoriaProducto, Mesa, Orden, OrdenProducto
+from .models import Producto, CategoriaProducto, Mesa, Orden, OrdenProducto, Factura
 from .utils import (
     long_polling_cocina, long_polling_meseros, obtener_todas_ordenes_cocina,
     obtener_stock_productos, notificar_cambio_cocina, notificar_cambio_stock,
     obtener_estadisticas_sistema, obtener_datos_completos_orden,
-    calcular_total_orden  # ✅ AGREGAR ESTA IMPORTACIÓN
+    calcular_total_orden,  # ✅ AGREGAR ESTA IMPORTACIÓN
 )
 
 
@@ -1388,62 +1388,207 @@ def api_agregar_productos_orden_facturada(request, orden_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
+# === API PARA OBTENER MESAS OCUPADAS (INCLUYENDO DOMICILIO) ===
+@login_required
 # === API PARA OBTENER MESAS OCUPADAS (INCLUYENDO DOMICILIO) ===
 @login_required
 def api_get_mesas_ocupadas(request):
     """API mejorada para obtener mesas ocupadas incluyendo órdenes de domicilio"""
     try:
-        # Obtener todas las mesas con órdenes activas (incluyendo mesa 0 para domicilio)
-        mesas_con_ordenes = Mesa.objects.filter(
-            is_active=True
-        ).filter(
-            models.Q(estado='OCUPADA') | 
-            models.Q(numero=0)  # Mesa 0 siempre disponible para domicilio
-        ).distinct()
+        from django.db import models  # ✅ AGREGAR ESTA IMPORTACIÓN
+        
+        # Obtener mesas físicas ocupadas (excluyendo mesas de domicilio 0 y 50)
+        mesas_fisicas_ocupadas = Mesa.objects.filter(
+            is_active=True,
+            estado='OCUPADA',
+            numero__gt=0,  # Excluir mesa 0
+            numero__ne=50  # Excluir mesa 50 si existe
+        )
+        
+        # Obtener mesas de domicilio (0 y 50) - siempre disponibles
+        mesas_domicilio = Mesa.objects.filter(
+            is_active=True,
+            numero__in=[0, 50]
+        )
         
         mesas_data = []
-        for mesa in mesas_con_ordenes:
-            # Obtener órdenes activas de la mesa
-            ordenes_activas = Orden.objects.filter(
+        
+        # === PROCESAR MESAS FÍSICAS OCUPADAS ===
+        for mesa in mesas_fisicas_ocupadas:
+            # Obtener la orden activa de la mesa
+            orden = Orden.objects.filter(
                 mesa=mesa,
+                estado__in=['EN_PROCESO', 'LISTA', 'NUEVA']
+            ).first()
+            
+            productos_count = 0
+            if orden:
+                productos_count = orden.productos_ordenados.count()
+            
+            mesas_data.append({
+                'id': mesa.id,
+                'numero': mesa.numero,
+                'ubicacion': mesa.ubicacion,
+                'capacidad': mesa.capacidad,
+                'productos_count': productos_count,
+                'tiene_orden': orden is not None,
+                'orden_id': orden.id if orden else None,
+                'es_domicilio': False,
+                'ordenes_count': 1 if orden else 0
+            })
+        
+        # === PROCESAR MESAS DE DOMICILIO (0 y 50) ===
+        for mesa_domicilio in mesas_domicilio:
+            # Obtener TODAS las órdenes activas y no pagadas de domicilio
+            ordenes_activas = Orden.objects.filter(
+                mesa=mesa_domicilio,
                 estado__in=['EN_PROCESO', 'LISTA', 'NUEVA']
             )
             
-            # Para domicilio, también incluir órdenes no pagadas
-            if mesa.numero == 0:
-                ordenes_no_pagadas = Orden.objects.filter(
-                    mesa=mesa,
-                    estado='SERVIDA',
-                    factura__estado_pago__in=['NO_PAGADA', 'PARCIAL']
-                )
-                ordenes_activas = ordenes_activas.union(ordenes_no_pagadas)
+            # También incluir órdenes servidas pero no pagadas (factura pendiente)
+            ordenes_no_pagadas = Orden.objects.filter(
+                mesa=mesa_domicilio,
+                estado='SERVIDA',
+                factura__estado_pago__in=['NO_PAGADA', 'PARCIAL']
+            )
             
-            if ordenes_activas.exists() or mesa.numero == 0:
-                orden_principal = ordenes_activas.first()
-                productos_count = 0
-                if orden_principal:
-                    productos_count = orden_principal.productos_ordenados.count()
+            # Combinar ambos tipos de órdenes
+            todas_las_ordenes = ordenes_activas.union(ordenes_no_pagadas)
+            
+            # Si hay órdenes, crear una entrada por cada orden O una entrada general
+            if todas_las_ordenes.exists():
+                # OPCIÓN 1: Mostrar como una sola mesa con múltiples órdenes
+                orden_principal = todas_las_ordenes.first()
+                total_productos = sum(orden.productos_ordenados.count() for orden in todas_las_ordenes)
                 
-                mesa_info = {
-                    'id': mesa.id,
-                    'numero': mesa.numero,
-                    'ubicacion': mesa.ubicacion if mesa.numero != 0 else 'Domicilio',
-                    'capacidad': mesa.capacidad,
-                    'productos_count': productos_count,
-                    'tiene_orden': orden_principal is not None,
-                    'orden_id': orden_principal.id if orden_principal else None,
-                    'es_domicilio': mesa.numero == 0,
-                    'ordenes_count': ordenes_activas.count()
-                }
-                
-                mesas_data.append(mesa_info)
+                mesas_data.append({
+                    'id': mesa_domicilio.id,
+                    'numero': mesa_domicilio.numero,
+                    'ubicacion': 'Domicilio',
+                    'capacidad': 999,  # Capacidad ilimitada para domicilio
+                    'productos_count': total_productos,
+                    'tiene_orden': True,
+                    'orden_id': orden_principal.id,
+                    'es_domicilio': True,
+                    'ordenes_count': todas_las_ordenes.count(),
+                    'ordenes_multiples': True  # ✅ NUEVO CAMPO para indicar múltiples órdenes
+                })
+            else:
+                # Si no hay órdenes, aún mostrar la mesa de domicilio como disponible
+                mesas_data.append({
+                    'id': mesa_domicilio.id,
+                    'numero': mesa_domicilio.numero,
+                    'ubicacion': 'Domicilio',
+                    'capacidad': 999,
+                    'productos_count': 0,
+                    'tiene_orden': False,
+                    'orden_id': None,
+                    'es_domicilio': True,
+                    'ordenes_count': 0,
+                    'ordenes_multiples': False
+                })
         
         return JsonResponse(mesas_data, safe=False)
         
     except Exception as e:
+        print(f"❌ Error en api_get_mesas_ocupadas: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
+
+# === FUNCIÓN ALTERNATIVA SI QUIERES MOSTRAR CADA ORDEN DE DOMICILIO POR SEPARADO ===
+@login_required
+def api_get_mesas_ocupadas_detallado(request):
+    """Versión alternativa que muestra cada orden de domicilio por separado"""
+    try:
+        from django.db import models
         
+        mesas_data = []
+        
+        # === MESAS FÍSICAS OCUPADAS ===
+        mesas_fisicas_ocupadas = Mesa.objects.filter(
+            is_active=True,
+            estado='OCUPADA',
+            numero__gt=0,
+            numero__ne=50
+        )
+        
+        for mesa in mesas_fisicas_ocupadas:
+            orden = Orden.objects.filter(
+                mesa=mesa,
+                estado__in=['EN_PROCESO', 'LISTA', 'NUEVA']
+            ).first()
+            
+            if orden:
+                mesas_data.append({
+                    'id': mesa.id,
+                    'numero': mesa.numero,
+                    'ubicacion': mesa.ubicacion,
+                    'capacidad': mesa.capacidad,
+                    'productos_count': orden.productos_ordenados.count(),
+                    'tiene_orden': True,
+                    'orden_id': orden.id,
+                    'es_domicilio': False,
+                    'ordenes_count': 1
+                })
+        
+        # === MESAS DE DOMICILIO - CADA ORDEN POR SEPARADO ===
+        mesas_domicilio = Mesa.objects.filter(
+            is_active=True,
+            numero__in=[0, 50]
+        )
+        
+        for mesa_domicilio in mesas_domicilio:
+            # Obtener todas las órdenes de domicilio
+            ordenes_activas = Orden.objects.filter(
+                mesa=mesa_domicilio,
+                estado__in=['EN_PROCESO', 'LISTA', 'NUEVA']
+            )
+            
+            ordenes_no_pagadas = Orden.objects.filter(
+                mesa=mesa_domicilio,
+                estado='SERVIDA',
+                factura__estado_pago__in=['NO_PAGADA', 'PARCIAL']
+            )
+            
+            todas_las_ordenes = ordenes_activas.union(ordenes_no_pagadas)
+            
+            # Crear una entrada por cada orden
+            for i, orden in enumerate(todas_las_ordenes):
+                mesas_data.append({
+                    'id': f"{mesa_domicilio.id}-{orden.id}",  # ID único combinado
+                    'numero': f"{mesa_domicilio.numero}.{i+1}",  # Ej: "0.1", "0.2", "50.1"
+                    'ubicacion': f'Domicilio #{i+1}',
+                    'capacidad': 999,
+                    'productos_count': orden.productos_ordenados.count(),
+                    'tiene_orden': True,
+                    'orden_id': orden.id,
+                    'es_domicilio': True,
+                    'ordenes_count': 1,
+                    'mesa_real_id': mesa_domicilio.id  # ✅ ID real de la mesa para referencias
+                })
+            
+            # Si no hay órdenes, mostrar mesa domicilio disponible
+            if not todas_las_ordenes.exists():
+                mesas_data.append({
+                    'id': mesa_domicilio.id,
+                    'numero': mesa_domicilio.numero,
+                    'ubicacion': 'Domicilio (Disponible)',
+                    'capacidad': 999,
+                    'productos_count': 0,
+                    'tiene_orden': False,
+                    'orden_id': None,
+                    'es_domicilio': True,
+                    'ordenes_count': 0
+                })
+        
+        return JsonResponse(mesas_data, safe=False)
+        
+    except Exception as e:
+        print(f"❌ Error en api_get_mesas_ocupadas_detallado: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+    
+          
 # === API PARA OBTENER FACTURA POR ORDEN ===
 @login_required
 def api_get_factura_por_orden(request, orden_id):

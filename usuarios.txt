@@ -1,0 +1,85 @@
+from django.db import IntegrityError
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+
+# --- CONFIGURACIÓN ---
+ROLES_A_CREAR = ['Administradores', 'Meseros', 'Cocineros', 'Cajeros']
+
+USUARIOS_A_CREAR = [
+    {
+        'nombre': 'Juan Perez',
+        'email': 'juan.perez@example.com',
+        'password': 'password123',
+        'group': 'Meseros'
+    },
+    {
+        'nombre': 'Luis Gomez',
+        'email': 'luis.gomez@example.com',
+        'password': 'password123',
+        'group': 'Cocineros'
+    },
+    {
+        'nombre': 'Ana Diaz',
+        'email': 'ana.diaz@example.com',
+        'password': 'password123',
+        'group': 'Cajeros'
+    },
+    {
+        'nombre': 'Jefe Principal',
+        'email': 'jefe.principal@example.com',
+        'password': 'password123',
+        'group': 'Administradores',
+        'is_staff': True,
+        'is_superuser': True
+    }
+]
+
+Usuario = get_user_model()
+
+# --- 1. CREACIÓN DE GRUPOS (ROLES) ---
+print("--- Creando Roles ---")
+for role_name in ROLES_A_CREAR:
+    grupo, created = Group.objects.get_or_create(name=role_name)
+    if created:
+        print(f"✅ Grupo '{grupo.name}' CREADO.")
+    else:
+        print(f"⏩ Grupo '{grupo.name}' ya existía.")
+
+# --- 2. CREACIÓN DE USUARIOS Y ASIGNACIÓN DE ROLES ---
+print("\n--- Creando Usuarios ---")
+for user_data in USUARIOS_A_CREAR:
+    try:
+        group_name = user_data.get('group')
+        if not group_name:
+            print(f"⚠️  Usuario con email '{user_data['email']}' no tiene un grupo definido. Saltando.")
+            continue
+        
+        # Usamos el email como el identificador único para buscar o crear
+        usuario, created = Usuario.objects.get_or_create(
+            email=user_data['email'], # <-- CORRECCIÓN CLAVE: Usamos 'email' en lugar de 'username'
+            defaults={
+                'nombre': user_data.get('nombre', ''),
+                'is_staff': user_data.get('is_staff', False),
+                'is_superuser': user_data.get('is_superuser', False)
+            }
+        )
+
+        if created:
+            usuario.set_password(user_data['password'])
+            usuario.save()
+            
+            grupo = Group.objects.get(name=group_name)
+            usuario.groups.add(grupo)
+            
+            print(f"✅ Usuario '{usuario.email}' CREADO y asignado al grupo '{group_name}'.")
+        else:
+            print(f"⏩ Usuario '{usuario.email}' ya existía. No se realizan cambios.")
+
+    except IntegrityError as e:
+        print(f"❌ ERROR DE INTEGRIDAD al procesar a '{user_data['email']}': {e}")
+    except Group.DoesNotExist:
+        print(f"❌ ERROR: El grupo '{group_name}' no existe. Asegúrate de crearlo primero.")
+    except Exception as e:
+        print(f"❌ Ocurrió un error inesperado con el usuario '{user_data['email']}': {e}")
+
+print("\nScript finalizado.")
