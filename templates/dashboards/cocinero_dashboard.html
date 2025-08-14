@@ -41,18 +41,12 @@
         .orden-card.lista { border-left: 4px solid #28a745; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15); }
         .orden-card.lista .orden-header { background: linear-gradient(135deg, #28a745, #20c997); }
         .controles-producto { display: flex; gap: 5px; align-items: center; }
+        .btn-confirmar-producto { background-color: var(--azul-info); font-size: 12px; padding: 8px 12px; }
+        .btn-decremento { font-size: 12px; padding: 8px 12px; }
 
         /* === TOAST Y MODAL === */
-        #toast-container {
-            position: fixed; top: 20px; right: 20px; z-index: 1050;
-            display: flex; flex-direction: column; gap: 10px;
-        }
-        .toast {
-            background-color: var(--carbon-suave); color: white; padding: 15px 20px;
-            border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            font-family: var(--fuente-cuerpo); font-size: 15px; opacity: 0;
-            animation: toast-fade-in 0.5s forwards; display: flex; align-items: center; gap: 10px;
-        }
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 1050; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background-color: var(--carbon-suave); color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-family: var(--fuente-cuerpo); font-size: 15px; opacity: 0; animation: toast-fade-in 0.5s forwards; display: flex; align-items: center; gap: 10px; }
         .toast.hiding { animation: toast-fade-out 0.5s forwards; }
         .toast.toast-success { background-color: var(--verde-listo); }
         .toast.toast-error { background-color: var(--rojo-error); }
@@ -60,16 +54,8 @@
         @keyframes toast-fade-in { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
         @keyframes toast-fade-out { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(100%); } }
         
-        #confirm-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.5); z-index: 1040; display: none;
-            justify-content: center; align-items: center; animation: fade-in 0.3s;
-        }
-        #confirm-modal {
-            background-color: var(--blanco-hueso); padding: 2rem; border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 90%; max-width: 450px;
-            text-align: center; transform: scale(0.9); animation: slide-up 0.3s forwards;
-        }
+        #confirm-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1040; display: none; justify-content: center; align-items: center; animation: fade-in 0.3s; }
+        #confirm-modal { background-color: var(--blanco-hueso); padding: 2rem; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 90%; max-width: 450px; text-align: center; transform: scale(0.9); animation: slide-up 0.3s forwards; }
         #confirm-message { font-size: 1.1rem; margin-bottom: 1.5rem; line-height: 1.5; }
         #confirm-buttons { display: flex; justify-content: center; gap: 1rem; }
         .confirm-btn { background-color: #ccc; color: var(--carbon-suave); padding: 10px 20px; }
@@ -121,7 +107,10 @@
                     <span class="mesa">Mesa #</span>
                     <div class="mesero-info">Mesero: <span class="mesero-nombre"></span></div>
                 </div>
-                <span class="hora">Hora</span>
+                <div>
+                    <span class="productos-count" style="font-weight: 600;">0/0 Listos</span>
+                    <span class="hora" style="display: block; font-size: 12px; text-align: right;"></span>
+                </div>
             </div>
             <div class="orden-body">
                 <ul class="lista-productos"></ul>
@@ -135,7 +124,7 @@
             const pendientesContainer = document.getElementById('ordenes-pendientes');
             const listasContainer = document.getElementById('ordenes-listas');
             const orderTemplate = document.getElementById('order-card-template');
-            const buttonsOnCooldown = new Set(); // <--- Set para controlar botones en enfriamiento
+            const buttonsOnCooldown = new Set(); 
 
             // === SISTEMA DE NOTIFICACIONES Y MODAL ===
             const toastContainer = document.getElementById('toast-container');
@@ -164,16 +153,8 @@
                 });
             };
 
-            confirmBtnOk.addEventListener('click', () => {
-                if (confirmResolve) confirmResolve(true);
-                confirmOverlay.style.display = 'none';
-            });
-
-            confirmBtnCancel.addEventListener('click', () => {
-                if (confirmResolve) confirmResolve(false);
-                confirmOverlay.style.display = 'none';
-            });
-            
+            confirmBtnOk.addEventListener('click', () => { if (confirmResolve) confirmResolve(true); confirmOverlay.style.display = 'none'; });
+            confirmBtnCancel.addEventListener('click', () => { if (confirmResolve) confirmResolve(false); confirmOverlay.style.display = 'none'; });
             window.alert = (message) => window.showToast(message, 'info');
             window.confirm = (message) => window.showConfirm(message);
 
@@ -189,8 +170,7 @@
                     return;
                 }
 
-                let hayPendientes = false;
-                let hayListas = false;
+                let hayPendientes = false, hayListas = false;
 
                 ordenes.forEach(orden => {
                     const card = document.importNode(orderTemplate.content, true);
@@ -202,7 +182,12 @@
                     card.querySelector('.hora').textContent = orden.creado_en;
 
                     const listaProductosEl = card.querySelector('.lista-productos');
+                    let productosListosCount = 0;
+                    const totalProductos = orden.productos.length;
+
                     orden.productos.forEach(p => {
+                        if (p.estado === 'LISTO') productosListosCount++;
+
                         const li = document.createElement('li');
                         li.className = 'producto-item';
                         if (p.estado === 'LISTO') li.classList.add('listo');
@@ -211,15 +196,28 @@
                         
                         let controlesHTML = '';
                         if (orden.completada || p.estado === 'LISTO') {
-                            controlesHTML = `<div class="controles-producto"><span style="color: var(--verde-listo); font-weight: 600;">✅ Entregado</span></div>`;
+                            controlesHTML = `<div class="controles-producto"><span style="color: var(--verde-listo); font-weight: 600;">✅ Listo</span></div>`;
                         } else {
-                            // ✅ CAMBIO: Botón "Marcar Listo" eliminado. Solo queda "Entregar 1".
-                            const decrementoId = `d-${p.id}`;
-                            const enCooldown = buttonsOnCooldown.has(decrementoId);
-                            controlesHTML = `
-                                <div class="controles-producto">
-                                    <button class="btn btn-decremento" data-producto-orden-id="${p.id}" data-cooldown-id="${decrementoId}" ${enCooldown ? 'disabled' : ''}>Entregar 1</button>
-                                </div>`;
+                            const confirmarId = `c-${p.id}`;
+                            const enCooldownC = buttonsOnCooldown.has(confirmarId);
+                            
+                            // ✅ CAMBIO CLAVE: Lógica condicional para los botones
+                            if (p.cantidad === 1) {
+                                // Si solo queda 1, mostrar solo "Confirmar"
+                                controlesHTML = `
+                                    <div class="controles-producto">
+                                        <button class="btn btn-confirmar-producto" data-producto-orden-id="${p.id}" data-cooldown-id="${confirmarId}" ${enCooldownC ? 'disabled' : ''}>Confirmar</button>
+                                    </div>`;
+                            } else {
+                                // Si hay más de 1, mostrar ambos botones
+                                const decrementoId = `d-${p.id}`;
+                                const enCooldownD = buttonsOnCooldown.has(decrementoId);
+                                controlesHTML = `
+                                    <div class="controles-producto">
+                                        <button class="btn btn-confirmar-producto" data-producto-orden-id="${p.id}" data-cooldown-id="${confirmarId}" ${enCooldownC ? 'disabled' : ''}>Confirmar</button>
+                                        <button class="btn btn-decremento" data-producto-orden-id="${p.id}" data-cooldown-id="${decrementoId}" ${enCooldownD ? 'disabled' : ''}>Entregar 1</button>
+                                    </div>`;
+                            }
                         }
 
                         li.innerHTML = `
@@ -230,6 +228,8 @@
                             ${controlesHTML}`;
                         listaProductosEl.appendChild(li);
                     });
+                    
+                    card.querySelector('.productos-count').textContent = `${productosListosCount} / ${totalProductos} Listos`;
 
                     if (orden.completada) {
                         ordenCard.classList.add('lista');
@@ -267,10 +267,7 @@
 
             async function manejarAccionProducto(url, successMessage, errorMessage) {
                 try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'X-CSRFToken': csrfToken }
-                    });
+                    const response = await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
                     const result = await response.json();
                     if (result.success) {
                         showToast(result.mensaje || successMessage, 'success');
@@ -289,20 +286,31 @@
                 const target = e.target;
                 const cooldownId = target.dataset.cooldownId;
 
-                // ✅ CAMBIO: Lógica de enfriamiento
                 if (cooldownId && buttonsOnCooldown.has(cooldownId)) {
                     e.preventDefault();
                     return;
                 }
-                
+
+                const productoItem = target.closest('.producto-item');
+                const productoName = productoItem ? productoItem.querySelector('strong').textContent : '';
+
                 if (target.classList.contains('btn-decremento')) {
-                    const productoName = target.closest('.producto-item').querySelector('strong').textContent;
                     const confirmed = await showConfirm(`¿Confirmas que YA ENTREGASTE 1 unidad de "<b>${productoName}</b>" al mesero?`);
                     if (confirmed) {
                         buttonsOnCooldown.add(cooldownId);
                         target.disabled = true;
                         const productoOrdenId = target.dataset.productoOrdenId;
-                        await manejarAccionProducto(`/api/cocina/producto/${productoOrdenId}/decrementar/`, 'Producto entregado.', 'No se pudo entregar el producto.');
+                        await manejarAccionProducto(`/api/cocina/producto/${productoOrdenId}/decrementar/`, 'Producto entregado.', 'No se pudo entregar.');
+                        setTimeout(() => buttonsOnCooldown.delete(cooldownId), 3000);
+                    }
+                }
+                else if (target.classList.contains('btn-confirmar-producto')) {
+                    const confirmed = await showConfirm(`¿Marcar "<b>${productoName}</b>" como completado y listo para servir?`);
+                    if (confirmed) {
+                        buttonsOnCooldown.add(cooldownId);
+                        target.disabled = true;
+                        const productoOrdenId = target.dataset.productoOrdenId;
+                        await manejarAccionProducto(`/api/cocina/producto/${productoOrdenId}/listo/`, 'Producto confirmado.', 'No se pudo confirmar.');
                         setTimeout(() => buttonsOnCooldown.delete(cooldownId), 3000);
                     }
                 }
@@ -313,7 +321,7 @@
                         buttonsOnCooldown.add(cooldownId);
                         target.disabled = true;
                         const ordenId = target.dataset.ordenId;
-                        await manejarAccionProducto(`/api/cocina/orden/${ordenId}/servida/`, '¡Orden servida! La mesa ha sido liberada.', 'No se pudo marcar la orden como servida.');
+                        await manejarAccionProducto(`/api/cocina/orden/${ordenId}/servida/`, '¡Orden servida!', 'No se pudo marcar como servida.');
                         setTimeout(() => buttonsOnCooldown.delete(cooldownId), 3000);
                      }
                 }

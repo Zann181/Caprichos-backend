@@ -1,5 +1,14 @@
-<!-- mesero_vista_cocina.html -->
 <style>
+    /* Estilos completos copiados del dashboard de cocinero para consistencia visual */
+    :root {
+        --naranja-tostado: #E8772E; --naranja-oscuro: #C0581B; --crema-palido: #FDF6E3;
+        --carbon-suave: #4F4A45; --gris-piedra: #D4C5A3; --blanco-hueso: #FEFBF3;
+        --verde-listo: #28a745; --rojo-error: #dc3545; --azul-info: #17a2b8;
+    }
+    .btn { background-color: var(--naranja-tostado); color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; transition: all 0.2s; }
+    .btn:hover { opacity: 0.85; }
+    .btn:disabled { background-color: var(--gris-piedra); cursor: wait; }
+
     .vista-cocina-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -36,24 +45,31 @@
         margin: 0;
     }
     .producto-item-cocina {
-        padding: 0.5rem 0;
-        border-bottom: 1px solid #eee;
-        display: flex;
-        justify-content: space-between;
+        display: grid;
+        grid-template-columns: 1fr auto;
         align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #eee;
+        gap: 1rem;
     }
-    .producto-item-cocina:last-child {
-        border-bottom: none;
-    }
-    .producto-item-cocina .estado-listo {
-        color: var(--verde-listo);
-        font-weight: 600;
-    }
-    .producto-item-cocina .estado-pendiente {
-        color: var(--naranja-tostado);
-        font-weight: 600;
-    }
+    .producto-item-cocina:last-child { border-bottom: none; }
+    .producto-item-cocina strong { font-size: 1.1em; }
+    .producto-item-cocina .obs { font-size: 0.9em; color: var(--naranja-tostado); font-style: italic; margin-top: 5px; }
+    .producto-item-cocina.listo .producto-info { text-decoration: line-through; color: #888; }
+    .controles-producto { display: flex; gap: 5px; align-items: center; }
+    .btn-confirmar-producto { background-color: var(--azul-info); font-size: 12px; padding: 8px 12px; }
+    .btn-decremento { font-size: 12px; padding: 8px 12px; }
 </style>
+
+<div id="confirm-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1040; justify-content: center; align-items: center;">
+    <div id="confirm-modal" style="background: white; padding: 2rem; border-radius: 8px; text-align: center; max-width: 450px;">
+        <p id="confirm-message" style="font-size: 1.1rem; margin-bottom: 1.5rem;"></p>
+        <div id="confirm-buttons" style="display: flex; justify-content: center; gap: 1rem;">
+            <button id="confirm-btn-cancel" class="btn">Cancelar</button>
+            <button id="confirm-btn-ok" class="btn" style="background-color: var(--naranja-tostado);">Aceptar</button>
+        </div>
+    </div>
+</div>
 
 <div id="vista-cocina-container">
     <div class="vista-cocina-grid">
@@ -71,25 +87,55 @@
 <template id="cocina-card-template">
     <div class="orden-card-cocina">
         <div class="orden-header-cocina">
-            <span class="mesa-cocina font-bold">Mesa #</span>
-            <span class="hora-cocina text-sm"></span>
+            <div>
+                <span class="mesa-cocina" style="font-weight: bold;">Mesa #</span>
+                <div class="mesero-info" style="font-size: 12px;">Mesero: <span class="mesero-nombre"></span></div>
+            </div>
+            <div>
+                <span class="productos-count" style="font-weight: 600;">0/0 Listos</span>
+                <span class="hora-cocina" style="display: block; font-size: 12px; text-align: right;"></span>
+            </div>
         </div>
-        <ul class="lista-productos-cocina"></ul>
+        <div class="orden-body-cocina" style="padding: 1rem;">
+             <ul class="lista-productos-cocina"></ul>
+        </div>
     </div>
 </template>
 
 <script>
-    function inicializar_vista_cocina() {
+    // Se usa una IIFE para evitar conflictos con otras pestañas
+    (function() {
+        // Asegurarse de que el script solo se ejecute una vez
+        if (window.vistaCocinaInicializada) return;
+        window.vistaCocinaInicializada = true;
+        
         const pendientesContainer = document.getElementById('cocina-pendientes');
         const listasContainer = document.getElementById('cocina-listas');
         const template = document.getElementById('cocina-card-template');
+        const buttonsOnCooldown = new Set();
+        const csrfToken = '{{ csrf_token }}';
 
+        // --- Sistema de Modal y Notificaciones ---
+        const confirmOverlay = document.getElementById('confirm-overlay');
+        const confirmMessage = document.getElementById('confirm-message');
+        const confirmBtnOk = document.getElementById('confirm-btn-ok');
+        const confirmBtnCancel = document.getElementById('confirm-btn-cancel');
+        let confirmResolve = null;
+
+        const showConfirm = (message) => {
+            return new Promise((resolve) => {
+                confirmResolve = resolve;
+                confirmMessage.innerHTML = message;
+                confirmOverlay.style.display = 'flex';
+            });
+        };
+        confirmBtnOk.addEventListener('click', () => { if (confirmResolve) confirmResolve(true); confirmOverlay.style.display = 'none'; });
+        confirmBtnCancel.addEventListener('click', () => { if (confirmResolve) confirmResolve(false); confirmOverlay.style.display = 'none'; });
+
+        // --- Lógica de Renderizado y Acciones ---
         const renderizarVistaCocina = (ordenes) => {
             pendientesContainer.innerHTML = '<h3>🍳 En Preparación</h3>';
             listasContainer.innerHTML = '<h3>🍽️ Listo para Servir</h3>';
-
-            let hayPendientes = false;
-            let hayListas = false;
 
             if (!ordenes || ordenes.length === 0) {
                 pendientesContainer.innerHTML += '<p>No hay órdenes en preparación.</p>';
@@ -97,33 +143,65 @@
                 return;
             }
 
+            let hayPendientes = false, hayListas = false;
+
             ordenes.forEach(orden => {
                 const cardNode = document.importNode(template.content, true);
                 const card = cardNode.querySelector('.orden-card-cocina');
                 
                 card.querySelector('.mesa-cocina').textContent = `Mesa #${orden.mesa}`;
+                card.querySelector('.mesero-nombre').textContent = orden.mesero;
                 card.querySelector('.hora-cocina').textContent = orden.creado_en;
                 
                 const productosList = card.querySelector('.lista-productos-cocina');
-                productosList.innerHTML = ''; // Limpiar lista
+                productosList.innerHTML = '';
+                
+                let productosListosCount = 0;
+                const totalProductos = orden.productos.length;
 
                 orden.productos.forEach(p => {
+                    if (p.estado === 'LISTO') productosListosCount++;
+                    
                     const li = document.createElement('li');
                     li.className = 'producto-item-cocina';
-                    const estadoHTML = p.estado === 'LISTO' 
-                        ? `<span class="estado-listo">✔ Listo</span>`
-                        : `<span class="estado-pendiente">Cocinando...</span>`;
-                    
-                    li.innerHTML = `<span>${p.cantidad}x ${p.nombre}</span> ${estadoHTML}`;
+                    if (p.estado === 'LISTO') li.classList.add('listo');
+
+                    const observacionesHTML = p.observaciones ? `<div class="obs">📝 ${p.observaciones}</div>` : '';
+                    let controlesHTML = '';
+
+                    if (orden.completada || p.estado === 'LISTO') {
+                        controlesHTML = `<div class="controles-producto"><span style="color: var(--verde-listo); font-weight: 600;">✅ Listo</span></div>`;
+                    } else {
+                        const confirmarId = `c-${p.id}`;
+                        const enCooldownC = buttonsOnCooldown.has(confirmarId);
+                        
+                        if (p.cantidad === 1) {
+                            controlesHTML = `<div class="controles-producto"><button class="btn btn-confirmar-producto" data-producto-orden-id="${p.id}" data-cooldown-id="${confirmarId}" ${enCooldownC ? 'disabled' : ''}>Confirmar</button></div>`;
+                        } else {
+                            const decrementoId = `d-${p.id}`;
+                            const enCooldownD = buttonsOnCooldown.has(decrementoId);
+                            controlesHTML = `<div class="controles-producto">
+                                <button class="btn btn-confirmar-producto" data-producto-orden-id="${p.id}" data-cooldown-id="${confirmarId}" ${enCooldownC ? 'disabled' : ''}>Confirmar</button>
+                                <button class="btn btn-decremento" data-producto-orden-id="${p.id}" data-cooldown-id="${decrementoId}" ${enCooldownD ? 'disabled' : ''}>Entregar 1</button>
+                            </div>`;
+                        }
+                    }
+                    li.innerHTML = `<div class="producto-info"><strong>${p.cantidad}x ${p.nombre}</strong>${observacionesHTML}</div>${controlesHTML}`;
                     productosList.appendChild(li);
                 });
 
+                card.querySelector('.productos-count').textContent = `${productosListosCount} / ${totalProductos} Listos`;
+
                 if (orden.completada) {
                     card.classList.add('lista');
-                    listasContainer.appendChild(card);
+                    const ordenBody = card.querySelector('.orden-body-cocina');
+                    const servidoId = `s-${orden.id}`;
+                    const enCooldown = buttonsOnCooldown.has(servidoId);
+                    ordenBody.innerHTML += `<div style="text-align: center; margin-top: 15px;"><button class="btn btn-servido" data-orden-id="${orden.id}" data-cooldown-id="${servidoId}" ${enCooldown ? 'disabled' : ''}>🍽️ Marcar Servido</button></div>`;
+                    listasContainer.appendChild(cardNode);
                     hayListas = true;
                 } else {
-                    pendientesContainer.appendChild(card);
+                    pendientesContainer.appendChild(cardNode);
                     hayPendientes = true;
                 }
             });
@@ -131,6 +209,63 @@
             if (!hayPendientes) pendientesContainer.innerHTML += '<p>No hay órdenes en preparación.</p>';
             if (!hayListas) listasContainer.innerHTML += '<p>No hay órdenes listas.</p>';
         };
+
+        const manejarAccion = async (url, successMessage, errorMessage) => {
+            try {
+                const response = await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
+                const result = await response.json();
+                if (result.success) {
+                    showToast(result.mensaje || successMessage, 'success');
+                } else {
+                    showToast(result.error || errorMessage, 'error');
+                }
+            } catch (error) {
+                console.error("Error en la acción:", error);
+                showToast('Error de conexión.', 'error');
+            } finally {
+                actualizar_vista_cocina(); // Siempre refrescar la vista
+            }
+        };
+
+        const vistaCocinaContainer = document.getElementById('vista-cocina-container');
+        vistaCocinaContainer.addEventListener('click', async (e) => {
+            const target = e.target;
+            const cooldownId = target.dataset.cooldownId;
+            if (cooldownId && buttonsOnCooldown.has(cooldownId)) return;
+
+            const productoItem = target.closest('.producto-item-cocina');
+            const productoName = productoItem ? productoItem.querySelector('strong').textContent : '';
+            
+            let actionConfirmed = false;
+            let url = '', successMsg = '', errorMsg = '';
+
+            if (target.classList.contains('btn-decremento')) {
+                actionConfirmed = await showConfirm(`¿Confirmas la entrega de 1 unidad de "<b>${productoName}</b>"?`);
+                if (actionConfirmed) {
+                    url = `/api/cocina/producto/${target.dataset.productoOrdenId}/decrementar/`;
+                    successMsg = 'Producto entregado.'; errorMsg = 'No se pudo entregar.';
+                }
+            } else if (target.classList.contains('btn-confirmar-producto')) {
+                actionConfirmed = await showConfirm(`¿Marcar "<b>${productoName}</b>" como completado?`);
+                 if (actionConfirmed) {
+                    url = `/api/cocina/producto/${target.dataset.productoOrdenId}/listo/`;
+                    successMsg = 'Producto confirmado.'; errorMsg = 'No se pudo confirmar.';
+                }
+            } else if (target.classList.contains('btn-servido')) {
+                actionConfirmed = await showConfirm(`¿Confirmas que la orden completa fue servida?`);
+                if (actionConfirmed) {
+                    url = `/api/cocina/orden/${target.dataset.ordenId}/servida/`;
+                    successMsg = '¡Orden servida!'; errorMsg = 'No se pudo marcar como servida.';
+                }
+            }
+
+            if (actionConfirmed) {
+                buttonsOnCooldown.add(cooldownId);
+                target.disabled = true;
+                await manejarAccion(url, successMsg, errorMsg);
+                setTimeout(() => { buttonsOnCooldown.delete(cooldownId); target.disabled = false; }, 3000);
+            }
+        });
 
         window.actualizar_vista_cocina = async () => {
             try {
@@ -140,17 +275,11 @@
                 renderizarVistaCocina(data);
             } catch (error) {
                 console.error("Error al actualizar vista de cocina:", error);
-                pendientesContainer.innerHTML = '<p class="error-message">No se pudo cargar la vista de cocina.</p>';
-                listasContainer.innerHTML = '';
             }
         };
 
-        // Carga inicial
-        window.actualizar_vista_cocina();
-    }
-    
-    // Ejecutar la inicialización si la función no existe ya (para evitar re-ejecución)
-    if (typeof inicializar_vista_cocina === 'function') {
-        inicializar_vista_cocina();
-    }
+        // Carga inicial y actualización periódica
+        actualizar_vista_cocina();
+        setInterval(actualizar_vista_cocina, 5000); // Refresca cada 5 segundos
+    })();
 </script>

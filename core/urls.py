@@ -40,6 +40,8 @@ urlpatterns = [
     path('api/cocina/ordenes/', views.api_get_ordenes_cocina, name='api_get_ordenes_cocina'),
     path('api/cocina/producto/<int:producto_orden_id>/listo/', views.api_marcar_producto_listo_tiempo_real, name='api_marcar_producto_listo'),
     path('api/cocina/producto/<int:producto_orden_id>/decrementar/', views.api_decrementar_producto_tiempo_real, name='api_decrementar_producto'),
+    path('api/cocina/orden/<int:orden_id>/servida/', views.api_marcar_orden_servida, name='api_marcar_orden_servida'),
+
 
     # === LONG POLLING (TIEMPO REAL) ===
     path('api/longpolling/cocina/', views.api_longpolling_cocina, name='api_longpolling_cocina'),
