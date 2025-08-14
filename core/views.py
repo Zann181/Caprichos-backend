@@ -309,30 +309,41 @@ def api_agregar_productos_orden(request, orden_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 @login_required
+# Reemplazar esta función en core/views.py
+
+@login_required
 def api_get_orden_por_mesa(request, mesa_id):
-    """API para obtener la orden activa de una mesa específica"""
+    """API para obtener la orden activa de una mesa específica (CORREGIDA)"""
     try:
         mesa = get_object_or_404(Mesa, id=mesa_id)
         
-        # Buscar orden activa en esa mesa
+        # ✅ LÓGICA MEJORADA: Buscar orden activa O servida con factura no pagada
         orden = Orden.objects.filter(
-            mesa=mesa,
-            estado__in=['EN_PROCESO', 'LISTA', 'NUEVA']
-        ).first()
+            Q(mesa=mesa) & 
+            (Q(estado__in=['EN_PROCESO', 'LISTA', 'NUEVA']) | 
+             Q(estado='SERVIDA', factura__estado_pago__in=['NO_PAGADA', 'PARCIAL']))
+        ).distinct().first()
         
         if not orden:
-            return JsonResponse({'error': 'No hay orden activa en esta mesa'}, status=404)
+            return JsonResponse({'error': 'No hay orden activa o con pago pendiente en esta mesa'}, status=404)
         
         orden_data = obtener_datos_completos_orden(orden)
         
-        # Separar productos originales de los agregados después
+        # ✅ AÑADIR FLAG: Informar a la interfaz si tiene factura pendiente
+        tiene_factura_pendiente = False
+        if hasattr(orden, 'factura'):
+            if orden.factura.estado_pago in ['NO_PAGADA', 'PARCIAL']:
+                tiene_factura_pendiente = True
+
+        orden_data['tiene_factura_pendiente'] = tiene_factura_pendiente
+        
+        # Lógica existente para separar productos...
         productos_originales = []
         productos_agregados = []
         
         for producto in orden_data['productos']:
-            # Buscar el OrdenProducto para ver sus observaciones
             op = OrdenProducto.objects.get(id=producto['id'])
-            if op.observaciones and 'AGREGADO_DESPUES' in op.observaciones:
+            if op.observaciones and ('AGREGADO_DESPUES' in op.observaciones or 'AGREGADO_POST_FACTURA' in op.observaciones):
                 producto['agregado_despues'] = True
                 productos_agregados.append(producto)
             else:
@@ -341,7 +352,6 @@ def api_get_orden_por_mesa(request, mesa_id):
         
         orden_data['productos_originales'] = productos_originales
         orden_data['productos_agregados'] = productos_agregados
-        orden_data['tiene_agregados'] = len(productos_agregados) > 0
         
         return JsonResponse(orden_data)
         

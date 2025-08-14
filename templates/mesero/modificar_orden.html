@@ -269,23 +269,17 @@
 <h2>🔧 Modificar Orden Existente</h2>
 <p>Selecciona una mesa, domicilio o reserva activa para agregar productos:</p>
 
-<!-- Selector de mesas ocupadas -->
 <div class="mesa-selector" id="mesas-ocupadas-container">
-    <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #666;">
-        ⏳ Cargando mesas ocupadas...
-    </div>
+    <div class="loading">Cargando mesas ocupadas...</div>
 </div>
 
-<!-- Información de la orden actual (oculto inicialmente) -->
 <div id="orden-actual-info" style="display: none;"></div>
 
-<!-- Contenedor para agregar productos (oculto inicialmente) -->
 <div id="agregar-productos-container" style="display: none;">
     <hr>
     <h3>➕ Agregar Productos a la Orden</h3>
     
     <div class="dashboard-grid-modificar">
-        <!-- Menú de productos para modificar -->
         <div id="menu-productos-modificar">
             <div class="category-tabs">
                 <button class="category-btn active" data-category-id="all" data-context="modificar">Todos</button>
@@ -293,13 +287,9 @@
                 <button class="category-btn" data-category-id="{{ categoria.id }}" data-context="modificar">{{ categoria.nombre }}</button>
                 {% endfor %}
             </div>
-            
-            <div class="product-grid" id="productos-modificar">
-                <!-- Se llenarán dinámicamente -->
-            </div>
+            <div class="product-grid" id="productos-modificar"></div>
         </div>
         
-        <!-- Resumen de modificación -->
         <div id="resumen-modificacion">
             <h3>📦 Productos a Agregar</h3>
             <div id="lista-productos-agregar">
@@ -317,14 +307,16 @@
 </div>
 
 <script>
-// ✅ DEFINIR LA FUNCIÓN GLOBALMENTE PRIMERO
 window.inicializar_modificar_orden = function() {
     console.log('🔧 Inicializando modificar orden...');
     
-    const ordenModificar = {}; // Para productos a agregar
+    const ordenModificar = {};
     let ordenSeleccionadaId = null;
     let mesaSeleccionadaId = null;
+    // ✅ CAMBIO: Variable para saber el estado de la factura
+    let ordenTieneFacturaPendiente = false;
 
+    
     // === CARGAR MESAS OCUPADAS ===
     function cargarMesasOcupadas() {
         const container = document.getElementById('mesas-ocupadas-container');
@@ -419,42 +411,90 @@ window.inicializar_modificar_orden = function() {
     }
 
     // === SELECCIONAR MESA PARA MODIFICAR ===
+     
+    // === SELECCIONAR MESA PARA MODIFICAR ===
     function seleccionarMesaParaModificar(ordenId, mesaId) {
         console.log('🎯 Seleccionando orden:', ordenId, 'mesa:', mesaId);
         
-        // Actualizar UI de selección
         document.querySelectorAll('.mesa-btn').forEach(btn => btn.classList.remove('seleccionada'));
         document.querySelector(`[data-orden-id="${ordenId}"]`).classList.add('seleccionada');
         mesaSeleccionadaId = mesaId;
         ordenSeleccionadaId = ordenId;
         
-        // Mostrar loading
         const infoContainer = document.getElementById('orden-actual-info');
         infoContainer.style.display = 'block';
-        infoContainer.innerHTML = '<div style="text-align: center; padding: 1rem;">⏳ Cargando información de la orden...</div>';
+        infoContainer.innerHTML = '<div class="loading">⏳ Cargando información de la orden...</div>';
         
-        // Obtener orden actual de la mesa
         fetch(`/api/mesa/${mesaId}/orden/`)
             .then(response => response.json())
             .then(ordenData => {
-                if (ordenData.error) {
-                    throw new Error(ordenData.error);
-                }
+                if (ordenData.error) throw new Error(ordenData.error);
                 console.log('📋 Orden cargada:', ordenData);
+                
+                // ✅ CAMBIO: Guardar el estado de la factura
+                ordenTieneFacturaPendiente = ordenData.tiene_factura_pendiente || false;
+                
                 mostrarOrdenActual(ordenData);
                 prepararMenuModificacion();
                 document.getElementById('agregar-productos-container').style.display = 'block';
             })
             .catch(error => {
                 console.error('❌ Error obteniendo orden:', error);
-                infoContainer.innerHTML = `
-                    <div class="error-message">
-                        <strong>❌ Error al cargar la orden</strong><br>
-                        ${error.message}
-                    </div>
-                `;
+                infoContainer.innerHTML = `<div class="error-message"><strong>❌ Error:</strong> ${error.message}</div>`;
             });
     }
+
+    // === ENVIAR PRODUCTOS ADICIONALES (LÓGICA CORREGIDA) ===
+    document.getElementById('btn-agregar-productos').addEventListener('click', async () => {
+        if (!ordenSeleccionadaId || Object.keys(ordenModificar).length === 0) return;
+        
+        const productosParaAgregar = Object.values(ordenModificar).map(p => ({
+            id: p.id,
+            cantidad: p.cantidad,
+            observaciones: p.observaciones || ''
+        }));
+        
+        if (!confirm('¿Confirmar agregar estos productos a la orden?')) return;
+        
+        const btnAgregar = document.getElementById('btn-agregar-productos');
+        btnAgregar.disabled = true;
+        btnAgregar.textContent = '⏳ Agregando...';
+        
+        // ✅ CAMBIO: Determinar la URL correcta según el estado de la factura
+        const apiUrl = ordenTieneFacturaPendiente
+            ? `/api/orden/${ordenSeleccionadaId}/agregar-productos-facturada/`
+            : `/api/orden/${ordenSeleccionadaId}/agregar-productos/`;
+            
+        console.log(`📡 Enviando a: ${apiUrl}`);
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'X-CSRFToken': window.csrfToken 
+                },
+                body: JSON.stringify({ productos: productosParaAgregar })
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) throw new Error(result.error);
+            
+            window.mostrarNotificacion(`✅ ${result.mensaje}`, 'success');
+            Object.keys(ordenModificar).forEach(key => delete ordenModificar[key]);
+            actualizarResumenModificacion();
+            seleccionarMesaParaModificar(ordenSeleccionadaId, mesaSeleccionadaId); // Recargar
+            
+        } catch (error) {
+            console.error('❌ Error agregando productos:', error);
+            window.mostrarNotificacion(`❌ Error: ${error.message}`, 'error');
+        } finally {
+            btnAgregar.disabled = false;
+            btnAgregar.textContent = 'Agregar a la Orden';
+        }
+    });
+
 
     // === MOSTRAR ORDEN ACTUAL ===
     function mostrarOrdenActual(ordenData) {

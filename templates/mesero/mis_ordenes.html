@@ -13,23 +13,11 @@
         transform: translateY(-2px); 
     }
     
-    /* Estados especiales de órdenes */
-    .orden-card.necesita-atencion { 
-        border-left: 4px solid #28a745; 
-        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15);
-    }
-    .orden-card.en-preparacion { 
-        border-left: 4px solid var(--amarillo-modificado); 
-        box-shadow: 0 4px 12px rgba(255, 193, 7, 0.15); 
-    }
-    .orden-card.servida {
-        border-left: 4px solid #6c757d;
-        opacity: 0.85;
-    }
-    .orden-card.facturada-pendiente {
-        border-left: 4px solid #6f42c1;
-        box-shadow: 0 4px 12px rgba(111, 66, 193, 0.15);
-    }
+    /* Estilos de estado */
+    .orden-card.necesita-atencion { border-left: 4px solid #28a745; }
+    .orden-card.en-preparacion { border-left: 4px solid var(--amarillo-modificado); }
+    .orden-card.servida { border-left: 4px solid #6c757d; opacity: 0.85; }
+    .orden-card.facturada-pendiente { border-left: 4px solid #6f42c1; }
     
     /* Header de la orden */
     .orden-header { 
@@ -49,162 +37,46 @@
     .mesa-info { font-size: 1.2em; font-weight: 700; }
     .estado-general { font-size: 0.9em; opacity: 0.9; margin-top: 4px; }
     .tiempo-transcurrido { font-size: 0.85em; opacity: 0.8; }
-    
-    /* Cuerpo de la orden */
     .orden-body { padding: 1.5rem; }
     
     /* Resumen de estado */
     .estado-resumen { 
         display: grid; 
         grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
-        gap: 1rem; 
-        margin-bottom: 1.5rem; 
-        padding: 1rem; 
+        gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; 
         background-color: rgba(232, 119, 46, 0.05); 
-        border-radius: 6px; 
-        border: 1px solid rgba(232, 119, 46, 0.1);
+        border-radius: 6px; border: 1px solid rgba(232, 119, 46, 0.1);
     }
     .estado-item { text-align: center; }
-    .estado-numero { 
-        font-size: 1.5em; 
-        font-weight: 700; 
-        color: var(--naranja-tostado); 
-        display: block; 
-    }
+    .estado-numero { font-size: 1.5em; font-weight: 700; color: var(--naranja-tostado); display: block; }
     .estado-label { font-size: 0.8em; color: #666; margin-top: 2px; }
     
     /* Lista de productos */
     .productos-existentes { border-top: 1px solid #eee; padding-top: 1rem; }
-    .producto-existente { 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center;
-        padding: 0.75rem 0; 
-        border-bottom: 1px solid #f0f0f0;
-    }
+    .producto-existente { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid #f0f0f0; }
     .producto-existente:last-child { border-bottom: none; }
-    
-    .producto-existente.listo { 
-        color: var(--verde-listo); 
-        font-weight: 600; 
-    }
+    .producto-existente.listo { color: var(--verde-listo); font-weight: 600; }
     .producto-existente.agregado-despues { 
-        background-color: rgba(255, 193, 7, 0.1);
-        padding: 0.75rem;
-        border-radius: 4px;
-        margin: 0.25rem 0;
+        background-color: rgba(255, 193, 7, 0.1); padding: 0.75rem;
+        border-radius: 4px; margin: 0.25rem 0;
         border-left: 4px solid var(--amarillo-modificado);
     }
-    
     .producto-nombre { flex: 1; }
-    .producto-estado { 
-        font-size: 0.9em; 
-        padding: 4px 8px; 
-        border-radius: 12px; 
-        font-weight: 600;
-    }
+    .producto-estado { font-size: 0.9em; padding: 4px 8px; border-radius: 12px; font-weight: 600; }
     .producto-estado.listo { background-color: #d4edda; color: #155724; }
     .producto-estado.pendiente { background-color: #fff3cd; color: #856404; }
-    .producto-estado.nuevo { background-color: #ffeaa7; color: #b2900f; }
     
-    /* Total y acciones */
-    .orden-footer { 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center; 
-        padding-top: 1rem; 
-        border-top: 1px solid #eee; 
-        margin-top: 1rem; 
-    }
-    .orden-total { font-size: 1.2em; font-weight: 700; color: var(--carbon-suave); }
-    
-    /* Botones de acción */
+    /* Footer de la orden */
+    .orden-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid #eee; margin-top: 1rem; }
     .acciones-orden { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-    .btn-pequeño { 
-        padding: 8px 12px; 
-        font-size: 13px; 
-        border-radius: 4px; 
-        font-weight: 600;
-        transition: all 0.3s ease;
-        border: none;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 90px;
-    }
-    .btn-modificar { background-color: var(--azul-info); color: white; }
-    .btn-modificar:hover { background-color: #138496; transform: translateY(-1px); }
-    .btn-entregar { background-color: #28a745; color: white; }
-    .btn-entregar:hover { background-color: #218838; transform: translateY(-1px); }
-    .btn-ver-cocina { background-color: #17a2b8; color: white; }
-    .btn-ver-cocina:hover { background-color: #138496; transform: translateY(-1px); }
-    .btn-marcar-lista { background-color: #28a745; color: white; }
-    .btn-marcar-lista:hover { background-color: #218838; transform: translateY(-1px); }
-    .btn-ver-factura { background-color: #6f42c1; color: white; }
-    .btn-ver-factura:hover { background-color: #5a32a3; transform: translateY(-1px); }
-    
-    /* Estados vacíos */
-    .estado-vacio { 
-        text-align: center; 
-        padding: 3rem; 
-        color: #888; 
-        background-color: #f8f9fa; 
-        border-radius: 8px; 
-        border: 2px dashed #dee2e6; 
-    }
+    .btn-pequeño { padding: 8px 12px; font-size: 13px; }
     
     /* Filtros */
-    .filtros-ordenes { 
-        display: flex; 
-        gap: 1rem; 
-        margin-bottom: 2rem; 
-        flex-wrap: wrap; 
-        align-items: center;
-    }
-    .filtro-btn { 
-        padding: 8px 16px; 
-        border: 1px solid var(--gris-piedra); 
-        background: white; 
-        border-radius: 20px; 
-        cursor: pointer; 
-        transition: all 0.2s; 
-        font-size: 14px;
-    }
-    .filtro-btn:hover, .filtro-btn.active { 
-        background-color: var(--naranja-tostado); 
-        color: white; 
-        border-color: var(--naranja-tostado); 
-    }
+    .filtros-ordenes { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; align-items: center; }
+    .filtro-btn { padding: 8px 16px; border: 1px solid var(--gris-piedra); background: white; border-radius: 20px; cursor: pointer; transition: all 0.2s; font-size: 14px; }
+    .filtro-btn:hover, .filtro-btn.active { background-color: var(--naranja-tostado); color: white; border-color: var(--naranja-tostado); }
 
-    /* Modal de factura */
-    .modal-overlay {
-        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.5); display: none; align-items: center;
-        justify-content: center; z-index: 2000;
-    }
-    .modal-content {
-        background: white; border-radius: 8px; max-width: 600px;
-        width: 90%; max-height: 80vh; overflow-y: auto; padding: 2rem;
-    }
-    .modal-header {
-        display: flex; justify-content: space-between; align-items: center;
-        margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #eee;
-    }
-    .btn-cerrar {
-        background: none; border: none; font-size: 1.5rem; cursor: pointer;
-        color: #666; padding: 0; width: 30px; height: 30px;
-        display: flex; align-items: center; justify-content: center;
-    }
-    .btn-cerrar:hover { background: #f0f0f0; border-radius: 50%; }
-    
-    @media (max-width: 768px) {
-        .estado-resumen { grid-template-columns: repeat(2, 1fr); }
-        .orden-footer { flex-direction: column; gap: 1rem; align-items: stretch; }
-        .acciones-orden { justify-content: center; }
-        .btn-pequeño { flex: 1; min-width: auto; }
-    }
+    .estado-vacio { text-align: center; padding: 3rem; color: #888; background-color: #f8f9fa; border-radius: 8px; border: 2px dashed #dee2e6; }
 </style>
 
 <h2>📋 Mis Órdenes</h2>
@@ -221,171 +93,99 @@
 </div>
 
 <div id="mis-ordenes-container" class="mis-ordenes-grid">
-    <div style="text-align: center; padding: 2rem; color: #666;">
-        🔄 Cargando tus órdenes...
-    </div>
+    <div class="loading">Cargando tus órdenes...</div>
 </div>
 
-<div id="modal-factura" class="modal-overlay">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>🧾 Detalle de Factura</h3>
-            <button class="btn-cerrar" onclick="cerrarModalFactura()">✕</button>
-        </div>
-        <div id="contenido-factura">
-            <div style="text-align: center; padding: 2rem;">
-                <div class="loading">Cargando factura...</div>
-            </div>
-        </div>
-    </div>
-</div>
+<div id="modal-factura" style="display:none;"> </div>
 
 <script>
-// Función de inicialización para mis órdenes
 window.inicializar_mis_ordenes = function() {
-    console.log('📋 Inicializando mis órdenes...');
+    console.log('📋 Inicializando "Mis Órdenes"...');
     
-    let ordenesData = [];
     let filtroActual = 'todas';
 
-    // === CARGAR MIS ÓRDENES ===
+    // === LÓGICA PRINCIPAL ===
     window.cargarMisOrdenes = async function() {
+        const container = document.getElementById('mis-ordenes-container');
+        container.innerHTML = '<div class="loading">Cargando órdenes...</div>';
+        
         try {
-            const container = document.getElementById('mis-ordenes-container');
-            container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">🔄 Cargando órdenes...</div>';
-            
             const response = await fetch(`/api/mesero/todas-ordenes/?filtro=${filtroActual}`);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            ordenesData = await response.json();
-            console.log('📊 Órdenes cargadas:', ordenesData.length);
-            renderizarMisOrdenes(ordenesData);
-            
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const ordenes = await response.json();
+            renderizarMisOrdenes(ordenes);
         } catch (error) {
-            console.error('❌ Error cargando mis órdenes:', error);
-            mostrarError('Error al cargar tus órdenes: ' + error.message);
+            container.innerHTML = `<div class="error-message">Error al cargar órdenes: ${error.message}</div>`;
         }
     };
 
-    // === RENDERIZAR ÓRDENES ===
     function renderizarMisOrdenes(ordenes) {
         const container = document.getElementById('mis-ordenes-container');
-        
         if (ordenes.length === 0) {
-            let mensajeVacio = '';
-            switch(filtroActual) {
-                case 'en-preparacion':
-                    mensajeVacio = '😊 No hay órdenes en preparación';
-                    break;
-                case 'listas':
-                    mensajeVacio = '👍 No tienes órdenes listas para servir';
-                    break;
-                case 'no-pagadas':
-                    mensajeVacio = '✅ Ninguna factura pendiente de cobro';
-                    break;
-                case 'servidas':
-                    mensajeVacio = '🕰️ Aún no hay órdenes pagadas';
-                    break;
-                default:
-                    mensajeVacio = '😊 No tienes órdenes registradas';
-            }
-            
-            container.innerHTML = `
-                <div class="estado-vacio">
-                    <h3>${mensajeVacio}</h3>
-                    <p>Las órdenes aparecerán aquí cuando las crees.</p>
-                    <button class="btn" onclick="document.querySelector('[data-tab=\\'nuevo-pedido\\']').click()">➕ Crear Nueva Orden</button>
-                </div>
-            `;
+            let mensajes = {
+                'en-preparacion': 'No hay órdenes en preparación',
+                'listas': 'No tienes órdenes listas para servir',
+                'no-pagadas': 'Ninguna factura pendiente de cobro',
+                'servidas': 'Aún no hay órdenes pagadas',
+                'default': 'No tienes órdenes registradas'
+            };
+            container.innerHTML = `<div class="estado-vacio"><h3>😊 ${mensajes[filtroActual] || mensajes.default}</h3></div>`;
             return;
         }
         
         container.innerHTML = '';
-        
-        ordenes.forEach(orden => {
-            const ordenCard = crearTarjetaOrden(orden);
-            container.appendChild(ordenCard);
-        });
+        ordenes.forEach(orden => container.appendChild(crearTarjetaOrden(orden)));
     }
 
-    // === CREAR TARJETA DE ORDEN ===
     function crearTarjetaOrden(orden) {
-        const ordenCard = document.createElement('div');
-        ordenCard.className = 'orden-card';
+        const card = document.createElement('div');
+        card.className = 'orden-card';
         
         let estadoGeneral = '', claseHeader = '', claseCard = '';
-        
         if (orden.estado === 'SERVIDA') {
             if (orden.tiene_factura_pendiente) {
-                claseCard = 'facturada-pendiente';
-                claseHeader = 'facturada';
+                claseCard = 'facturada-pendiente'; claseHeader = 'facturada';
                 estadoGeneral = `🧾 Servida - Pago Pendiente`;
             } else {
-                claseCard = 'servida';
-                claseHeader = 'servida';
+                claseCard = 'servida'; claseHeader = 'servida';
                 estadoGeneral = '✅ Servida y Pagada';
             }
         } else if (orden.estado === 'LISTA') {
-            claseCard = 'necesita-atencion';
-            claseHeader = 'lista';
+            claseCard = 'necesita-atencion'; claseHeader = 'lista';
             estadoGeneral = '🔔 ¡Lista para servir!';
         } else if (orden.estado === 'EN_PROCESO') {
             claseCard = 'en-preparacion';
-             if (orden.productos_listos_count > 0) {
-                claseHeader = 'parcial';
-                estadoGeneral = `🔄 Parcial (${orden.productos_listos_count}/${orden.productos.length})`;
-            } else {
-                estadoGeneral = '⏳ En preparación';
-            }
+            estadoGeneral = orden.productos_listos_count > 0 ? `🔄 Parcial (${orden.productos_listos_count}/${orden.productos.length})` : '⏳ En preparación';
         }
         
-        ordenCard.className += ` ${claseCard}`;
-        
-        let productosHtml = '';
-        if (orden.productos && orden.productos.length > 0) {
-            orden.productos.forEach(p => {
-                let claseProducto = '', estadoProducto = '', iconoEstado = '';
-                if (p.estado === 'LISTO') { claseProducto = 'listo'; estadoProducto = 'listo'; iconoEstado = '✅'; } 
-                else { estadoProducto = 'pendiente'; iconoEstado = '⏳'; }
-                if (p.agregado_despues || p.agregado_post_factura) {
-                    claseProducto += ' agregado-despues'; estadoProducto = 'nuevo';
-                    iconoEstado = p.agregado_post_factura ? '🆕💰' : '🆕';
-                }
-                productosHtml += `
-                    <div class="producto-existente ${claseProducto}">
-                        <div class="producto-nombre">
-                            ${iconoEstado} ${p.cantidad}x ${p.nombre}
-                            ${p.observaciones ? `<div style="font-size: 0.8em; color: var(--naranja-tostado); font-style: italic; margin-top: 2px;">📝 ${p.observaciones}</div>` : ''}
-                        </div>
-                        <span class="producto-estado ${estadoProducto}">${p.estado}</span>
-                    </div>`;
-            });
-        }
-        
+        card.classList.add(claseCard);
+
+        const productosHtml = orden.productos.map(p => `
+            <div class="producto-existente ${p.estado === 'LISTO' ? 'listo' : ''} ${p.agregado_despues ? 'agregado-despues' : ''}">
+                <div>
+                    <span>${p.estado === 'LISTO' ? '✅' : '⏳'} ${p.cantidad}x ${p.nombre}</span>
+                    ${p.observaciones ? `<div style="font-size: 0.8em; color: var(--naranja-tostado);">${p.observaciones}</div>` : ''}
+                </div>
+                <span class="producto-estado ${p.estado === 'LISTO' ? 'listo' : 'pendiente'}">${p.estado}</span>
+            </div>
+        `).join('');
+
         let botonesAccion = '';
         if (orden.puede_modificar) {
             const btnText = orden.tiene_factura_pendiente ? '✏️💰 Agregar +' : '✏️ Modificar';
             const onclickAction = orden.tiene_factura_pendiente ? `modificarOrdenFacturada(${orden.mesa.id}, ${orden.orden_id})` : `modificarOrden(${orden.mesa.id})`;
-            botonesAccion += `<button class="btn-pequeño btn-modificar" onclick="${onclickAction}">${btnText}</button>`;
-        }
-        if (orden.puede_marcar_lista) {
-            botonesAccion += `<button class="btn-pequeño btn-marcar-lista" onclick="marcarComoLista(${orden.orden_id})">✅ Marcar Lista</button>`;
+            botonesAccion += `<button class="btn btn-pequeño" onclick="${onclickAction}">${btnText}</button>`;
         }
         if (orden.puede_entregar) {
-            botonesAccion += `<button class="btn-pequeño btn-entregar" onclick="entregarOrden(${orden.orden_id})">🍽️ Entregar</button>`;
+            botonesAccion += `<button class="btn btn-pequeño" onclick="entregarOrden(${orden.orden_id})">🍽️ Entregar</button>`;
         }
-        botonesAccion += `<button class="btn-pequeño btn-ver-cocina" onclick="irAVistaCocina()">👨‍🍳 Cocina</button>`;
         if (orden.factura_info) {
-             const textoBoton = orden.tiene_factura_pendiente ? `🧾 ${orden.factura_info.total.toLocaleString()}` : '🧾 Factura';
-             botonesAccion += `<button class="btn-pequeño btn-ver-factura" onclick="verFactura(${orden.orden_id})">${textoBoton}</button>`;
+             botonesAccion += `<button class="btn btn-pequeño" onclick="verFactura(${orden.orden_id})">🧾 Factura</button>`;
         }
         
         const mesaTexto = orden.es_domicilio ? '🏠 Domicilio' : `Mesa #${orden.mesa.numero}`;
         
-        ordenCard.innerHTML = `
+        card.innerHTML = `
             <div class="orden-header ${claseHeader}">
                 <div>
                     <div class="mesa-info">${mesaTexto}</div>
@@ -402,41 +202,53 @@ window.inicializar_mis_ordenes = function() {
                 </div>
                 <div class="productos-existentes">${productosHtml}</div>
                 <div class="orden-footer">
-                    <div class="orden-total">Estado Orden: ${orden.estado}</div>
                     <div class="acciones-orden">${botonesAccion}</div>
                 </div>
-            </div>`;
-        return ordenCard;
+            </div>
+        `;
+        return card;
     }
 
-    // === FUNCIONES DE ACCIÓN ===
-    window.modificarOrden = function(mesaId) { /* ... */ };
-    window.modificarOrdenFacturada = function(mesaId, ordenId) { /* ... */ };
-    window.marcarComoLista = async function(ordenId) { /* ... */ };
+    // === FUNCIONES DE ACCIÓN (LÓGICA RESTAURADA) ===
+    window.modificarOrden = function(mesaId) {
+        console.log('🔧 Modificando orden de mesa:', mesaId);
+        document.querySelector('[data-tab="modificar-orden"]').click();
+        setTimeout(() => {
+            const mesaBtn = document.querySelector(`#mesas-ocupadas-container [data-mesa-id="${mesaId}"]`);
+            if (mesaBtn) {
+                mesaBtn.click();
+            } else {
+                 console.warn(`No se encontró el botón para la mesa ${mesaId} en la pestaña de modificar.`);
+            }
+        }, 500); // Pequeño delay para asegurar que la pestaña cargue
+    };
+
+    window.modificarOrdenFacturada = function(mesaId, ordenId) {
+        console.log('🔧💰 Modificando orden facturada:', ordenId);
+        if (confirm('Esta orden ya tiene factura. ¿Deseas agregar más productos? El total se actualizará.')) {
+            modificarOrden(mesaId);
+        }
+    };
+
     window.entregarOrden = async function(ordenId) {
-        if (!confirm('¿Confirmas que esta orden ha sido entregada al cliente?\n\nSe generará una factura pendiente de pago.')) return;
+        if (!confirm('¿Confirmas que esta orden ha sido entregada?\nSe generará una factura pendiente.')) return;
         try {
             const response = await fetch(`/api/mesero/orden/${ordenId}/entregar/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.csrfToken }
+                headers: { 'X-CSRFToken': window.csrfToken }
             });
             const result = await response.json();
-            if (response.ok) {
-                window.mostrarNotificacion(`✅ Orden entregada. Factura: $${result.total.toLocaleString()}`, 'success');
-                cargarMisOrdenes();
-            } else {
-                window.mostrarNotificacion(`❌ ${result.error}`, 'error');
-            }
-        } catch (error) { window.mostrarNotificacion('🔌 Error de conexión', 'error'); }
+            if (!response.ok) throw new Error(result.error);
+            window.mostrarNotificacion(`✅ Orden #${ordenId} entregada.`, 'success');
+            cargarMisOrdenes();
+        } catch (error) {
+            window.mostrarNotificacion(`❌ Error: ${error.message}`, 'error');
+        }
     };
-    window.irAVistaCocina = function() { document.querySelector('[data-tab="vista-cocina"]').click(); };
-    window.verFactura = async function(ordenId) { /* ... */ };
-    window.cerrarModalFactura = function() { document.getElementById('modal-factura').style.display = 'none'; };
+    
+    // ... (otras funciones como verFactura pueden ir aquí si las necesitas) ...
 
-    // === MOSTRAR ERROR ===
-    function mostrarError(mensaje) { /* ... */ }
-
-    // === FILTROS ===
+    // === MANEJO DE FILTROS ===
     document.querySelectorAll('.filtro-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
@@ -446,20 +258,23 @@ window.inicializar_mis_ordenes = function() {
         });
     });
 
-    // === INICIALIZACIÓN ===
+    // === INICIALIZACIÓN Y LIMPIEZA ===
     cargarMisOrdenes();
     const intervalId = setInterval(cargarMisOrdenes, 30000);
     
-    return function cleanup() { if (intervalId) clearInterval(intervalId); };
+    return function cleanup() {
+        if (intervalId) clearInterval(intervalId);
+    };
 };
 
+// Función de actualización llamada por el polling del dashboard principal
 window.actualizar_mis_ordenes = function() {
     if (typeof cargarMisOrdenes === 'function') {
         cargarMisOrdenes();
     }
 };
 
-// Se asegura de que el script se inicialice al cargar la pestaña
+// Ejecutar la inicialización
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', window.inicializar_mis_ordenes);
 } else {
