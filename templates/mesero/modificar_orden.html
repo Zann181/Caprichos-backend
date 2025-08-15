@@ -1,5 +1,3 @@
-<!-- ARCHIVO COMPLETO: templates/mesero/modificar_orden.html -->
-
 <style>
     /* Estilos específicos para modificar orden */
     .mesa-selector { 
@@ -258,6 +256,22 @@
         font-family: var(--fuente-titulos); 
         margin: 1rem 0; 
     }
+
+    .stock-indicator {
+        font-size: 0.8em;
+        color: #666;
+        margin-top: 0.5rem;
+    }
+
+    .stock-low {
+        color: #ff6b6b;
+        font-weight: 600;
+    }
+
+    .stock-out {
+        color: #ff0000;
+        font-weight: 700;
+    }
     
     @media (max-width: 900px) {
         .dashboard-grid-modificar { grid-template-columns: 1fr; }
@@ -311,12 +325,110 @@ window.inicializar_modificar_orden = function() {
     console.log('🔧 Inicializando modificar orden...');
     
     const ordenModificar = {};
+    const stockVirtual = {}; // ✅ NUEVO: Seguimiento del stock virtual
     let ordenSeleccionadaId = null;
     let mesaSeleccionadaId = null;
-    // ✅ CAMBIO: Variable para saber el estado de la factura
     let ordenTieneFacturaPendiente = false;
 
-    
+    // === GESTIÓN DE STOCK VIRTUAL ===
+    function inicializarStockVirtual() {
+        // Copiar el stock actual de todos los productos
+        document.querySelectorAll('#productos-modificar .product-item').forEach(item => {
+            const id = item.dataset.id;
+            const stockOriginal = parseInt(item.dataset.stock, 10);
+            stockVirtual[id] = stockOriginal;
+        });
+    }
+
+    function actualizarStockVirtual(productoId, cantidadUsada) {
+        if (stockVirtual[productoId] !== undefined) {
+            stockVirtual[productoId] -= cantidadUsada;
+            actualizarIndicadorStock(productoId);
+        }
+    }
+
+    function restaurarStockVirtual(productoId, cantidadARestaurar) {
+        if (stockVirtual[productoId] !== undefined) {
+            const stockOriginal = parseInt(
+                document.querySelector(`[data-id="${productoId}"]`)?.dataset.stock || '0'
+            );
+            stockVirtual[productoId] = Math.min(
+                stockVirtual[productoId] + cantidadARestaurar,
+                stockOriginal
+            );
+            actualizarIndicadorStock(productoId);
+        }
+    }
+
+    function actualizarIndicadorStock(productoId) {
+        const productItem = document.querySelector(`#productos-modificar .product-item[data-id="${productoId}"]`);
+        if (!productItem) return;
+
+        let indicador = productItem.querySelector('.stock-indicator');
+        if (!indicador) {
+            indicador = document.createElement('div');
+            indicador.className = 'stock-indicator';
+            productItem.appendChild(indicador);
+        }
+
+        const stockActual = stockVirtual[productoId];
+        const stockOriginal = parseInt(productItem.dataset.stock, 10);
+
+        indicador.className = 'stock-indicator';
+        
+        if (stockActual <= 0) {
+            indicador.className += ' stock-out';
+            indicador.textContent = '❌ Sin stock';
+        } else if (stockActual <= 3) {
+            indicador.className += ' stock-low';
+            indicador.textContent = `⚠️ Stock: ${stockActual}`;
+        } else {
+            indicador.textContent = `📦 Stock: ${stockActual}`;
+        }
+    }
+
+    // === SELECCIONAR MESA PARA MODIFICAR ===
+    function seleccionarMesaParaModificar(ordenId, mesaId) {
+        console.log('🎯 Seleccionando orden:', ordenId, 'mesa:', mesaId);
+        
+        const mesaButtons = document.querySelectorAll('.mesa-btn');
+        mesaButtons.forEach(btn => btn.classList.remove('seleccionada'));
+        
+        const targetButton = document.querySelector(`[data-orden-id="${ordenId}"][data-mesa-id="${mesaId}"]`) || 
+                           document.querySelector(`[data-orden-id="${ordenId}"]`);
+        
+        if (targetButton) {
+            targetButton.classList.add('seleccionada');
+        } else {
+            console.warn(`⚠️ No se encontró el botón para orden ${ordenId}, mesa ${mesaId}`);
+        }
+        
+        mesaSeleccionadaId = mesaId;
+        ordenSeleccionadaId = ordenId;
+        
+        const infoContainer = document.getElementById('orden-actual-info');
+        infoContainer.style.display = 'block';
+        infoContainer.innerHTML = '<div class="loading">⏳ Cargando información de la orden...</div>';
+        
+        fetch(`/api/mesa/${mesaId}/orden/`)
+            .then(response => response.json())
+            .then(ordenData => {
+                if (ordenData.error) throw new Error(ordenData.error);
+                console.log('📋 Orden cargada:', ordenData);
+                
+                ordenTieneFacturaPendiente = ordenData.tiene_factura_pendiente || false;
+                console.log('💰 Tiene factura pendiente:', ordenTieneFacturaPendiente);
+                
+                mostrarOrdenActual(ordenData);
+                prepararMenuModificacion();
+                document.getElementById('agregar-productos-container').style.display = 'block';
+            })
+            .catch(error => {
+                console.error('❌ Error obteniendo orden:', error);
+                infoContainer.innerHTML = `<div class="error-message"><strong>❌ Error:</strong> ${error.message}</div>`;
+            });
+    }
+
     // === CARGAR MESAS OCUPADAS ===
     function cargarMesasOcupadas() {
         const container = document.getElementById('mesas-ocupadas-container');
@@ -350,7 +462,6 @@ window.inicializar_modificar_orden = function() {
                     let iconoEstado = '🍽️';
                     let clienteInfo = '';
                     
-                    // ✅ DETERMINAR TIPO DE ORDEN
                     if (mesa.es_domicilio) {
                         clases += ' domicilio';
                         iconoEstado = '🚚';
@@ -410,92 +521,6 @@ window.inicializar_modificar_orden = function() {
             });
     }
 
-    // === SELECCIONAR MESA PARA MODIFICAR ===
-     
-    // === SELECCIONAR MESA PARA MODIFICAR ===
-    function seleccionarMesaParaModificar(ordenId, mesaId) {
-        console.log('🎯 Seleccionando orden:', ordenId, 'mesa:', mesaId);
-        
-        document.querySelectorAll('.mesa-btn').forEach(btn => btn.classList.remove('seleccionada'));
-        document.querySelector(`[data-orden-id="${ordenId}"]`).classList.add('seleccionada');
-        mesaSeleccionadaId = mesaId;
-        ordenSeleccionadaId = ordenId;
-        
-        const infoContainer = document.getElementById('orden-actual-info');
-        infoContainer.style.display = 'block';
-        infoContainer.innerHTML = '<div class="loading">⏳ Cargando información de la orden...</div>';
-        
-        fetch(`/api/mesa/${mesaId}/orden/`)
-            .then(response => response.json())
-            .then(ordenData => {
-                if (ordenData.error) throw new Error(ordenData.error);
-                console.log('📋 Orden cargada:', ordenData);
-                
-                // ✅ CAMBIO: Guardar el estado de la factura
-                ordenTieneFacturaPendiente = ordenData.tiene_factura_pendiente || false;
-                
-                mostrarOrdenActual(ordenData);
-                prepararMenuModificacion();
-                document.getElementById('agregar-productos-container').style.display = 'block';
-            })
-            .catch(error => {
-                console.error('❌ Error obteniendo orden:', error);
-                infoContainer.innerHTML = `<div class="error-message"><strong>❌ Error:</strong> ${error.message}</div>`;
-            });
-    }
-
-    // === ENVIAR PRODUCTOS ADICIONALES (LÓGICA CORREGIDA) ===
-    document.getElementById('btn-agregar-productos').addEventListener('click', async () => {
-        if (!ordenSeleccionadaId || Object.keys(ordenModificar).length === 0) return;
-        
-        const productosParaAgregar = Object.values(ordenModificar).map(p => ({
-            id: p.id,
-            cantidad: p.cantidad,
-            observaciones: p.observaciones || ''
-        }));
-        
-        if (!confirm('¿Confirmar agregar estos productos a la orden?')) return;
-        
-        const btnAgregar = document.getElementById('btn-agregar-productos');
-        btnAgregar.disabled = true;
-        btnAgregar.textContent = '⏳ Agregando...';
-        
-        // ✅ CAMBIO: Determinar la URL correcta según el estado de la factura
-        const apiUrl = ordenTieneFacturaPendiente
-            ? `/api/orden/${ordenSeleccionadaId}/agregar-productos-facturada/`
-            : `/api/orden/${ordenSeleccionadaId}/agregar-productos/`;
-            
-        console.log(`📡 Enviando a: ${apiUrl}`);
-
-        try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'X-CSRFToken': window.csrfToken 
-                },
-                body: JSON.stringify({ productos: productosParaAgregar })
-            });
-            
-            const result = await response.json();
-            
-            if (!response.ok) throw new Error(result.error);
-            
-            window.mostrarNotificacion(`✅ ${result.mensaje}`, 'success');
-            Object.keys(ordenModificar).forEach(key => delete ordenModificar[key]);
-            actualizarResumenModificacion();
-            seleccionarMesaParaModificar(ordenSeleccionadaId, mesaSeleccionadaId); // Recargar
-            
-        } catch (error) {
-            console.error('❌ Error agregando productos:', error);
-            window.mostrarNotificacion(`❌ Error: ${error.message}`, 'error');
-        } finally {
-            btnAgregar.disabled = false;
-            btnAgregar.textContent = 'Agregar a la Orden';
-        }
-    });
-
-
     // === MOSTRAR ORDEN ACTUAL ===
     function mostrarOrdenActual(ordenData) {
         const container = document.getElementById('orden-actual-info');
@@ -516,7 +541,6 @@ window.inicializar_modificar_orden = function() {
         if (esDomicilio) {
             tipoOrden = 'Domicilio';
             iconoTipo = '🚚';
-            // Extraer info del cliente de observaciones
             if (ordenData.observaciones) {
                 const clienteMatch = ordenData.observaciones.match(/Cliente:\s*([^,]+)/i);
                 const direccionMatch = ordenData.observaciones.match(/Dir(?:ección)?:\s*([^,\n]+)/i);
@@ -534,7 +558,6 @@ window.inicializar_modificar_orden = function() {
         } else if (esReserva) {
             tipoOrden = 'Reserva';
             iconoTipo = '📅';
-            // Extraer info del cliente de observaciones
             if (ordenData.observaciones) {
                 const clienteMatch = ordenData.observaciones.match(/(?:Reserva|Cliente):\s*([^,]+)/i);
                 const personasMatch = ordenData.observaciones.match(/Personas?:\s*(\d+)/i);
@@ -650,6 +673,16 @@ window.inicializar_modificar_orden = function() {
             // Resetear cantidades en el menú de modificación
             menuModificar.querySelectorAll('.quantity-value').forEach(el => el.textContent = '0');
             menuModificar.querySelectorAll('.observaciones-input').forEach(el => el.value = '');
+            
+            // ✅ NUEVO: Inicializar stock virtual
+            inicializarStockVirtual();
+            
+            // Mostrar indicadores de stock iniciales
+            document.querySelectorAll('#productos-modificar .product-item').forEach(item => {
+                const id = item.dataset.id;
+                actualizarIndicadorStock(id);
+            });
+            
         } else {
             // Si no hay menú original, crear mensaje de ayuda
             menuModificar.innerHTML = `
@@ -682,18 +715,26 @@ window.inicializar_modificar_orden = function() {
         actualizarResumenModificacion();
     }
 
-    // === MANEJAR CAMBIOS DE CANTIDAD ===
+    // === MANEJAR CAMBIOS DE CANTIDAD (MEJORADO) ===
     function manejarCambioCantidad(id, accion) {
         const productItem = document.querySelector(`#productos-modificar .product-item[data-id="${id}"]`);
         if (!productItem) return;
         
-        const stock = parseInt(productItem.dataset.stock, 10);
+        const stockDisponible = stockVirtual[id] || 0;
         let cantidadActual = ordenModificar[id] ? ordenModificar[id].cantidad : 0;
+        let cantidadAnterior = cantidadActual;
 
-        if (accion === 'increment' && cantidadActual < stock) {
+        if (accion === 'increment' && stockDisponible > 0) {
             cantidadActual++;
+            // ✅ NUEVO: Reducir stock virtual inmediatamente
+            actualizarStockVirtual(id, 1);
         } else if (accion === 'decrement' && cantidadActual > 0) {
             cantidadActual--;
+            // ✅ NUEVO: Restaurar stock virtual inmediatamente
+            restaurarStockVirtual(id, 1);
+        } else if (accion === 'increment' && stockDisponible <= 0) {
+            window.mostrarNotificacion('❌ No hay suficiente stock disponible', 'error');
+            return;
         }
 
         if (cantidadActual > 0) {
@@ -712,6 +753,30 @@ window.inicializar_modificar_orden = function() {
 
         // Actualizar UI del producto
         productItem.querySelector('.quantity-value').textContent = cantidadActual;
+        
+        // ✅ NUEVO: Actualizar botones según stock disponible
+        const incrementBtn = productItem.querySelector('[data-action="increment"]');
+        const decrementBtn = productItem.querySelector('[data-action="decrement"]');
+        
+        if (stockVirtual[id] <= 0) {
+            incrementBtn.disabled = true;
+            incrementBtn.style.opacity = '0.3';
+            incrementBtn.style.cursor = 'not-allowed';
+        } else {
+            incrementBtn.disabled = false;
+            incrementBtn.style.opacity = '1';
+            incrementBtn.style.cursor = 'pointer';
+        }
+        
+        if (cantidadActual <= 0) {
+            decrementBtn.disabled = true;
+            decrementBtn.style.opacity = '0.3';
+            decrementBtn.style.cursor = 'not-allowed';
+        } else {
+            decrementBtn.disabled = false;
+            decrementBtn.style.opacity = '1';
+            decrementBtn.style.cursor = 'pointer';
+        }
         
         actualizarResumenModificacion();
     }
@@ -748,6 +813,28 @@ window.inicializar_modificar_orden = function() {
         totalEl.textContent = totalAdicional.toLocaleString();
     }
 
+    // === RESTAURAR STOCK EN CASO DE ERROR ===
+    function restaurarTodoElStock() {
+        console.log('🔄 Restaurando todo el stock virtual por error...');
+        Object.keys(ordenModificar).forEach(id => {
+            const cantidad = ordenModificar[id].cantidad;
+            restaurarStockVirtual(id, cantidad);
+        });
+        
+        // Limpiar orden y UI
+        Object.keys(ordenModificar).forEach(key => delete ordenModificar[key]);
+        
+        // Resetear UI
+        document.querySelectorAll('#productos-modificar .quantity-value').forEach(el => el.textContent = '0');
+        document.querySelectorAll('#productos-modificar .quantity-btn').forEach(btn => {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        });
+        
+        actualizarResumenModificacion();
+    }
+
     // === FILTROS DE CATEGORÍAS PARA MODIFICACIÓN ===
     document.addEventListener('click', e => {
         if (e.target.tagName === 'BUTTON' && e.target.dataset.context === 'modificar') {
@@ -769,12 +856,9 @@ window.inicializar_modificar_orden = function() {
         }
     });
 
-    // === ENVIAR PRODUCTOS ADICIONALES ===
+    // === ENVIAR PRODUCTOS ADICIONALES (LÓGICA CORREGIDA) ===
     document.getElementById('btn-agregar-productos').addEventListener('click', async () => {
-        if (!ordenSeleccionadaId || Object.keys(ordenModificar).length === 0) {
-            alert('Selecciona productos para agregar');
-            return;
-        }
+        if (!ordenSeleccionadaId || Object.keys(ordenModificar).length === 0) return;
         
         const productosParaAgregar = Object.values(ordenModificar).map(p => ({
             id: p.id,
@@ -782,65 +866,69 @@ window.inicializar_modificar_orden = function() {
             observaciones: p.observaciones || ''
         }));
         
-        const totalAdicional = productosParaAgregar.reduce((sum, p) => sum + (p.cantidad * p.precio), 0);
+        // ✅ CORRECCIÓN: Mensaje más específico según el tipo de orden
+        const tipoAccion = ordenTieneFacturaPendiente ? 
+            'agregar productos a la orden facturada (se actualizará el total)' : 
+            'agregar productos a la orden';
+            
+        if (!confirm(`¿Confirmar ${tipoAccion}?`)) return;
         
-        // Confirmar antes de enviar
-        const confirmacion = confirm(
-            `¿Confirmar agregar productos a la orden?\n\n` +
-            `Productos a agregar: ${productosParaAgregar.length}\n` +
-            `Costo adicional: ${totalAdicional.toLocaleString()}\n\n` +
-            `¿Proceder?`
-        );
-        
-        if (!confirmacion) return;
-        
-        // Deshabilitar botón mientras se procesa
         const btnAgregar = document.getElementById('btn-agregar-productos');
-        const textoOriginal = btnAgregar.textContent;
         btnAgregar.disabled = true;
-        btnAgregar.textContent = '⏳ Agregando productos...';
+        btnAgregar.textContent = '⏳ Agregando...';
         
+        // ✅ CORRECCIÓN: URL corregida con manejo de errores
+        let apiUrl;
+        if (ordenTieneFacturaPendiente) {
+            // Usar la URL estándar de agregar productos y manejar en el backend
+            apiUrl = `/api/orden/${ordenSeleccionadaId}/agregar-productos/`;
+        } else {
+            apiUrl = `/api/orden/${ordenSeleccionadaId}/agregar-productos/`;
+        }
+            
+        console.log(`📡 Enviando a: ${apiUrl}`);
+        console.log(`💰 Orden tiene factura pendiente: ${ordenTieneFacturaPendiente}`);
+
         try {
-            const response = await fetch(`/api/orden/${ordenSeleccionadaId}/agregar-productos/`, {
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json', 
                     'X-CSRFToken': window.csrfToken 
                 },
-                body: JSON.stringify({ productos: productosParaAgregar })
+                body: JSON.stringify({ 
+                    productos: productosParaAgregar,
+                    es_orden_facturada: ordenTieneFacturaPendiente // ✅ NUEVO: Flag para el backend
+                })
             });
             
             const result = await response.json();
             
-            if (response.ok) {
-                window.mostrarNotificacion(`✅ ${result.mensaje}`, 'success');
-                
-                // Limpiar formulario
-                Object.keys(ordenModificar).forEach(key => delete ordenModificar[key]);
-                actualizarResumenModificacion();
-                
-                // Recargar la información de la orden
-                if (ordenSeleccionadaId && mesaSeleccionadaId) {
-                    seleccionarMesaParaModificar(ordenSeleccionadaId, mesaSeleccionadaId);
-                }
-                
-                // Sugerir ir a vista de cocina
-                setTimeout(() => {
-                    if (confirm('¿Quieres ver el estado actualizado de la orden en la cocina?')) {
-                        document.querySelector('[data-tab="vista-cocina"]').click();
-                    }
-                }, 2000);
-                
-            } else {
-                window.mostrarNotificacion(`❌ Error: ${result.error}`, 'error');
+            if (!response.ok) {
+                throw new Error(result.error || `Error ${response.status}: ${response.statusText}`);
             }
+            
+            window.mostrarNotificacion(`✅ ${result.mensaje}`, 'success');
+            
+            // ✅ ÉXITO: Limpiar orden sin restaurar stock (ya fue usado)
+            Object.keys(ordenModificar).forEach(key => delete ordenModificar[key]);
+            
+            // Resetear UI
+            document.querySelectorAll('#productos-modificar .quantity-value').forEach(el => el.textContent = '0');
+            
+            actualizarResumenModificacion();
+            seleccionarMesaParaModificar(ordenSeleccionadaId, mesaSeleccionadaId); // Recargar
+            
         } catch (error) {
             console.error('❌ Error agregando productos:', error);
-            window.mostrarNotificacion('🔌 Error de conexión al agregar productos', 'error');
+            window.mostrarNotificacion(`❌ Error: ${error.message}`, 'error');
+            
+            // ✅ ERROR: Restaurar todo el stock virtual
+            restaurarTodoElStock();
+            
         } finally {
-            // Rehabilitar botón
             btnAgregar.disabled = false;
-            btnAgregar.textContent = textoOriginal;
+            btnAgregar.textContent = 'Agregar a la Orden';
         }
     });
 
@@ -852,20 +940,23 @@ window.inicializar_modificar_orden = function() {
     
     console.log('✅ Modificar orden inicializado correctamente');
     
-    // Retornar función de cleanup
     return function cleanup() {
         console.log('🧹 Limpiando modificar orden');
-        // Limpiar event listeners si es necesario
         const container = document.getElementById('agregar-productos-container');
         if (container) {
             container.style.display = 'none';
         }
+        
+        // ✅ NUEVO: Restaurar todo el stock al limpiar
+        if (Object.keys(ordenModificar).length > 0) {
+            console.log('🔄 Restaurando stock virtual al limpiar...');
+            restaurarTodoElStock();
+        }
     };
 };
 
-// Función de actualización (llamada por long polling)
+// === FUNCIONES GLOBALES ===
 window.actualizar_modificar_orden = function() {
-    // Recargar mesas ocupadas si hay cambios
     if (typeof window.cargarMesasOcupadas === 'function') {
         console.log('🔄 Actualizando mesas ocupadas...');
         window.cargarMesasOcupadas();
