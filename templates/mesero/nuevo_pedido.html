@@ -1,33 +1,230 @@
 <style>
-    /* Estilos específicos para nuevo pedido */
-    .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
-    .category-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--gris-piedra); padding-bottom: 1rem; }
-    .category-btn { background-color: transparent; border: 1px solid var(--naranja-tostado); color: var(--naranja-tostado); padding: 0.5rem 1rem; border-radius: 20px; cursor: pointer; transition: all 0.2s; }
-    .category-btn:hover, .category-btn.active { background-color: var(--naranja-tostado); color: white; }
-    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1.5rem; }
-    .product-item { border: 1px solid var(--gris-piedra); border-radius: 8px; padding: 1rem; text-align: center; display: flex; flex-direction: column; }
-    .product-image-container { width: 100%; height: 100px; margin-bottom: 0.5rem; }
-    .product-image-container img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
-    .product-item h4, .product-item p { margin: 0.25rem 0; }
-    .stock-text { font-size: 0.8em; color: #666; }
-    .quantity-selector { display: flex; justify-content: center; align-items: center; margin: 1rem 0; }
-    .quantity-btn { width: 40px; height: 40px; border: 1px solid var(--gris-piedra); background-color: #fff; font-size: 24px; font-weight: bold; cursor: pointer; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; }
-    .quantity-value { width: 50px; font-size: 18px; font-weight: 600; text-align: center; }
-    .observaciones-input { font-size: 12px; padding: 5px; margin-top: auto; border: 1px solid var(--gris-piedra); border-radius: 4px; width: 100%; box-sizing: border-box; }
+    /* === ESTILOS MEJORADOS PARA CAMPOS OBLIGATORIOS === */
+    .campo-obligatorio {
+        border: 2px solid #dc3545 !important;
+        box-shadow: 0 0 8px rgba(220, 53, 69, 0.4) !important;
+        background-color: #fff5f5 !important;
+    }
     
-    #resumen-pedido { position: sticky; top: 2rem; }
-    #lista-pedido-items { min-height: 200px; max-height: 40vh; overflow-y: auto; }
-    .order-item { display: grid; grid-template-columns: 1fr 120px; gap: 1rem; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid #eee; }
-    .order-item-info { font-weight: 600; }
-    .order-item-obs { font-size: 0.8em; color: #666; grid-column: 1 / 3; }
-    .summary-quantity-selector { display: flex; justify-content: flex-end; align-items: center; }
-    .summary-quantity-selector .quantity-btn { width: 28px; height: 28px; font-size: 18px; }
-    .summary-quantity-selector .quantity-value { width: 35px; font-size: 16px; }
-    .order-total { text-align: right; font-size: 1.5rem; font-family: var(--fuente-titulos); margin: 1rem 0; }
+    .campo-obligatorio-label {
+        color: #dc3545 !important;
+        font-weight: 700 !important;
+    }
     
-    @media (max-width: 900px) {
-        .dashboard-grid { grid-template-columns: 1fr; }
-        #resumen-pedido { order: -1; position: static; }
+    .campo-obligatorio-label::after {
+        content: ' *';
+        color: #dc3545;
+        font-weight: 700;
+        font-size: 1.2em;
+    }
+    
+    /* Animación para campos obligatorios */
+    @keyframes shake-field {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+    
+    .campo-obligatorio-shake {
+        animation: shake-field 0.6s ease-in-out;
+    }
+    
+    /* === ESTILOS MEJORADOS PARA INDICADORES DE STOCK === */
+    .product-item {
+        position: relative;
+        border: 1px solid var(--gris-piedra);
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        transition: all 0.3s ease;
+    }
+    
+    /* Stock crítico (1-2 productos restantes) - ROJO */
+    .product-item.stock-critico {
+        border: 2px solid #dc3545;
+        background: linear-gradient(135deg, #fff5f5, #ffe6e6);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.25);
+        transform: scale(1.02);
+    }
+    
+    .product-item.stock-critico .stock-text {
+        color: #dc3545;
+        font-weight: 700;
+        animation: parpadeo 1.5s infinite;
+        text-transform: uppercase;
+    }
+    
+    .product-item.stock-critico::before {
+        content: '🚨';
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        font-size: 1.2em;
+        animation: shake 0.5s ease-in-out infinite alternate;
+        z-index: 5;
+    }
+    
+    /* Stock bajo (3-5 productos restantes) - AMARILLO */
+    .product-item.stock-bajo {
+        border: 2px solid #ffc107;
+        background: linear-gradient(135deg, #fffdf0, #fff8e1);
+        box-shadow: 0 3px 10px rgba(255, 193, 7, 0.2);
+    }
+    
+    .product-item.stock-bajo .stock-text {
+        color: #856404;
+        font-weight: 700;
+    }
+    
+    .product-item.stock-bajo::before {
+        content: '⚠️';
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        font-size: 1em;
+        z-index: 5;
+    }
+    
+    /* Producto agotado - GRIS */
+    .product-item.stock-agotado {
+        border: 2px solid #6c757d;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        opacity: 0.6;
+        pointer-events: none;
+        position: relative;
+    }
+    
+    .product-item.stock-agotado .stock-text {
+        color: #dc3545;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    
+    .product-item.stock-agotado::before {
+        content: '❌';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 3em;
+        z-index: 10;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .product-item.stock-agotado::after {
+        content: 'AGOTADO';
+        position: absolute;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #dc3545;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: 700;
+        z-index: 10;
+    }
+    
+    /* Animaciones mejoradas */
+    @keyframes parpadeo {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0.4; }
+    }
+    
+    @keyframes shake {
+        0% { transform: translateX(0) rotate(0deg); }
+        50% { transform: translateX(2px) rotate(1deg); }
+        100% { transform: translateX(-2px) rotate(-1deg); }
+    }
+    
+    /* Tooltip mejorado */
+    .stock-tooltip {
+        position: absolute;
+        top: -3rem;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 0.5rem;
+        border-radius: 6px;
+        font-size: 0.75em;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        z-index: 20;
+        font-weight: 600;
+    }
+    
+    .product-item:hover .stock-tooltip {
+        opacity: 1;
+    }
+    
+    /* Botones según stock */
+    .product-item.stock-critico .quantity-btn:hover {
+        background-color: #dc3545;
+        color: white;
+        border-color: #dc3545;
+    }
+    
+    .product-item.stock-bajo .quantity-btn:hover {
+        background-color: #ffc107;
+        color: #212529;
+        border-color: #ffc107;
+    }
+    
+    .product-item.stock-agotado .quantity-btn {
+        opacity: 0.3;
+        pointer-events: none;
+    }
+    
+    /* === ESTILOS PARA MENSAJES DE ERROR === */
+    .error-obligatorio {
+        background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+        border: 2px solid #dc3545;
+        color: #721c24;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+        font-weight: 600;
+        text-align: center;
+        animation: shake-field 0.6s ease-in-out;
+    }
+    
+    .success-obligatorio {
+        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        border: 2px solid #28a745;
+        color: #155724;
+        padding: 0.75rem;
+        border-radius: 6px;
+        margin: 0.5rem 0;
+        font-weight: 600;
+    }
+    
+    /* === BOTÓN ENVIAR MEJORADO === */
+    #btn-enviar-pedido {
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    #btn-enviar-pedido:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    
+    #btn-enviar-pedido.enviando {
+        background: linear-gradient(45deg, #17a2b8, #138496);
+        animation: pulse-envio 1.5s infinite;
+    }
+    
+    @keyframes pulse-envio {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(23, 162, 184, 0.7); }
+        50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(23, 162, 184, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(23, 162, 184, 0); }
     }
 </style>
 
@@ -35,6 +232,26 @@
     <!-- MENÚ DE PRODUCTOS -->
     <div id="menu-productos">
         <h2>Menú de Productos</h2>
+        
+        <!-- Leyenda de colores mejorada -->
+        <div style="display: flex; gap: 1rem; margin-bottom: 1rem; padding: 1rem; background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 8px; font-size: 0.85em; flex-wrap: wrap; border: 1px solid #dee2e6;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="width: 16px; height: 16px; background: #28a745; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></span>
+                <span><strong>Normal:</strong> 6+ unidades</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="width: 16px; height: 16px; background: #ffc107; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></span>
+                <span><strong>Bajo:</strong> 3-5 unidades</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="width: 16px; height: 16px; background: #dc3545; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></span>
+                <span><strong>Crítico:</strong> 1-2 unidades</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="width: 16px; height: 16px; background: #6c757d; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></span>
+                <span><strong>Agotado:</strong> Sin stock</span>
+            </div>
+        </div>
         
         <!-- Filtros de categorías -->
         <div class="category-tabs">
@@ -68,13 +285,16 @@
                         <p>${{ producto.precio|floatformat:0 }}</p>
                         <p class="stock-text">Disponible: <span class="stock-display">{{ producto.cantidad }}</span></p>
                         
+                        <!-- Tooltip informativo mejorado -->
+                        <div class="stock-tooltip">Stock: {{ producto.cantidad }} unidades</div>
+                        
                         <div class="quantity-selector">
                             <button class="quantity-btn" data-action="decrement">-</button>
                             <span class="quantity-value">0</span>
                             <button class="quantity-btn" data-action="increment">+</button>
                         </div>
                         
-                        <input type="text" class="observaciones-input" placeholder="Observaciones...">
+                        <input type="text" class="observaciones-input" placeholder="Observaciones..." maxlength="200">
                     </div>
                     {% endif %}
                 {% endfor %}
@@ -86,104 +306,282 @@
     <div id="resumen-pedido">
         <h2>Orden Actual</h2>
         
-        <!-- Selección de mesa -->
+        <!-- Selección de mesa con indicadores mejorados -->
         <div style="margin-bottom: 1rem;">
-            <label for="select-mesa" style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Asignar a Mesa:</label>
-            <select id="select-mesa" style="width: 100%; padding: 8px; border: 1px solid var(--gris-piedra); border-radius: 5px;">
-                <option value="">-- Elige una mesa libre --</option>
-                {% for mesa in mesas %} 
-                <option value="{{ mesa.id }}">Mesa {{ mesa.numero }} ({{ mesa.ubicacion }})</option> 
+            <label for="select-mesa" style="font-weight: 600; display: block; margin-bottom: 0.5rem;">
+                🍽️ Asignar a Mesa:
+            </label>
+            <select id="select-mesa" style="width: 100%; padding: 10px; border: 2px solid var(--gris-piedra); border-radius: 6px; font-size: 16px; background: white;">
+                <option value="">-- Selecciona una mesa --</option>
+                {% for mesa in mesas %}
+                    {% if mesa.numero == 0 %}
+                        <option value="{{ mesa.id }}" data-tipo="domicilio">🏠 DOMICILIO (Mesa {{ mesa.numero }})</option>
+                    {% elif mesa.numero == 50 %}
+                        <option value="{{ mesa.id }}" data-tipo="reserva">📅 RESERVA (Mesa {{ mesa.numero }})</option>
+                    {% else %}
+                        <option value="{{ mesa.id }}" data-tipo="normal">🍽️ Mesa {{ mesa.numero }} ({{ mesa.ubicacion }})</option>
+                    {% endif %}
                 {% endfor %}
             </select>
+            <div id="mesa-error" style="color: #dc3545; font-size: 0.9em; margin-top: 0.5rem; display: none; font-weight: 600;">
+                ⚠️ Debes seleccionar una mesa
+            </div>
         </div>
         
         <hr>
         
-        <!-- Observaciones generales -->
+        <!-- Campo de observaciones DINÁMICO y OBLIGATORIO para mesas especiales -->
         <div style="margin-bottom: 1rem;">
-            <label for="observaciones-orden" style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Observaciones de la orden:</label>
+            <label for="observaciones-orden" id="label-observaciones" style="font-weight: 600; display: block; margin-bottom: 0.5rem;">
+                📝 Observaciones de la orden:
+            </label>
+            
+            <!-- Indicador de campo obligatorio -->
+            <div id="indicador-obligatorio" style="display: none; background: linear-gradient(135deg, #fff3cd, #ffeaa7); border: 2px solid #ffc107; padding: 0.75rem; border-radius: 6px; margin-bottom: 0.5rem; color: #856404; font-weight: 600;">
+                <span style="font-size: 1.2em;">🚨</span> <strong>CAMPO OBLIGATORIO:</strong> 
+                <span id="texto-obligatorio">Complete la información requerida</span>
+            </div>
+            
             <textarea id="observaciones-orden" 
                       placeholder="Observaciones generales de la orden..." 
-                      style="width: 100%; padding: 8px; border: 1px solid var(--gris-piedra); border-radius: 5px; resize: vertical; min-height: 60px; box-sizing: border-box;"></textarea>
+                      style="width: 100%; padding: 12px; border: 2px solid var(--gris-piedra); border-radius: 6px; resize: vertical; min-height: 80px; max-height: 150px; box-sizing: border-box; font-size: 14px; line-height: 1.4;"
+                      maxlength="500"></textarea>
+            
+            <!-- Contador de caracteres -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.25rem;">
+                <div id="observaciones-error" style="color: #dc3545; font-size: 0.85em; display: none; font-weight: 600;">
+                    ⚠️ Este campo es obligatorio
+                </div>
+                <div id="char-counter" style="color: #666; font-size: 0.75em;">
+                    <span id="char-count">0</span>/500
+                </div>
+            </div>
+            
+            <!-- Ayuda contextual MEJORADA -->
+            <div id="observaciones-ayuda" style="display: none; margin-top: 0.75rem; padding: 0.75rem; border-radius: 6px; font-size: 0.85em; line-height: 1.4;">
+                <!-- La ayuda se carga dinámicamente según el tipo de mesa -->
+            </div>
+            
+            <!-- Ejemplos dinámicos -->
+            <div id="ejemplos-formato" style="display: none; margin-top: 0.5rem; padding: 0.5rem; background: #f8f9fa; border-radius: 4px; border-left: 4px solid #17a2b8;">
+                <div style="font-size: 0.8em; color: #495057; font-weight: 600; margin-bottom: 0.25rem;">💡 Ejemplo de formato:</div>
+                <div id="ejemplo-texto" style="font-size: 0.75em; color: #6c757d; font-style: italic;">
+                    <!-- El ejemplo se carga dinámicamente -->
+                </div>
+            </div>
         </div>
         
         <hr>
         
         <!-- Lista de productos seleccionados -->
         <div id="lista-pedido-items">
-            <p style="color: #888; text-align: center;">Elige productos del menú.</p>
+            <p style="color: #888; text-align: center; font-style: italic;">Selecciona productos del menú</p>
         </div>
         
         <hr>
         
-        <!-- Total -->
+        <!-- Total con información adicional -->
         <div class="order-total">
-            <strong>Total: $<span id="total-pedido">0</span></strong>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span style="font-size: 1.1em;">Productos:</span>
+                <span id="productos-count" style="font-weight: 600;">0</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 1.3em; font-weight: 700;">
+                <span>💰 Total:</span>
+                <span>$<span id="total-pedido">0</span></span>
+            </div>
         </div>
         
-        <!-- Botón de envío -->
-        <button id="btn-enviar-pedido" class="btn" style="width: 100%;">Confirmar y Enviar Pedido</button>
+        <!-- Botón de envío con estados visuales -->
+        <button id="btn-enviar-pedido" class="btn" style="width: 100%; padding: 1rem; font-size: 1.1em; margin-top: 1rem; position: relative;">
+            <span id="btn-texto">Confirmar y Enviar Pedido</span>
+            <span id="btn-loader" style="display: none;">⏳ Enviando...</span>
+        </button>
+        
+        <!-- Información adicional del pedido -->
+        <div id="info-pedido" style="margin-top: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 6px; font-size: 0.85em; color: #495057; display: none;">
+            <div style="font-weight: 600; margin-bottom: 0.5rem;">📋 Resumen del pedido:</div>
+            <div id="resumen-info">
+                <!-- Se llena dinámicamente -->
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
 // Función de inicialización para nuevo pedido
 window.inicializar_nuevo_pedido = function() {
-    // Objeto para guardar el estado del pedido: { id: {cantidad, observaciones, nombre, precio}, ... }
+    console.log('🍽️ Inicializando nuevo pedido con protección ULTRA ROBUSTA...');
+    
+    // === VARIABLES DE ESTADO CON PROTECCIÓN MÚLTIPLE ===
     const orden = {};
     
+    // PROTECCIÓN NIVEL 1: Estados de envío
+    let enviandoPedido = false;
+    let pedidoEnviado = false; // Flag permanente hasta reset
+    let ultimoEnvio = 0;
+    let requestId = null; // ID único por request
+    
+    // PROTECCIÓN NIVEL 2: Control de clicks
+    let clicksIgnorados = 0;
+    let ultimoClick = 0;
+    const DEBOUNCE_CLICK = 1000; // 1 segundo entre clicks
+    
+    // PROTECCIÓN NIVEL 3: Validación de estado
+    let estadoFormulario = 'idle'; // idle, validating, sending, sent, error
+    
+    // Long polling y stock
+    let longPollingActivo = false;
+    let hashStockAnterior = null;
+    let stockUpdateInterval = null;
+    
+    // === ELEMENTOS DEL DOM ===
+    const btnEnviar = document.getElementById('btn-enviar-pedido');
+    const btnTexto = document.getElementById('btn-texto');
+    const btnLoader = document.getElementById('btn-loader');
+    const selectMesa = document.getElementById('select-mesa');
+    const observacionesOrden = document.getElementById('observaciones-orden');
     const menuProductos = document.getElementById('menu-productos');
     const resumenContainer = document.getElementById('lista-pedido-items');
     const totalEl = document.getElementById('total-pedido');
-    const categoryTabs = document.querySelector('.category-tabs');
     const productItems = document.querySelectorAll('.product-item');
-
-    // === FILTROS DE CATEGORÍAS ===
-    categoryTabs.addEventListener('click', (e) => {
-        if (e.target.tagName === 'BUTTON') {
-            const selectedCategoryId = e.target.dataset.categoryId;
-            
-            // Actualizar botón activo
-            categoryTabs.querySelector('.active').classList.remove('active');
-            e.target.classList.add('active');
-            
-            // Mostrar/ocultar productos
-            productItems.forEach(item => {
-                if (selectedCategoryId === 'all' || item.dataset.categoryId === selectedCategoryId) {
-                    item.style.display = 'flex';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
+    
+    // === FUNCIÓN PARA BLOQUEAR COMPLETAMENTE EL ENVÍO ===
+    function bloquearEnvio(razon) {
+        enviandoPedido = true;
+        pedidoEnviado = true;
+        estadoFormulario = 'sending';
+        
+        btnEnviar.disabled = true;
+        btnEnviar.style.pointerEvents = 'none';
+        btnEnviar.classList.add('enviando');
+        
+        // Bloquear también otros controles críticos
+        selectMesa.disabled = true;
+        observacionesOrden.disabled = true;
+        
+        console.log(`🔒 ENVÍO BLOQUEADO: ${razon}`);
+    }
+    
+    function desbloquearEnvio(exitoso = false) {
+        // Solo desbloquear si fue exitoso, sino mantener bloqueado
+        if (exitoso) {
+            enviandoPedido = false;
+            pedidoEnviado = false;
+            estadoFormulario = 'idle';
+            ultimoEnvio = 0;
+            requestId = null;
+        } else {
+            estadoFormulario = 'error';
         }
-    });
-
-    // === FUNCIONES DE ACTUALIZACIÓN ===
+        
+        btnEnviar.disabled = false;
+        btnEnviar.style.pointerEvents = 'auto';
+        btnEnviar.classList.remove('enviando');
+        
+        btnTexto.style.display = 'inline';
+        btnLoader.style.display = 'none';
+        
+        selectMesa.disabled = false;
+        observacionesOrden.disabled = false;
+        
+        console.log(`🔓 ENVÍO ${exitoso ? 'DESBLOQUEADO' : 'ERROR - PERMITIR REINTENTO'}`);
+    }
+    
+    // === FUNCIONES BÁSICAS (SIMPLIFICADAS) ===
+    function actualizarClaseStock(item, stockRestante) {
+        item.classList.remove('stock-critico', 'stock-bajo', 'stock-agotado');
+        const incrementBtn = item.querySelector('[data-action="increment"]');
+        
+        if (stockRestante <= 0) {
+            item.classList.add('stock-agotado');
+            if (incrementBtn) incrementBtn.disabled = true;
+        } else if (stockRestante <= 2) {
+            item.classList.add('stock-critico');
+            if (incrementBtn) incrementBtn.disabled = false;
+        } else if (stockRestante <= 5) {
+            item.classList.add('stock-bajo');
+            if (incrementBtn) incrementBtn.disabled = false;
+        } else {
+            if (incrementBtn) incrementBtn.disabled = false;
+        }
+    }
+    
+    function actualizarCampoObservaciones(mesaId) {
+        const labelObservaciones = document.getElementById('label-observaciones');
+        const indicadorObligatorio = document.getElementById('indicador-obligatorio');
+        
+        if (mesaId === '0') {
+            labelObservaciones.innerHTML = '🏠 Información del domicilio:';
+            labelObservaciones.classList.add('campo-obligatorio-label');
+            observacionesOrden.placeholder = 'OBLIGATORIO - Cliente: Juan Pérez, Tel: 3001234567, Dir: Calle 123';
+            observacionesOrden.required = true;
+            if (indicadorObligatorio) indicadorObligatorio.style.display = 'block';
+        } else if (mesaId === '50') {
+            labelObservaciones.innerHTML = '📅 Información de la reserva:';
+            labelObservaciones.classList.add('campo-obligatorio-label');
+            observacionesOrden.placeholder = 'OBLIGATORIO - Reserva: María García, Tel: 3109876543, Personas: 4';
+            observacionesOrden.required = true;
+            if (indicadorObligatorio) indicadorObligatorio.style.display = 'block';
+        } else {
+            labelObservaciones.innerHTML = '📝 Observaciones:';
+            labelObservaciones.classList.remove('campo-obligatorio-label');
+            observacionesOrden.placeholder = 'Observaciones opcionales';
+            observacionesOrden.required = false;
+            if (indicadorObligatorio) indicadorObligatorio.style.display = 'none';
+        }
+    }
+    
+    function validarInformacionMesa(mesaId, observaciones) {
+        const obs = observaciones.trim().toLowerCase();
+        
+        if (mesaId === '0') {
+            const tieneCliente = /\b[a-záéíóúñü]+\s+[a-záéíóúñü]+/i.test(observaciones);
+            const tieneTelefono = /\b\d{7,10}\b/.test(observaciones);
+            const tieneDireccion = obs.includes('dir') || obs.includes('calle') || /#/.test(observaciones);
+            
+            const errores = [];
+            if (!tieneCliente) errores.push('Nombre');
+            if (!tieneTelefono) errores.push('Teléfono');
+            if (!tieneDireccion) errores.push('Dirección');
+            
+            return { valido: errores.length === 0, errores, mensaje: errores.join(', ') };
+        } else if (mesaId === '50') {
+            const tieneCliente = /\b[a-záéíóúñü]+\s+[a-záéíóúñü]+/i.test(observaciones);
+            const tieneTelefono = /\b\d{7,10}\b/.test(observaciones);
+            const tienePersonas = /\d+\s*personas?/i.test(observaciones);
+            
+            const errores = [];
+            if (!tieneCliente) errores.push('Nombre');
+            if (!tieneTelefono) errores.push('Teléfono');
+            if (!tienePersonas) errores.push('Personas');
+            
+            return { valido: errores.length === 0, errores, mensaje: errores.join(', ') };
+        }
+        
+        return { valido: true, errores: [], mensaje: '' };
+    }
+    
     function actualizarResumen() {
         resumenContainer.innerHTML = '';
         let totalGeneral = 0;
         
         if (Object.keys(orden).length === 0) {
-            resumenContainer.innerHTML = '<p style="color: #888; text-align: center;">Elige productos del menú.</p>';
+            resumenContainer.innerHTML = '<p style="color: #888; text-align: center;">Selecciona productos</p>';
         } else {
             Object.values(orden).forEach(item => {
-                const subtotal = item.cantidad * item.precio;
-                totalGeneral += subtotal;
-                
-                const itemHTML = `
-                    <div>
-                        <div class="order-item" data-id="${item.id}">
-                            <span class="order-item-info">${item.nombre} x${item.cantidad}</span>
-                            <div class="summary-quantity-selector">
-                                <button class="quantity-btn" data-action="decrement" data-id="${item.id}">-</button>
-                                <span class="quantity-value">${item.cantidad}</span>
-                                <button class="quantity-btn" data-action="increment" data-id="${item.id}">+</button>
-                            </div>
+                totalGeneral += item.cantidad * item.precio;
+                resumenContainer.innerHTML += `
+                    <div class="order-item" data-id="${item.id}">
+                        <span>${item.cantidad}x ${item.nombre}</span>
+                        <div class="summary-quantity-selector">
+                            <button class="quantity-btn" data-action="decrement" data-id="${item.id}">-</button>
+                            <span>${item.cantidad}</span>
+                            <button class="quantity-btn" data-action="increment" data-id="${item.id}">+</button>
                         </div>
-                        ${item.observaciones ? `<div class="order-item-obs">📝 ${item.observaciones}</div>` : ''}
                     </div>
+                    ${item.observaciones ? `<div class="order-item-obs">📝 ${item.observaciones}</div>` : ''}
                 `;
-                resumenContainer.innerHTML += itemHTML;
             });
         }
         
@@ -199,7 +597,7 @@ window.inicializar_nuevo_pedido = function() {
             
             item.querySelector('.quantity-value').textContent = cantidadEnOrden;
             item.querySelector('.stock-display').textContent = stockRestante;
-            item.querySelector('.observaciones-input').value = orden[id] ? orden[id].observaciones : '';
+            actualizarClaseStock(item, stockRestante);
         });
     }
 
@@ -208,7 +606,11 @@ window.inicializar_nuevo_pedido = function() {
         const stock = parseInt(productItem.dataset.stock, 10);
         let cantidadActual = orden[id] ? orden[id].cantidad : 0;
 
-        if (accion === 'increment' && cantidadActual < stock) {
+        if (accion === 'increment') {
+            if (stock - cantidadActual <= 0) {
+                window.mostrarNotificacion('❌ Sin stock', 'error');
+                return;
+            }
             cantidadActual++;
         } else if (accion === 'decrement' && cantidadActual > 0) {
             cantidadActual--;
@@ -220,7 +622,7 @@ window.inicializar_nuevo_pedido = function() {
                     id: id,
                     nombre: productItem.dataset.nombre,
                     precio: parseFloat(productItem.dataset.precio),
-                    observaciones: productItem.querySelector('.observaciones-input').value
+                    observaciones: ''
                 };
             }
             orden[id].cantidad = cantidadActual;
@@ -231,82 +633,127 @@ window.inicializar_nuevo_pedido = function() {
         actualizarResumen();
         actualizarMenuYStock();
     }
-
-    // === EVENT LISTENERS ===
     
-    // Clics en el menú de productos (botones +/-)
-    menuProductos.addEventListener('click', e => {
-        if (e.target.classList.contains('quantity-btn')) {
-            const id = e.target.closest('.product-item').dataset.id;
-            manejarCambioCantidad(id, e.target.dataset.action);
+    // === ENVÍO DE PEDIDO CON PROTECCIÓN ULTRA ROBUSTA ===
+    btnEnviar.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        
+        const ahora = Date.now();
+        
+        // ====== PROTECCIÓN NIVEL 1: ESTADO GENERAL ======
+        if (enviandoPedido || pedidoEnviado || estadoFormulario === 'sending') {
+            clicksIgnorados++;
+            console.warn(`⚠️ CLICK IGNORADO #${clicksIgnorados} - Estado: ${estadoFormulario}, Enviando: ${enviandoPedido}`);
+            window.mostrarNotificacion('⏳ Pedido en proceso, espera...', 'warning');
+            return;
         }
-    });
-
-    // Clics en el resumen del pedido (botones +/-)
-    resumenContainer.addEventListener('click', e => {
-        if (e.target.classList.contains('quantity-btn')) {
-            const id = e.target.dataset.id;
-            manejarCambioCantidad(id, e.target.dataset.action);
+        
+        // ====== PROTECCIÓN NIVEL 2: DEBOUNCE DE CLICKS ======
+        if (ahora - ultimoClick < DEBOUNCE_CLICK) {
+            clicksIgnorados++;
+            console.warn(`⚠️ CLICK MUY RÁPIDO #${clicksIgnorados} - Debounce activo`);
+            return;
         }
-    });
-
-    // Cambios en las observaciones de productos
-    menuProductos.addEventListener('input', e => {
-        if (e.target.classList.contains('observaciones-input')) {
-            const id = e.target.closest('.product-item').dataset.id;
-            if (orden[id]) {
-                orden[id].observaciones = e.target.value;
-                actualizarResumen();
-            }
+        ultimoClick = ahora;
+        
+        // ====== PROTECCIÓN NIVEL 3: DEBOUNCE DE ENVÍOS ======
+        if (ahora - ultimoEnvio < 5000) {
+            const tiempoRestante = Math.ceil((5000 - (ahora - ultimoEnvio)) / 1000);
+            console.warn(`⚠️ DEBOUNCE DE ENVÍO - Esperar ${tiempoRestante}s`);
+            window.mostrarNotificacion(`⏳ Espera ${tiempoRestante} segundos`, 'warning');
+            return;
         }
-    });
-
-    // === ENVIAR PEDIDO ===
-    document.getElementById('btn-enviar-pedido').addEventListener('click', async () => {
-        const mesaId = document.getElementById('select-mesa').value;
+        
+        // ====== GENERAR ID ÚNICO PARA ESTE REQUEST ======
+        requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        console.log(`🆔 NUEVO REQUEST ID: ${requestId}`);
+        
+        // ====== BLOQUEAR INMEDIATAMENTE ======
+        bloquearEnvio(`Request ${requestId}`);
+        ultimoEnvio = ahora;
+        
+        // ====== VALIDACIONES ======
+        estadoFormulario = 'validating';
+        
+        const mesaId = selectMesa.value;
         const productosParaEnviar = Object.values(orden);
-        const observacionesOrden = document.getElementById('observaciones-orden').value;
-        
-        // Validaciones
-        if (!mesaId) {
-            alert('Por favor, selecciona una mesa.');
-            return;
-        }
-        
-        if (productosParaEnviar.length === 0) {
-            alert('El pedido está vacío. Agrega al menos un producto.');
-            return;
-        }
-        
-        // Confirmar envío
-        const totalPedido = Object.values(orden).reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
-        const confirmacion = confirm(
-            `¿Confirmar pedido?\n\n` +
-            `Mesa: ${document.querySelector(`option[value="${mesaId}"]`).textContent}\n` +
-            `Productos: ${productosParaEnviar.length}\n` +
-            `Total: ${totalPedido.toLocaleString()}\n\n` +
-            `${observacionesOrden ? `Observaciones: ${observacionesOrden}\n` : ''}` +
-            `¿Proceder con el envío?`
-        );
-        
-        if (!confirmacion) return;
-        
-        // Deshabilitar botón mientras se procesa
-        const btnEnviar = document.getElementById('btn-enviar-pedido');
-        const textoOriginal = btnEnviar.textContent;
-        btnEnviar.disabled = true;
-        btnEnviar.textContent = '⏳ Enviando pedido...';
+        const observaciones = observacionesOrden.value.trim();
         
         try {
+            // Validación 1: Mesa
+            if (!mesaId) {
+                throw new Error('Selecciona una mesa');
+            }
+            
+            // Validación 2: Productos
+            if (productosParaEnviar.length === 0) {
+                throw new Error('Agrega productos al pedido');
+            }
+            
+            // Validación 3: Información obligatoria
+            if (mesaId === '0' || mesaId === '50') {
+                if (!observaciones || observaciones.length < 15) {
+                    const tipo = mesaId === '0' ? 'domicilio' : 'reserva';
+                    throw new Error(`Información del ${tipo} es obligatoria`);
+                }
+                
+                const validacion = validarInformacionMesa(mesaId, observaciones);
+                if (!validacion.valido) {
+                    throw new Error(`Falta: ${validacion.mensaje}`);
+                }
+            }
+            
+            // Validación 4: Stock
+            for (const item of productosParaEnviar) {
+                const productItem = document.querySelector(`.product-item[data-id="${item.id}"]`);
+                const stockActual = parseInt(productItem.dataset.stock, 10);
+                if (stockActual < item.cantidad) {
+                    throw new Error(`Sin stock: ${item.nombre}`);
+                }
+            }
+            
+            // ====== CONFIRMACIÓN ======
+            const totalPedido = productosParaEnviar.reduce((sum, item) => sum + (item.cantidad * item.precio), 0);
+            const mesaTexto = selectMesa.options[selectMesa.selectedIndex].text;
+            
+            // Temporalmente desbloquear para la confirmación
+            estadoFormulario = 'idle';
+            const confirmacion = confirm(`¿Confirmar pedido?\n\n${mesaTexto}\nProductos: ${productosParaEnviar.length}\nTotal: $${totalPedido.toLocaleString()}`);
+            
+            if (!confirmacion) {
+                desbloquearEnvio(false);
+                console.log('❌ Usuario canceló el envío');
+                return;
+            }
+            
+            // Rebloquear después de confirmación
+            bloquearEnvio(`Confirmado ${requestId}`);
+            estadoFormulario = 'sending';
+            
+            // ====== ACTUALIZAR UI DE ENVÍO ======
+            btnTexto.style.display = 'none';
+            btnLoader.style.display = 'inline';
+            btnLoader.textContent = '⏳ Enviando pedido único...';
+            
+            console.log(`📤 ENVIANDO PEDIDO ÚNICO [${requestId}]:`, {
+                mesa_id: mesaId,
+                productos: productosParaEnviar.length,
+                total: totalPedido
+            });
+            
+            // ====== REALIZAR REQUEST ÚNICO ======
             const response = await fetch('/api/orden/crear/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': window.csrfToken
+                    'X-CSRFToken': window.csrfToken,
+                    'X-Request-ID': requestId // Header personalizado para tracking
                 },
                 body: JSON.stringify({
                     mesa_id: mesaId,
-                    observaciones_orden: observacionesOrden,
+                    observaciones_orden: observaciones,
                     productos: productosParaEnviar.map(p => ({
                         id: p.id,
                         cantidad: p.cantidad,
@@ -317,62 +764,160 @@ window.inicializar_nuevo_pedido = function() {
             
             const result = await response.json();
             
-            if (response.ok) {
-                // Éxito
-                window.mostrarNotificacion(
-                    `✅ ¡Pedido creado exitosamente! Orden #${result.orden_id}`, 
-                    'success',
-                    8000
-                );
+            if (response.ok && result.success) {
+                // ====== ÉXITO ======
+                console.log(`✅ PEDIDO CREADO EXITOSAMENTE [${requestId}]:`, result.orden_id);
                 
-                // Limpiar formulario
+                const tipoMesa = mesaId === '0' ? 'DOMICILIO' : mesaId === '50' ? 'RESERVA' : 'PEDIDO';
+                window.mostrarNotificacion(`✅ ${tipoMesa} #${result.orden_id} creado exitosamente`, 'success', 10000);
+                
+                // ====== LIMPIAR FORMULARIO ======
                 Object.keys(orden).forEach(key => delete orden[key]);
-                document.getElementById('select-mesa').value = '';
-                document.getElementById('observaciones-orden').value = '';
+                selectMesa.value = '';
+                observacionesOrden.value = '';
                 document.querySelectorAll('.observaciones-input').forEach(input => input.value = '');
                 
+                actualizarCampoObservaciones('');
                 actualizarResumen();
                 actualizarMenuYStock();
                 
-                // Sugerir cambiar a vista de cocina
+                // ====== DESBLOQUEAR COMPLETAMENTE ======
                 setTimeout(() => {
-                    if (confirm('¿Quieres ver el estado de tu pedido en la cocina?')) {
-                        document.querySelector('[data-tab="vista-cocina"]').click();
-                    }
+                    desbloquearEnvio(true);
+                    console.log(`🔓 PEDIDO COMPLETADO [${requestId}] - Formulario limpio y listo`);
                 }, 2000);
                 
             } else {
-                // Error del servidor
-                window.mostrarNotificacion(
-                    `❌ Error al crear el pedido: ${result.error}`, 
-                    'error'
-                );
+                // ====== ERROR DEL SERVIDOR ======
+                throw new Error(result.error || 'Error del servidor');
             }
             
         } catch (error) {
-            console.error('Error de red:', error);
-            window.mostrarNotificacion(
-                '🔌 Error de conexión. Verifica tu internet e intenta nuevamente.', 
-                'error'
-            );
-        } finally {
-            // Rehabilitar botón
-            btnEnviar.disabled = false;
-            btnEnviar.textContent = textoOriginal;
+            // ====== MANEJO DE ERRORES ======
+            console.error(`❌ ERROR EN PEDIDO [${requestId}]:`, error.message);
+            window.mostrarNotificacion(`❌ ${error.message}`, 'error');
+            
+            // Permitir reintento después de un error
+            setTimeout(() => {
+                desbloquearEnvio(false);
+                console.log(`🔄 REINTENTO PERMITIDO [${requestId}]`);
+            }, 2000);
         }
     });
-
+    
+    // === LONG POLLING SIMPLIFICADO ===
+    async function iniciarLongPollingStock() {
+        if (longPollingActivo) return;
+        longPollingActivo = true;
+        console.log('🔄 Long polling iniciado');
+        
+        async function pollStock() {
+            if (!longPollingActivo) return;
+            
+            try {
+                const url = `/api/longpolling/meseros/${hashStockAnterior ? `?hash_stock=${hashStockAnterior}` : ''}`;
+                const response = await fetch(url);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.cambios && data.hash_stock !== hashStockAnterior) {
+                        console.log('📊 Actualizando stock desde long polling');
+                        hashStockAnterior = data.hash_stock;
+                        
+                        if (data.stock_productos) {
+                            Object.values(data.stock_productos).forEach(producto => {
+                                const productItem = document.querySelector(`.product-item[data-id="${producto.id}"]`);
+                                if (productItem) {
+                                    const stockAnterior = parseInt(productItem.dataset.stock, 10);
+                                    if (stockAnterior !== producto.stock) {
+                                        productItem.dataset.stock = producto.stock;
+                                        actualizarMenuYStock();
+                                        console.log(`📊 ${producto.nombre}: ${stockAnterior} → ${producto.stock}`);
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+                
+                if (longPollingActivo) {
+                    setTimeout(pollStock, 2000);
+                }
+                
+            } catch (error) {
+                console.error('❌ Error en long polling:', error);
+                if (longPollingActivo) {
+                    setTimeout(pollStock, 10000);
+                }
+            }
+        }
+        
+        pollStock();
+    }
+    
+    // === EVENT LISTENERS BÁSICOS ===
+    selectMesa.addEventListener('change', (e) => {
+        const mesaId = e.target.value;
+        actualizarCampoObservaciones(mesaId);
+    });
+    
+    // Filtros de categorías
+    document.querySelector('.category-tabs').addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON') {
+            const categoryId = e.target.dataset.categoryId;
+            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            productItems.forEach(item => {
+                if (categoryId === 'all' || item.dataset.categoryId === categoryId) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+    });
+    
+    // Controles de cantidad
+    menuProductos.addEventListener('click', e => {
+        if (e.target.classList.contains('quantity-btn') && !e.target.disabled) {
+            const id = e.target.closest('.product-item').dataset.id;
+            manejarCambioCantidad(id, e.target.dataset.action);
+        }
+    });
+    
+    resumenContainer.addEventListener('click', e => {
+        if (e.target.classList.contains('quantity-btn')) {
+            const id = e.target.dataset.id;
+            manejarCambioCantidad(id, e.target.dataset.action);
+        }
+    });
+    
     // === INICIALIZACIÓN ===
+    actualizarCampoObservaciones('');
     actualizarResumen();
     actualizarMenuYStock();
     
-    console.log('✅ Nuevo pedido inicializado');
+    // Iniciar long polling
+    setTimeout(iniciarLongPollingStock, 5000);
+    
+    // === FUNCIÓN DE LIMPIEZA ===
+    return function cleanup() {
+        console.log('🧹 Limpiando nuevo pedido...');
+        longPollingActivo = false;
+        if (stockUpdateInterval) clearInterval(stockUpdateInterval);
+        
+        // Reset completo del estado
+        enviandoPedido = false;
+        pedidoEnviado = false;
+        estadoFormulario = 'idle';
+        ultimoEnvio = 0;
+        requestId = null;
+        
+        console.log('✅ Cleanup completado');
+    };
 };
 
-// Función de actualización (llamada por long polling)
-window.actualizar_nuevo_pedido = function() {
-    // Actualizar stock en tiempo real si es necesario
-    // Por ahora solo log para debug
-    console.log('🔄 Actualizando nuevo pedido...');
-};
+console.log('✅ Nuevo pedido con protección ULTRA ROBUSTA implementado');
 </script>

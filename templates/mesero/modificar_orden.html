@@ -1,5 +1,3 @@
-<!-- templates/mesero/modificar_orden.html - PARTE 1: HTML Y CSS -->
-
 <style>
     /* === ESTILOS PARA MODIFICAR ORDEN === */
     .modificar-container {
@@ -597,6 +595,276 @@
         cursor: not-allowed;
     }
 
+    /* === ESTILOS PARA DETALLE COMPLETO DE ORDEN === */
+    .detalle-orden-completo {
+        margin-top: 2rem;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .orden-header-detalle {
+        background: linear-gradient(135deg, #17a2b8, #138496);
+        color: white;
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .orden-info-principal-detalle h4 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.3em;
+    }
+
+    .meta-orden {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        font-size: 0.9em;
+        opacity: 0.95;
+    }
+
+    .meta-orden span {
+        background: rgba(255,255,255,0.2);
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.85em;
+    }
+
+    .totales-orden-detalle {
+        text-align: right;
+    }
+
+    .total-actual {
+        font-size: 1.2em;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+
+    .productos-count {
+        font-size: 0.9em;
+        opacity: 0.9;
+    }
+
+    .info-cliente-detalle,
+    .info-factura-detalle {
+        padding: 1rem 1.5rem;
+        border-left: 4px solid #17a2b8;
+        background: rgba(23, 162, 184, 0.05);
+        margin: 0;
+    }
+
+    .info-factura-detalle {
+        border-left-color: #dc3545;
+        background: rgba(220, 53, 69, 0.05);
+    }
+
+    .info-cliente-detalle h5,
+    .info-factura-detalle h5 {
+        margin: 0 0 0.75rem 0;
+        color: #17a2b8;
+        font-size: 1em;
+    }
+
+    .info-factura-detalle h5 {
+        color: #dc3545;
+    }
+
+    .cliente-grid,
+    .factura-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 0.5rem;
+        font-size: 0.9em;
+    }
+
+    .direccion-completa {
+        grid-column: 1 / -1;
+    }
+
+    .productos-orden-detalle {
+        padding: 1.5rem;
+    }
+
+    .productos-orden-detalle h5 {
+        margin: 0 0 1rem 0;
+        color: var(--carbon-suave);
+        border-bottom: 2px solid var(--gris-piedra);
+        padding-bottom: 0.5rem;
+    }
+
+    .seccion-productos-originales,
+    .seccion-productos-agregados {
+        margin-bottom: 1.5rem;
+    }
+
+    .seccion-productos-originales h6,
+    .seccion-productos-agregados h6 {
+        margin: 0 0 0.75rem 0;
+        color: #666;
+        font-size: 0.95em;
+    }
+
+    .lista-productos-detalle {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .producto-detalle-item {
+        padding: 0.75rem;
+        border: 1px solid #eee;
+        border-radius: 6px;
+        background: #fafafa;
+    }
+
+    .producto-detalle-item.producto-listo {
+        background: #f8fff8;
+        border-color: #d4edda;
+    }
+
+    .producto-detalle-item.producto-agregado {
+        background: #fff8e1;
+        border-color: #ffc107;
+        border-left: 3px solid #ffc107;
+    }
+
+    .producto-info-detalle {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .producto-principal {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 600;
+    }
+
+    .estado-icono {
+        font-size: 1.1em;
+    }
+
+    .cantidad-nombre {
+        flex: 1;
+    }
+
+    .precio-unit {
+        color: #666;
+        font-size: 0.9em;
+    }
+
+    .producto-secundario {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.85em;
+        color: #666;
+    }
+
+    .marcador-agregado {
+        background: #ffc107;
+        color: #856404;
+        padding: 0.125rem 0.5rem;
+        border-radius: 8px;
+        font-size: 0.8em;
+        font-weight: 600;
+    }
+
+    .observaciones-producto {
+        font-size: 0.85em;
+        color: var(--naranja-tostado);
+        font-style: italic;
+        padding: 0.25rem 0.5rem;
+        background: rgba(232, 119, 46, 0.1);
+        border-radius: 4px;
+        margin-top: 0.25rem;
+    }
+
+    .tiempo-listo {
+        font-size: 0.8em;
+        color: #28a745;
+        font-weight: 600;
+    }
+
+    .resumen-productos-detalle {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #eee;
+    }
+
+    .estado-productos-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+
+    .estado-productos-item {
+        text-align: center;
+        padding: 0.75rem;
+        border-radius: 6px;
+        background: #f8f9fa;
+    }
+
+    .estado-productos-item.listos {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .estado-productos-item.pendientes {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .estado-productos-item.total {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .estado-productos-item .numero {
+        display: block;
+        font-size: 1.5em;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+
+    .estado-productos-item .label {
+        font-size: 0.85em;
+        font-weight: 600;
+    }
+
+    .observaciones-generales {
+        padding: 1rem 1.5rem;
+        background: rgba(255, 193, 7, 0.1);
+        border-top: 1px solid #eee;
+    }
+
+    .observaciones-generales h5 {
+        margin: 0 0 0.5rem 0;
+        color: #856404;
+    }
+
+    .observaciones-texto {
+        background: white;
+        padding: 0.75rem;
+        border-radius: 4px;
+        border-left: 3px solid #ffc107;
+        font-style: italic;
+    }
+
+    .sin-productos {
+        text-align: center;
+        padding: 2rem;
+        color: #666;
+        font-style: italic;
+        background: #f8f9fa;
+        border-radius: 6px;
+    }
+
+    /* Responsive */
     @media (max-width: 900px) {
         .modificacion-grid {
             grid-template-columns: 1fr;
@@ -607,7 +875,6 @@
         }
     }
     
-    /* Responsive */
     @media (max-width: 768px) {
         .filtros-principales {
             flex-direction: column;
@@ -642,8 +909,36 @@
         .btn-accion {
             flex: none;
         }
+
+        .orden-header-detalle {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .totales-orden-detalle {
+            text-align: left;
+        }
+        
+        .meta-orden {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .cliente-grid,
+        .factura-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .producto-principal {
+            flex-wrap: wrap;
+        }
+        
+        .estado-productos-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
+
 
 <div class="modificar-container">
     <h2>🔧 Modificar Órdenes y Facturas</h2>
@@ -738,7 +1033,9 @@
     </div>
 </template>
 
-// templates/mesero/modificar_orden.html - PARTE 2: JAVASCRIPT
+
+
+// templates/mesero/modificar_orden.html - PARTE 3: JAVASCRIPT COMPLETO
 
 <script>
 window.inicializar_modificar_orden = function() {
@@ -1277,17 +1574,247 @@ window.inicializar_modificar_orden = function() {
                 </div>
             </div>
             
-            <div style="margin-top: 2rem; padding: 1rem; background: rgba(23, 162, 184, 0.1); border-radius: 8px; border-left: 4px solid #17a2b8;">
-                <strong>ℹ️ Información de la Orden Actual:</strong><br>
-                📋 ID: ${orden.orden_id} | 
-                🍽️ Mesa: ${orden.es_domicilio ? 'Domicilio' : orden.es_reserva ? 'Reserva' : `#${orden.mesa.numero}`} | 
-                📊 Estado: ${orden.estado} | 
-                💰 Total actual: $${(orden.total || 0).toLocaleString()} | 
-                ${orden.factura_info ? `🧾 Factura: ${orden.factura_info.numero || orden.factura_info.id} (${orden.factura_info.estado_pago})` : '📝 Sin factura'}
-            </div>
+            ${renderizarDetalleOrdenCompleto(orden)}
         `;
         
         container.innerHTML = interfazHTML;
+    }
+
+    /**
+     * Renderizar detalle completo de la orden actual
+     */
+    function renderizarDetalleOrdenCompleto(orden) {
+        // Información básica de la orden
+        const mesaTexto = orden.es_domicilio ? '🏠 Domicilio' : 
+                         orden.es_reserva ? '📅 Reserva' : 
+                         `🍽️ Mesa #${orden.mesa.numero}`;
+        
+        const estadoTexto = obtenerTextoEstadoCompleto(orden);
+        const tiempoTranscurrido = orden.tiempo_transcurrido || 'N/A';
+        
+        // Información de cliente si es domicilio o reserva
+        let infoCliente = '';
+        if (orden.cliente_info && (orden.es_domicilio || orden.es_reserva)) {
+            if (orden.es_domicilio) {
+                infoCliente = `
+                    <div class="info-cliente-detalle">
+                        <h5>🚚 Información del Domicilio</h5>
+                        <div class="cliente-grid">
+                            <div><strong>👤 Cliente:</strong> ${orden.cliente_info.nombre || 'No especificado'}</div>
+                            <div><strong>📞 Teléfono:</strong> ${orden.cliente_info.telefono || 'No especificado'}</div>
+                            <div class="direccion-completa"><strong>📍 Dirección:</strong> ${orden.cliente_info.direccion || 'No especificada'}</div>
+                        </div>
+                    </div>
+                `;
+            } else if (orden.es_reserva) {
+                infoCliente = `
+                    <div class="info-cliente-detalle">
+                        <h5>📅 Información de la Reserva</h5>
+                        <div class="cliente-grid">
+                            <div><strong>👤 Cliente:</strong> ${orden.cliente_info.nombre || 'No especificado'}</div>
+                            <div><strong>📞 Teléfono:</strong> ${orden.cliente_info.telefono || 'No especificado'}</div>
+                            <div><strong>👥 Personas:</strong> ${orden.cliente_info.personas || 'No especificado'}</div>
+                            <div><strong>📅 Fecha:</strong> ${orden.cliente_info.fecha_reserva || 'No especificada'}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Información de factura si existe
+        let infoFactura = '';
+        if (orden.factura_info) {
+            const estadoPago = orden.factura_info.estado_pago;
+            const colorFactura = estadoPago === 'PAGADA' ? '#28a745' : '#dc3545';
+            const iconoFactura = estadoPago === 'PAGADA' ? '✅' : '⚠️';
+            
+            infoFactura = `
+                <div class="info-factura-detalle" style="border-left-color: ${colorFactura};">
+                    <h5>${iconoFactura} Información de Factura</h5>
+                    <div class="factura-grid">
+                        <div><strong>🧾 Número:</strong> ${orden.factura_info.numero || `FAC-${orden.factura_info.id}`}</div>
+                        <div><strong>💰 Total:</strong> ${(orden.factura_info.total || 0).toLocaleString()}</div>
+                        <div><strong>📊 Estado:</strong> ${estadoPago === 'PAGADA' ? 'Pagada' : 'Pendiente de Pago'}</div>
+                        ${orden.factura_info.metodo_pago ? `<div><strong>💳 Método:</strong> ${orden.factura_info.metodo_pago}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Productos de la orden
+        const productosHTML = renderizarProductosOrdenDetalle(orden.productos || []);
+        
+        // Observaciones generales
+        let observacionesGenerales = '';
+        if (orden.observaciones && !orden.es_domicilio && !orden.es_reserva) {
+            observacionesGenerales = `
+                <div class="observaciones-generales">
+                    <h5>📝 Observaciones de la Orden</h5>
+                    <div class="observaciones-texto">${orden.observaciones}</div>
+                </div>
+            `;
+        }
+        
+        return `
+            <div class="detalle-orden-completo">
+                <div class="orden-header-detalle">
+                    <div class="orden-info-principal-detalle">
+                        <h4>📋 Orden #${orden.orden_id}</h4>
+                        <div class="meta-orden">
+                            <span class="mesa-detalle">${mesaTexto}</span>
+                            <span class="estado-detalle">${estadoTexto}</span>
+                            <span class="tiempo-detalle">⏱️ ${tiempoTranscurrido}</span>
+                            <span class="mesero-detalle">👨‍🍳 Mesero: ${orden.mesero?.nombre || 'No asignado'}</span>
+                        </div>
+                    </div>
+                    <div class="totales-orden-detalle">
+                        <div class="total-actual">💰 Total Actual: ${(orden.total || 0).toLocaleString()}</div>
+                        <div class="productos-count">${(orden.productos || []).length} productos</div>
+                    </div>
+                </div>
+                
+                ${infoCliente}
+                ${infoFactura}
+                
+                <div class="productos-orden-detalle">
+                    <h5>🍽️ Productos de la Orden (${(orden.productos || []).length})</h5>
+                    ${productosHTML}
+                </div>
+                
+                ${observacionesGenerales}
+            </div>
+        `;
+    }
+
+    /**
+     * Renderizar productos de la orden con detalle completo
+     */
+    function renderizarProductosOrdenDetalle(productos) {
+        if (!productos || productos.length === 0) {
+            return '<div class="sin-productos">😕 No hay productos en esta orden</div>';
+        }
+        
+        // Separar productos por tipo
+        const productosOriginales = productos.filter(p => !p.agregado_despues && !p.agregado_post_factura);
+        const productosAgregados = productos.filter(p => p.agregado_despues || p.agregado_post_factura);
+        
+        let html = '';
+        
+        // Productos originales
+        if (productosOriginales.length > 0) {
+            html += `
+                <div class="seccion-productos-originales">
+                    <h6>📦 Productos Originales (${productosOriginales.length})</h6>
+                    <div class="lista-productos-detalle">
+                        ${productosOriginales.map(producto => renderizarProductoIndividualDetalle(producto, 'original')).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Productos agregados después
+        if (productosAgregados.length > 0) {
+            html += `
+                <div class="seccion-productos-agregados">
+                    <h6>🆕 Productos Agregados Después (${productosAgregados.length})</h6>
+                    <div class="lista-productos-detalle">
+                        ${productosAgregados.map(producto => renderizarProductoIndividualDetalle(producto, 'agregado')).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Resumen de estados
+        const productosListos = productos.filter(p => p.estado === 'LISTO').length;
+        const productosPendientes = productos.filter(p => p.estado === 'PENDIENTE').length;
+        
+        html += `
+            <div class="resumen-productos-detalle">
+                <div class="estado-productos-grid">
+                    <div class="estado-productos-item listos">
+                        <span class="numero">${productosListos}</span>
+                        <span class="label">✅ Listos</span>
+                    </div>
+                    <div class="estado-productos-item pendientes">
+                        <span class="numero">${productosPendientes}</span>
+                        <span class="label">⏳ Pendientes</span>
+                    </div>
+                    <div class="estado-productos-item total">
+                        <span class="numero">${productos.length}</span>
+                        <span class="label">📦 Total</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+
+    /**
+     * Renderizar producto individual con detalle
+     */
+    function renderizarProductoIndividualDetalle(producto, tipo) {
+        const estadoClass = producto.estado === 'LISTO' ? 'producto-listo' : 'producto-pendiente';
+        const tipoClass = tipo === 'agregado' ? 'producto-agregado' : 'producto-original';
+        const iconoEstado = producto.estado === 'LISTO' ? '✅' : '⏳';
+        const subtotal = producto.cantidad * producto.precio_unitario;
+        
+        // Tiempo de preparación si está listo
+        let tiempoListo = '';
+        if (producto.listo_en) {
+            const fecha = new Date(producto.listo_en);
+            tiempoListo = `<div class="tiempo-listo">🕐 Listo: ${fecha.toLocaleTimeString()}</div>`;
+        }
+        
+        // Observaciones del producto
+        let observacionesProducto = '';
+        if (producto.observaciones) {
+            observacionesProducto = `<div class="observaciones-producto">📝 ${producto.observaciones}</div>`;
+        }
+        
+        return `
+            <div class="producto-detalle-item ${estadoClass} ${tipoClass}">
+                <div class="producto-info-detalle">
+                    <div class="producto-principal">
+                        <span class="estado-icono">${iconoEstado}</span>
+                        <span class="cantidad-nombre">${producto.cantidad}x ${producto.nombre}</span>
+                        <span class="precio-unit">${(producto.precio_unitario || 0).toLocaleString()} c/u</span>
+                    </div>
+                    <div class="producto-secundario">
+                        <span class="subtotal-producto">Subtotal: ${subtotal.toLocaleString()}</span>
+                        ${tipo === 'agregado' ? '<span class="marcador-agregado">🆕 Agregado después</span>' : ''}
+                    </div>
+                    ${observacionesProducto}
+                    ${tiempoListo}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Obtener texto de estado completo
+     */
+    function obtenerTextoEstadoCompleto(orden) {
+        if (orden.factura_info) {
+            if (orden.factura_info.estado_pago === 'PAGADA') {
+                return '💰 Facturada y Pagada';
+            } else {
+                return '🧾 Servida - Factura Pendiente';
+            }
+        }
+        
+        switch (orden.estado) {
+            case 'EN_PROCESO':
+                const listos = orden.productos_listos_count || 0;
+                const total = (orden.productos || []).length;
+                return listos > 0 ? `🔄 En Preparación (${listos}/${total} listos)` : '⏳ En Preparación';
+            case 'LISTA':
+                return '🍽️ Lista para Servir';
+            case 'SERVIDA':
+                return '✅ Servida';
+            default:
+                return '⏳ En Preparación';
+        }
     }
 
     /**
@@ -1301,13 +1828,13 @@ window.inicializar_modificar_orden = function() {
         
         return `
             <div class="producto-item-mod ${stockClass}" 
-                data-producto-id="${producto.id}" 
-                data-categoria="${producto.categoriaId}"
-                data-precio="${producto.precio}"
-                data-stock="${producto.stock}">
+                 data-producto-id="${producto.id}" 
+                 data-categoria="${producto.categoriaId}"
+                 data-precio="${producto.precio}"
+                 data-stock="${producto.stock}">
                 
                 <div class="producto-nombre-mod">${producto.nombre}</div>
-                <div class="producto-precio-mod">$${producto.precio.toLocaleString()}</div>
+                <div class="producto-precio-mod">${producto.precio.toLocaleString()}</div>
                 <div class="stock-info-mod ${stockTextClass}">${stockText}</div>
                 
                 ${sinStock ? 
@@ -1322,12 +1849,6 @@ window.inicializar_modificar_orden = function() {
             </div>
         `;
     }
-
-    // Continúa con las funciones de lógica...
-
-
-
-
 
     /**
      * Inicializar lógica del menú de modificación
@@ -1472,7 +1993,7 @@ window.inicializar_modificar_orden = function() {
                                 <strong>${item.cantidad}x ${item.nombre}</strong>
                                 ${item.observaciones ? `<div style="font-size: 0.8em; color: #666;">📝 ${item.observaciones}</div>` : ''}
                             </div>
-                            <div>$${subtotal.toLocaleString()}</div>
+                            <div>${subtotal.toLocaleString()}</div>
                         </div>
                     `;
                 }).join('');
@@ -1714,3 +2235,4 @@ window.actualizar_modificar_orden = function() {
 
 // Hacer función de inicialización disponible globalmente
 console.log('✅ Función inicializar_modificar_orden definida globalmente');
+</script>
