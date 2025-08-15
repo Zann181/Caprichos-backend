@@ -1,969 +1,1716 @@
+<!-- templates/mesero/modificar_orden.html - PARTE 1: HTML Y CSS -->
+
 <style>
-    /* Estilos específicos para modificar orden */
-    .mesa-selector { 
-        display: grid; 
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
-        gap: 1rem; 
-        margin-bottom: 2rem; 
+    /* === ESTILOS PARA MODIFICAR ORDEN === */
+    .modificar-container {
+        max-width: 1400px;
+        margin: 0 auto;
     }
     
-    .mesa-btn { 
-        padding: 1.2rem; 
-        border: 2px solid var(--gris-piedra); 
-        background: white; 
-        border-radius: 8px; 
-        cursor: pointer; 
-        text-align: center; 
-        transition: all 0.3s; 
-        position: relative;
-        min-height: 140px;
+    /* Filtros principales */
+    .filtros-principales {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background: var(--blanco-hueso);
+        border: 1px solid var(--gris-piedra);
+        border-radius: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .filtro-grupo {
         display: flex;
         flex-direction: column;
-        justify-content: center;
-    }
-    
-    .mesa-btn:hover { 
-        border-color: var(--naranja-tostado); 
-        background-color: rgba(232, 119, 46, 0.1); 
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(232, 119, 46, 0.2);
-    }
-    
-    .mesa-btn.ocupada { 
-        border-color: var(--amarillo-modificado); 
-        background-color: rgba(255, 193, 7, 0.1); 
-    }
-    
-    .mesa-btn.domicilio { 
-        border-color: #17a2b8; 
-        background-color: rgba(23, 162, 184, 0.1); 
-    }
-    
-    .mesa-btn.reserva { 
-        border-color: #6f42c1; 
-        background-color: rgba(111, 66, 193, 0.1); 
-    }
-    
-    .mesa-btn.seleccionada { 
-        border-color: var(--naranja-tostado); 
-        background-color: var(--naranja-tostado); 
-        color: white; 
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(232, 119, 46, 0.4);
-    }
-    
-    .mesa-numero { 
-        font-size: 1.1em; 
-        font-weight: 700; 
-        margin-bottom: 0.5rem; 
-    }
-    
-    .mesa-info { 
-        font-size: 0.75em; 
-        opacity: 0.8; 
-        margin-bottom: 0.25rem; 
-    }
-    
-    .cliente-info { 
-        font-size: 0.7em; 
-        font-weight: 600; 
-        color: var(--naranja-tostado); 
-        margin-top: 0.5rem; 
-        line-height: 1.2;
-    }
-    
-    .mesa-btn.seleccionada .cliente-info {
-        color: white;
-        opacity: 0.9;
-    }
-    
-    .mesa-estado { 
-        position: absolute; 
-        top: 8px; 
-        right: 8px; 
-        background: var(--amarillo-modificado); 
-        color: white; 
-        border-radius: 50%; 
-        width: 26px; 
-        height: 26px; 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        font-size: 12px; 
-        font-weight: bold;
-    }
-    
-    .estado-domicilio { background: #17a2b8; }
-    .estado-reserva { background: #6f42c1; }
-    
-    .orden-existente { 
-        background-color: rgba(23, 162, 184, 0.1); 
-        border: 1px solid var(--azul-info); 
-        border-radius: 8px; 
-        padding: 1.5rem; 
-        margin-bottom: 2rem; 
-    }
-    
-    .orden-existente h3 { 
-        color: var(--azul-info); 
-        margin-bottom: 1rem; 
-        display: flex;
-        align-items: center;
         gap: 0.5rem;
     }
     
-    .productos-existentes { font-size: 0.9em; }
+    .filtro-label {
+        font-weight: 600;
+        color: var(--carbon-suave);
+        font-size: 0.9em;
+    }
     
-    .producto-existente { 
-        display: flex; 
-        justify-content: space-between; 
+    .filtro-botones {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .filtro-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--gris-piedra);
+        background: white;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.85em;
+        white-space: nowrap;
+    }
+    
+    .filtro-btn:hover {
+        border-color: var(--naranja-tostado);
+        background-color: rgba(232, 119, 46, 0.1);
+    }
+    
+    .filtro-btn.active {
+        background-color: var(--naranja-tostado);
+        color: white;
+        border-color: var(--naranja-tostado);
+    }
+    
+    .btn-actualizar {
+        margin-left: auto;
+        padding: 0.5rem 1rem;
+        background-color: var(--azul-info);
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.9em;
+    }
+    
+    .btn-actualizar:hover {
+        opacity: 0.85;
+    }
+    
+    /* Grid de órdenes */
+    .ordenes-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    /* Tarjetas de orden */
+    .orden-item {
+        background: white;
+        border: 1px solid var(--gris-piedra);
+        border-radius: 8px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+    }
+    
+    .orden-item:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .orden-item.seleccionada {
+        border-color: var(--naranja-tostado);
+        box-shadow: 0 4px 12px rgba(232, 119, 46, 0.2);
+    }
+    
+    /* Estados de orden */
+    .orden-item.en-proceso {
+        border-left: 4px solid #ffc107;
+    }
+    
+    .orden-item.lista {
+        border-left: 4px solid #28a745;
+    }
+    
+    .orden-item.servida {
+        border-left: 4px solid #6c757d;
+    }
+    
+    .orden-item.factura-pendiente {
+        border-left: 4px solid #dc3545;
+    }
+    
+    .orden-item.factura-pagada {
+        border-left: 4px solid #20c997;
+    }
+    
+    /* Header de orden */
+    .orden-header {
+        padding: 1rem;
+        background: var(--carbon-suave);
+        color: white;
+        display: flex;
+        justify-content: space-between;
         align-items: center;
-        padding: 0.5rem 0; 
-        border-bottom: 1px solid rgba(23, 162, 184, 0.2);
     }
     
-    .producto-existente:last-child { border-bottom: none; }
-    
-    .producto-existente.listo { 
-        color: var(--verde-listo); 
-        font-weight: 600; 
+    .orden-header.en-proceso {
+        background: linear-gradient(135deg, #ffc107, #e0a800);
     }
     
-    .producto-existente.agregado-despues { 
-        color: var(--amarillo-modificado); 
-        font-weight: 600; 
-        background-color: rgba(255, 193, 7, 0.1);
+    .orden-header.lista {
+        background: linear-gradient(135deg, #28a745, #20c997);
+    }
+    
+    .orden-header.servida {
+        background: linear-gradient(135deg, #6c757d, #5a6268);
+    }
+    
+    .orden-header.factura-pendiente {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+    }
+    
+    .orden-header.factura-pagada {
+        background: linear-gradient(135deg, #20c997, #17a2b8);
+    }
+    
+    .orden-info-principal {
+        flex: 1;
+    }
+    
+    .mesa-numero {
+        font-size: 1.2em;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+    
+    .estado-orden {
+        font-size: 0.9em;
+        opacity: 0.9;
+    }
+    
+    .orden-meta {
+        text-align: right;
+        font-size: 0.85em;
+    }
+    
+    .tiempo-transcurrido {
+        font-weight: 600;
+    }
+    
+    .total-orden {
+        margin-top: 0.25rem;
+    }
+    
+    /* Cuerpo de orden */
+    .orden-body {
+        padding: 1rem;
+    }
+    
+    .productos-resumen {
+        margin-bottom: 1rem;
+    }
+    
+    .producto-item-resumen {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.9em;
+    }
+    
+    .producto-item-resumen:last-child {
+        border-bottom: none;
+    }
+    
+    .producto-item-resumen.listo {
+        color: #28a745;
+        font-weight: 600;
+    }
+    
+    .producto-item-resumen.agregado {
+        background: rgba(255, 193, 7, 0.1);
         padding: 0.5rem;
         border-radius: 4px;
         margin: 0.25rem 0;
-        border-left: 4px solid var(--amarillo-modificado);
+        border-left: 3px solid #ffc107;
     }
     
-    .dashboard-grid-modificar { 
-        display: grid; 
-        grid-template-columns: 2fr 1fr; 
-        gap: 2rem; 
-        margin-top: 1rem; 
+    .producto-nombre {
+        flex: 1;
     }
     
-    .btn-agregar-disabled { 
-        opacity: 0.6; 
-        cursor: not-allowed; 
+    .producto-estado-badge {
+        font-size: 0.8em;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-weight: 600;
     }
     
-    /* Estilos para categorías y productos */
-    .category-tabs { 
-        display: flex; 
-        flex-wrap: wrap; 
-        gap: 0.5rem; 
-        margin-bottom: 1.5rem; 
-        border-bottom: 2px solid var(--gris-piedra); 
-        padding-bottom: 1rem; 
+    .producto-estado-badge.listo {
+        background: #d4edda;
+        color: #155724;
     }
     
-    .category-btn { 
-        background-color: transparent; 
-        border: 1px solid var(--naranja-tostado); 
-        color: var(--naranja-tostado); 
-        padding: 0.5rem 1rem; 
-        border-radius: 20px; 
-        cursor: pointer; 
-        transition: all 0.2s; 
-        font-size: 14px;
+    .producto-estado-badge.pendiente {
+        background: #fff3cd;
+        color: #856404;
     }
     
-    .category-btn:hover, .category-btn.active { 
-        background-color: var(--naranja-tostado); 
-        color: white; 
+    /* Información adicional */
+    .info-adicional {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        font-size: 0.85em;
     }
     
-    .product-grid { 
-        display: grid; 
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
-        gap: 1.5rem; 
+    .info-item {
+        display: flex;
+        flex-direction: column;
     }
     
-    .product-item { 
-        border: 1px solid var(--gris-piedra); 
-        border-radius: 8px; 
-        padding: 1rem; 
-        text-align: center; 
-        display: flex; 
-        flex-direction: column; 
+    .info-label {
+        font-weight: 600;
+        color: #666;
+        margin-bottom: 0.25rem;
     }
     
-    .product-item h4, .product-item p { margin: 0.25rem 0; }
-    
-    .quantity-selector { 
-        display: flex; 
-        justify-content: center; 
-        align-items: center; 
-        margin: 1rem 0; 
+    .info-valor {
+        color: var(--carbon-suave);
     }
     
-    .quantity-btn { 
-        width: 40px; 
-        height: 40px; 
-        border: 1px solid var(--gris-piedra); 
-        background-color: #fff; 
-        font-size: 24px; 
-        font-weight: bold; 
-        cursor: pointer; 
-        border-radius: 50%; 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        padding: 0; 
-        line-height: 1; 
+    /* Factura info */
+    .factura-info {
+        background: rgba(220, 53, 69, 0.1);
+        border: 1px solid rgba(220, 53, 69, 0.2);
+        border-radius: 4px;
+        padding: 0.75rem;
+        margin-bottom: 1rem;
     }
     
-    .quantity-value { 
-        width: 50px; 
-        font-size: 18px; 
-        font-weight: 600; 
-        text-align: center; 
+    .factura-info.pagada {
+        background: rgba(32, 201, 151, 0.1);
+        border-color: rgba(32, 201, 151, 0.2);
     }
     
-    .observaciones-input { 
-        font-size: 12px; 
-        padding: 5px; 
-        margin-top: auto; 
-        border: 1px solid var(--gris-piedra); 
-        border-radius: 4px; 
-        width: 100%; 
-        box-sizing: border-box; 
+    .factura-numero {
+        font-weight: 700;
+        color: #dc3545;
     }
     
-    .order-item { 
-        display: grid; 
-        grid-template-columns: 1fr 120px; 
-        gap: 1rem; 
-        align-items: center; 
-        padding: 0.75rem 0; 
-        border-bottom: 1px solid #eee; 
+    .factura-info.pagada .factura-numero {
+        color: #20c997;
     }
     
-    .order-item-info { font-weight: 600; }
-    .order-item-obs { 
-        font-size: 0.8em; 
-        color: #666; 
-        grid-column: 1 / 3; 
+    /* Botones de acción */
+    .acciones-orden {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #eee;
     }
     
-    .order-total { 
-        text-align: right; 
-        font-size: 1.2rem; 
-        font-family: var(--fuente-titulos); 
-        margin: 1rem 0; 
+    .btn-accion {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85em;
+        font-weight: 600;
+        transition: all 0.2s;
+        flex: 1;
+        min-width: 100px;
+    }
+    
+    .btn-modificar {
+        background: var(--naranja-tostado);
+        color: white;
+    }
+    
+    .btn-modificar:hover {
+        opacity: 0.85;
+    }
+    
+    .btn-entregar {
+        background: #28a745;
+        color: white;
+    }
+    
+    .btn-entregar:hover {
+        opacity: 0.85;
+    }
+    
+    .btn-ver-factura {
+        background: var(--azul-info);
+        color: white;
+    }
+    
+    .btn-ver-factura:hover {
+        opacity: 0.85;
+    }
+    
+    /* Estados vacíos */
+    .estado-vacio {
+        text-align: center;
+        padding: 3rem;
+        color: #888;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 2px dashed #dee2e6;
+        grid-column: 1 / -1;
+    }
+    
+    .estado-vacio h3 {
+        margin-bottom: 1rem;
+        color: #666;
+    }
+    
+    /* Loading */
+    .loading-modificar {
+        text-align: center;
+        padding: 3rem;
+        color: #666;
+        grid-column: 1 / -1;
+    }
+    
+    .loading-modificar::after {
+        content: '';
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--gris-piedra);
+        border-radius: 50%;
+        border-top: 2px solid var(--naranja-tostado);
+        animation: spin 1s linear infinite;
+        margin-left: 10px;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* Panel de modificación */
+    .panel-modificacion {
+        display: none;
+        background: white;
+        border: 1px solid var(--gris-piedra);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+    
+    .panel-modificacion.visible {
+        display: block;
+    }
+    
+    .modificacion-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--gris-piedra);
+    }
+    
+    .btn-cerrar-panel {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    
+    .btn-cerrar-panel:hover {
+        opacity: 0.85;
     }
 
-    .stock-indicator {
+    /* === ESTILOS PARA MENÚ DE PRODUCTOS EN MODIFICACIÓN === */
+    .modificacion-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    .menu-productos-modificacion {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+    }
+
+    .categoria-tabs-mod {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .categoria-btn-mod {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--naranja-tostado);
+        background: white;
+        color: var(--naranja-tostado);
+        border-radius: 15px;
+        cursor: pointer;
+        font-size: 0.85em;
+        transition: all 0.2s;
+    }
+
+    .categoria-btn-mod:hover,
+    .categoria-btn-mod.active {
+        background: var(--naranja-tostado);
+        color: white;
+    }
+
+    .productos-grid-mod {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1rem;
+    }
+
+    .producto-item-mod {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+        transition: all 0.2s;
+    }
+
+    .producto-item-mod:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .producto-item-mod.sin-stock {
+        background: #ffe6e6;
+        border-color: #ff4444;
+        opacity: 0.7;
+    }
+
+    .producto-item-mod.sin-stock .producto-nombre-mod {
+        color: #cc0000;
+        text-decoration: line-through;
+    }
+
+    .producto-nombre-mod {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 0.9em;
+    }
+
+    .producto-precio-mod {
+        color: var(--naranja-tostado);
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .stock-info-mod {
         font-size: 0.8em;
         color: #666;
-        margin-top: 0.5rem;
+        margin-bottom: 1rem;
     }
 
-    .stock-low {
-        color: #ff6b6b;
+    .stock-info-mod.agotado {
+        color: #cc0000;
         font-weight: 600;
     }
 
-    .stock-out {
-        color: #ff0000;
+    .quantity-controls-mod {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .qty-btn-mod {
+        width: 30px;
+        height: 30px;
+        border: 1px solid #ddd;
+        background: white;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .qty-btn-mod:hover {
+        background: var(--naranja-tostado);
+        color: white;
+    }
+
+    .qty-btn-mod:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .qty-value-mod {
+        min-width: 35px;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    .obs-input-mod {
+        width: 100%;
+        padding: 0.25rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 0.8em;
+    }
+
+    .carrito-modificacion {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        position: sticky;
+        top: 1rem;
+    }
+
+    .carrito-item-mod {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .carrito-item-mod:last-child {
+        border-bottom: none;
+    }
+
+    .carrito-total-mod {
+        font-size: 1.2em;
         font-weight: 700;
+        text-align: right;
+        margin: 1rem 0;
+        padding-top: 1rem;
+        border-top: 2px solid var(--gris-piedra);
+    }
+
+    .btn-confirmar-mod {
+        width: 100%;
+        background: var(--verde-listo);
+        color: white;
+        border: none;
+        padding: 1rem;
+        border-radius: 5px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .btn-confirmar-mod:hover {
+        opacity: 0.85;
+    }
+
+    .btn-confirmar-mod:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+
+    @media (max-width: 900px) {
+        .modificacion-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .carrito-modificacion {
+            position: static;
+        }
     }
     
-    @media (max-width: 900px) {
-        .dashboard-grid-modificar { grid-template-columns: 1fr; }
-        .mesa-selector { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-        .product-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    /* Responsive */
+    @media (max-width: 768px) {
+        .filtros-principales {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .filtro-grupo {
+            width: 100%;
+        }
+        
+        .filtro-botones {
+            justify-content: center;
+        }
+        
+        .btn-actualizar {
+            margin-left: 0;
+            align-self: center;
+        }
+        
+        .ordenes-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .info-adicional {
+            grid-template-columns: 1fr;
+        }
+        
+        .acciones-orden {
+            flex-direction: column;
+        }
+        
+        .btn-accion {
+            flex: none;
+        }
     }
 </style>
 
-<h2>🔧 Modificar Orden Existente</h2>
-<p>Selecciona una mesa, domicilio o reserva activa para agregar productos:</p>
+<div class="modificar-container">
+    <h2>🔧 Modificar Órdenes y Facturas</h2>
+    <p>Selecciona una orden o factura para modificar y agregar productos:</p>
 
-<div class="mesa-selector" id="mesas-ocupadas-container">
-    <div class="loading">Cargando mesas ocupadas...</div>
-</div>
-
-<div id="orden-actual-info" style="display: none;"></div>
-
-<div id="agregar-productos-container" style="display: none;">
-    <hr>
-    <h3>➕ Agregar Productos a la Orden</h3>
-    
-    <div class="dashboard-grid-modificar">
-        <div id="menu-productos-modificar">
-            <div class="category-tabs">
-                <button class="category-btn active" data-category-id="all" data-context="modificar">Todos</button>
-                {% for categoria in categorias %}
-                <button class="category-btn" data-category-id="{{ categoria.id }}" data-context="modificar">{{ categoria.nombre }}</button>
-                {% endfor %}
+    <!-- FILTROS PRINCIPALES -->
+    <div class="filtros-principales">
+        <div class="filtro-grupo">
+            <div class="filtro-label">Tipo:</div>
+            <div class="filtro-botones">
+                <button class="filtro-btn active" data-tipo="todos">📋 Todos</button>
+                <button class="filtro-btn" data-tipo="ordenes">🍽️ Solo Órdenes</button>
+                <button class="filtro-btn" data-tipo="facturas">🧾 Solo Facturas</button>
             </div>
-            <div class="product-grid" id="productos-modificar"></div>
+        </div>
+
+        <div class="filtro-grupo" id="filtro-estados">
+            <div class="filtro-label" id="estados-label">Estado:</div>
+            <div class="filtro-botones" id="estados-botones">
+                <!-- Los botones se generan dinámicamente según el tipo seleccionado -->
+                <button class="filtro-btn" data-estado="EN_PROCESO">⏳ En Preparación</button>
+                <button class="filtro-btn" data-estado="LISTA">🍽️ Lista para Servir</button>
+                <button class="filtro-btn" data-estado="SERVIDA">✅ Servida</button>
+            </div>
+        </div>
+
+        <button class="btn-actualizar" onclick="cargarOrdenesModificar()">
+            🔄 Actualizar
+        </button>
+    </div>
+
+    <!-- GRID DE ÓRDENES -->
+    <div class="ordenes-grid" id="ordenes-modificar-container">
+        <div class="loading-modificar">Cargando órdenes disponibles...</div>
+    </div>
+
+    <!-- PANEL DE MODIFICACIÓN (OCULTO INICIALMENTE) -->
+    <div class="panel-modificacion" id="panel-modificacion">
+        <div class="modificacion-header">
+            <h3 id="modificacion-titulo">Modificar Orden</h3>
+            <button class="btn-cerrar-panel" onclick="cerrarPanelModificacion()">
+                ✕ Cerrar
+            </button>
         </div>
         
-        <div id="resumen-modificacion">
-            <h3>📦 Productos a Agregar</h3>
-            <div id="lista-productos-agregar">
-                <p style="color: #888; text-align: center;">Selecciona productos para agregar.</p>
-            </div>
-            <hr>
-            <div class="order-total">
-                <strong>Adicional: $<span id="total-adicional">0</span></strong>
-            </div>
-            <button id="btn-agregar-productos" class="btn btn-agregar-disabled" style="width: 100%;" disabled>
-                Agregar a la Orden
-            </button>
+        <div id="modificacion-content">
+            <!-- Aquí se cargará el contenido de modificación -->
         </div>
     </div>
 </div>
 
+<!-- TEMPLATE PARA ÓRDEN ITEM -->
+<template id="orden-item-template">
+    <div class="orden-item" data-orden-id="" data-tipo="">
+        <div class="orden-header">
+            <div class="orden-info-principal">
+                <div class="mesa-numero"></div>
+                <div class="estado-orden"></div>
+            </div>
+            <div class="orden-meta">
+                <div class="tiempo-transcurrido"></div>
+                <div class="total-orden"></div>
+            </div>
+        </div>
+        
+        <div class="orden-body">
+            <div class="info-adicional">
+                <div class="info-item">
+                    <div class="info-label">Productos:</div>
+                    <div class="info-valor productos-count"></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Mesero:</div>
+                    <div class="info-valor mesero-nombre"></div>
+                </div>
+            </div>
+            
+            <div class="factura-info" style="display: none;">
+                <div><strong>🧾 Factura:</strong> <span class="factura-numero"></span></div>
+                <div>Estado: <span class="factura-estado"></span></div>
+                <div>Total: <span class="factura-total"></span></div>
+            </div>
+            
+            <div class="productos-resumen"></div>
+            
+            <div class="acciones-orden">
+                <button class="btn-accion btn-modificar" onclick="">
+                    ✏️ Modificar
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
+
+// templates/mesero/modificar_orden.html - PARTE 2: JAVASCRIPT
+
 <script>
 window.inicializar_modificar_orden = function() {
-    console.log('🔧 Inicializando modificar orden...');
+    console.log('🔧 Inicializando modificar orden (nueva versión)...');
     
-    const ordenModificar = {};
-    const stockVirtual = {}; // ✅ NUEVO: Seguimiento del stock virtual
-    let ordenSeleccionadaId = null;
-    let mesaSeleccionadaId = null;
-    let ordenTieneFacturaPendiente = false;
-
-    // === GESTIÓN DE STOCK VIRTUAL ===
-    function inicializarStockVirtual() {
-        // Copiar el stock actual de todos los productos
-        document.querySelectorAll('#productos-modificar .product-item').forEach(item => {
-            const id = item.dataset.id;
-            const stockOriginal = parseInt(item.dataset.stock, 10);
-            stockVirtual[id] = stockOriginal;
-        });
-    }
-
-    function actualizarStockVirtual(productoId, cantidadUsada) {
-        if (stockVirtual[productoId] !== undefined) {
-            stockVirtual[productoId] -= cantidadUsada;
-            actualizarIndicadorStock(productoId);
-        }
-    }
-
-    function restaurarStockVirtual(productoId, cantidadARestaurar) {
-        if (stockVirtual[productoId] !== undefined) {
-            const stockOriginal = parseInt(
-                document.querySelector(`[data-id="${productoId}"]`)?.dataset.stock || '0'
-            );
-            stockVirtual[productoId] = Math.min(
-                stockVirtual[productoId] + cantidadARestaurar,
-                stockOriginal
-            );
-            actualizarIndicadorStock(productoId);
-        }
-    }
-
-    function actualizarIndicadorStock(productoId) {
-        const productItem = document.querySelector(`#productos-modificar .product-item[data-id="${productoId}"]`);
-        if (!productItem) return;
-
-        let indicador = productItem.querySelector('.stock-indicator');
-        if (!indicador) {
-            indicador = document.createElement('div');
-            indicador.className = 'stock-indicator';
-            productItem.appendChild(indicador);
-        }
-
-        const stockActual = stockVirtual[productoId];
-        const stockOriginal = parseInt(productItem.dataset.stock, 10);
-
-        indicador.className = 'stock-indicator';
+    // === VARIABLES GLOBALES ===
+    let filtrosActivos = {
+        tipo: 'todos',
+        estado: null  // Unificado: puede ser estado de orden o factura según el tipo
+    };
+    
+    let ordenesData = [];
+    let ordenSeleccionada = null;
+    
+    // === ELEMENTOS DEL DOM ===
+    const container = document.getElementById('ordenes-modificar-container');
+    const template = document.getElementById('orden-item-template');
+    const panelModificacion = document.getElementById('panel-modificacion');
+    
+    // === FUNCIONES PRINCIPALES ===
+    
+    /**
+     * Cargar órdenes desde el servidor
+     */
+    window.cargarOrdenesModificar = async function() {
+        container.innerHTML = '<div class="loading-modificar">Cargando órdenes disponibles...</div>';
         
-        if (stockActual <= 0) {
-            indicador.className += ' stock-out';
-            indicador.textContent = '❌ Sin stock';
-        } else if (stockActual <= 3) {
-            indicador.className += ' stock-low';
-            indicador.textContent = `⚠️ Stock: ${stockActual}`;
-        } else {
-            indicador.textContent = `📦 Stock: ${stockActual}`;
-        }
-    }
-
-    // === SELECCIONAR MESA PARA MODIFICAR ===
-    function seleccionarMesaParaModificar(ordenId, mesaId) {
-        console.log('🎯 Seleccionando orden:', ordenId, 'mesa:', mesaId);
-        
-        const mesaButtons = document.querySelectorAll('.mesa-btn');
-        mesaButtons.forEach(btn => btn.classList.remove('seleccionada'));
-        
-        const targetButton = document.querySelector(`[data-orden-id="${ordenId}"][data-mesa-id="${mesaId}"]`) || 
-                           document.querySelector(`[data-orden-id="${ordenId}"]`);
-        
-        if (targetButton) {
-            targetButton.classList.add('seleccionada');
-        } else {
-            console.warn(`⚠️ No se encontró el botón para orden ${ordenId}, mesa ${mesaId}`);
-        }
-        
-        mesaSeleccionadaId = mesaId;
-        ordenSeleccionadaId = ordenId;
-        
-        const infoContainer = document.getElementById('orden-actual-info');
-        infoContainer.style.display = 'block';
-        infoContainer.innerHTML = '<div class="loading">⏳ Cargando información de la orden...</div>';
-        
-        fetch(`/api/mesa/${mesaId}/orden/`)
-            .then(response => response.json())
-            .then(ordenData => {
-                if (ordenData.error) throw new Error(ordenData.error);
-                console.log('📋 Orden cargada:', ordenData);
-                
-                ordenTieneFacturaPendiente = ordenData.tiene_factura_pendiente || false;
-                console.log('💰 Tiene factura pendiente:', ordenTieneFacturaPendiente);
-                
-                mostrarOrdenActual(ordenData);
-                prepararMenuModificacion();
-                document.getElementById('agregar-productos-container').style.display = 'block';
-            })
-            .catch(error => {
-                console.error('❌ Error obteniendo orden:', error);
-                infoContainer.innerHTML = `<div class="error-message"><strong>❌ Error:</strong> ${error.message}</div>`;
-            });
-    }
-
-    // === CARGAR MESAS OCUPADAS ===
-    function cargarMesasOcupadas() {
-        const container = document.getElementById('mesas-ocupadas-container');
-        container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #666;">⏳ Cargando mesas ocupadas...</div>';
-        
-        fetch('/api/mesero/mesas-ocupadas/')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                return response.json();
-            })
-            .then(mesas => {
-                console.log('🏠 Mesas cargadas:', mesas);
-                
-                if (mesas.length === 0) {
-                    container.innerHTML = `
-                        <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: #888;">
-                            <h3>😊 ¡No hay órdenes activas!</h3>
-                            <p>No hay mesas, domicilios o reservas para modificar en este momento.</p>
-                            <button class="btn" onclick="cargarMesasOcupadas()">🔄 Actualizar</button>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                container.innerHTML = '';
-                mesas.forEach(mesa => {
-                    const mesaBtn = document.createElement('div');
-                    let clases = 'mesa-btn ocupada';
-                    let iconoEstado = '🍽️';
-                    let clienteInfo = '';
-                    
-                    if (mesa.es_domicilio) {
-                        clases += ' domicilio';
-                        iconoEstado = '🚚';
-                        if (mesa.cliente_nombre) {
-                            clienteInfo = `<div class="cliente-info">👤 ${mesa.cliente_nombre}</div>`;
-                            if (mesa.direccion && mesa.direccion.length > 0) {
-                                const direccionCorta = mesa.direccion.length > 30 ? 
-                                    mesa.direccion.substring(0, 30) + '...' : 
-                                    mesa.direccion;
-                                clienteInfo += `<div class="cliente-info">📍 ${direccionCorta}</div>`;
-                            }
-                            if (mesa.telefono) {
-                                clienteInfo += `<div class="cliente-info">📞 ${mesa.telefono}</div>`;
-                            }
-                        }
-                    } else if (mesa.es_reserva) {
-                        clases += ' reserva';
-                        iconoEstado = '📅';
-                        if (mesa.cliente_nombre) {
-                            clienteInfo = `<div class="cliente-info">👤 ${mesa.cliente_nombre}</div>`;
-                            if (mesa.telefono) {
-                                clienteInfo += `<div class="cliente-info">📞 ${mesa.telefono}</div>`;
-                            }
-                            if (mesa.fecha_reserva) {
-                                clienteInfo += `<div class="cliente-info">📅 ${mesa.fecha_reserva}</div>`;
-                            }
-                        }
-                    }
-                    
-                    mesaBtn.className = clases;
-                    mesaBtn.dataset.mesaId = mesa.mesa_real_id || mesa.id;
-                    mesaBtn.dataset.ordenId = mesa.orden_id;
-                    
-                    mesaBtn.innerHTML = `
-                        <div class="mesa-estado ${mesa.es_domicilio ? 'estado-domicilio' : (mesa.es_reserva ? 'estado-reserva' : '')}">${iconoEstado}</div>
-                        <div class="mesa-numero">${mesa.numero}</div>
-                        <div class="mesa-info">${mesa.ubicacion}</div>
-                        <div class="mesa-info">${mesa.productos_count} productos</div>
-                        ${clienteInfo}
-                    `;
-                    
-                    mesaBtn.addEventListener('click', () => seleccionarMesaParaModificar(mesa.orden_id, mesa.mesa_real_id || mesa.id));
-                    container.appendChild(mesaBtn);
-                });
-            })
-            .catch(error => {
-                console.error('❌ Error cargando mesas ocupadas:', error);
-                container.innerHTML = `
-                    <div style="grid-column: 1 / -1; text-align: center; padding: 2rem;">
-                        <div class="error-message">
-                            <strong>❌ Error al cargar mesas</strong><br>
-                            ${error.message}<br>
-                            <button class="btn" onclick="cargarMesasOcupadas()">🔄 Reintentar</button>
-                        </div>
-                    </div>
-                `;
-            });
-    }
-
-    // === MOSTRAR ORDEN ACTUAL ===
-    function mostrarOrdenActual(ordenData) {
-        const container = document.getElementById('orden-actual-info');
-        
-        let productosHtml = '';
-        let estadoGeneral = '';
-        let totalOriginal = 0;
-        let productosOriginales = 0;
-        let productosAgregados = 0;
-        
-        // ✅ DETERMINAR TIPO DE ORDEN Y EXTRAER INFO CLIENTE
-        const esDomicilio = ordenData.mesa.numero === 0;
-        const esReserva = ordenData.mesa.numero === 50;
-        let tipoOrden = 'Mesa';
-        let iconoTipo = '🍽️';
-        let infoCliente = '';
-        
-        if (esDomicilio) {
-            tipoOrden = 'Domicilio';
-            iconoTipo = '🚚';
-            if (ordenData.observaciones) {
-                const clienteMatch = ordenData.observaciones.match(/Cliente:\s*([^,]+)/i);
-                const direccionMatch = ordenData.observaciones.match(/Dir(?:ección)?:\s*([^,\n]+)/i);
-                const telefonoMatch = ordenData.observaciones.match(/Tel(?:éfono)?:\s*([^,]+)/i);
-                
-                if (clienteMatch) {
-                    infoCliente = `<div style="background: rgba(23, 162, 184, 0.1); padding: 0.8rem; border-radius: 4px; margin-top: 0.5rem; border-left: 4px solid #17a2b8;">
-                        <strong>🚚 Información del Domicilio</strong><br>
-                        <strong>👤 Cliente:</strong> ${clienteMatch[1].trim()}<br>
-                        ${direccionMatch ? `<strong>📍 Dirección:</strong> ${direccionMatch[1].trim()}<br>` : ''}
-                        ${telefonoMatch ? `<strong>📞 Teléfono:</strong> ${telefonoMatch[1].trim()}` : ''}
-                    </div>`;
-                }
-            }
-        } else if (esReserva) {
-            tipoOrden = 'Reserva';
-            iconoTipo = '📅';
-            if (ordenData.observaciones) {
-                const clienteMatch = ordenData.observaciones.match(/(?:Reserva|Cliente):\s*([^,]+)/i);
-                const personasMatch = ordenData.observaciones.match(/Personas?:\s*(\d+)/i);
-                const fechaMatch = ordenData.observaciones.match(/Fecha:\s*([^,\n]+)/i);
-                const telefonoMatch = ordenData.observaciones.match(/Tel(?:éfono)?:\s*([^,]+)/i);
-                
-                if (clienteMatch) {
-                    infoCliente = `<div style="background: rgba(111, 66, 193, 0.1); padding: 0.8rem; border-radius: 4px; margin-top: 0.5rem; border-left: 4px solid #6f42c1;">
-                        <strong>📅 Información de la Reserva</strong><br>
-                        <strong>👤 Cliente:</strong> ${clienteMatch[1].trim()}<br>
-                        ${personasMatch ? `<strong>👥 Personas:</strong> ${personasMatch[1]}<br>` : ''}
-                        ${fechaMatch ? `<strong>📅 Fecha:</strong> ${fechaMatch[1].trim()}<br>` : ''}
-                        ${telefonoMatch ? `<strong>📞 Teléfono:</strong> ${telefonoMatch[1].trim()}` : ''}
-                    </div>`;
-                }
-            }
-        }
-        
-        // Procesar productos
-        ordenData.productos.forEach(p => {
-            const subtotal = p.cantidad * p.precio_unitario;
-            totalOriginal += subtotal;
+        try {
+            // Obtener todas las órdenes del mesero
+            const response = await fetch('/api/mesero/todas-ordenes/?filtro=todas');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             
-            let claseProducto = '';
-            let iconoEstado = '';
-            let tipoTexto = '';
+            const ordenes = await response.json();
+            console.log('📋 Órdenes cargadas:', ordenes.length);
             
-            if (p.agregado_despues) {
-                claseProducto = 'agregado-despues';
-                tipoTexto = '🆕 Agregado después';
-                productosAgregados++;
-            } else {
-                productosOriginales++;
-            }
+            ordenesData = ordenes;
+            aplicarFiltrosYRenderizar();
             
-            if (p.estado === 'LISTO') {
-                claseProducto += ' listo';
-                iconoEstado = '✅';
-            } else {
-                iconoEstado = '⏳';
-            }
-            
-            productosHtml += `
-                <div class="producto-existente ${claseProducto}">
-                    <div>
-                        <span>${iconoEstado} ${p.cantidad}x ${p.nombre}</span>
-                        ${tipoTexto ? `<div style="font-size: 0.8em; margin-top: 2px;">${tipoTexto}</div>` : ''}
-                        ${p.observaciones ? `<div style="font-size: 0.8em; color: var(--naranja-tostado); font-style: italic;">📝 ${p.observaciones}</div>` : ''}
-                    </div>
-                    <span>$${subtotal.toLocaleString()}</span>
+        } catch (error) {
+            console.error('❌ Error cargando órdenes:', error);
+            container.innerHTML = `
+                <div class="estado-vacio">
+                    <h3>❌ Error al cargar órdenes</h3>
+                    <p>${error.message}</p>
+                    <button class="btn-actualizar" onclick="cargarOrdenesModificar()">🔄 Reintentar</button>
                 </div>
             `;
+        }
+    };
+    
+    /**
+     * Aplicar filtros y renderizar órdenes
+     */
+    function aplicarFiltrosYRenderizar() {
+        let ordenesFiltradas = ordenesData.filter(orden => {
+            // Filtro por tipo
+            if (filtrosActivos.tipo === 'ordenes' && !puedeModificarOrden(orden)) {
+                return false;
+            }
+            if (filtrosActivos.tipo === 'facturas' && !tieneFactura(orden)) {
+                return false;
+            }
+            
+            // Filtro por estado (contextual según el tipo)
+            if (filtrosActivos.estado) {
+                if (filtrosActivos.tipo === 'facturas') {
+                    // Para facturas, filtrar por estado de pago
+                    if (!orden.factura_info) return false;
+                    if (orden.factura_info.estado_pago !== filtrosActivos.estado) {
+                        return false;
+                    }
+                } else {
+                    // Para órdenes (o todos), filtrar por estado de orden
+                    if (orden.estado !== filtrosActivos.estado) {
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
         });
         
-        // Determinar estado general
-        const productosListos = ordenData.productos.filter(p => p.estado === 'LISTO').length;
-        const productosPendientes = ordenData.productos.length - productosListos;
-        
-        if (productosListos === 0) {
-            estadoGeneral = '⏳ En preparación';
-        } else if (productosPendientes === 0) {
-            estadoGeneral = '✅ Lista para servir';
-        } else {
-            estadoGeneral = `🔄 Parcial (${productosListos}/${ordenData.productos.length} listos)`;
+        console.log(`🔍 Filtros aplicados: ${ordenesFiltradas.length} de ${ordenesData.length} órdenes`);
+        renderizarOrdenes(ordenesFiltradas);
+    }
+    
+    /**
+     * Renderizar lista de órdenes
+     */
+    function renderizarOrdenes(ordenes) {
+        if (ordenes.length === 0) {
+            container.innerHTML = `
+                <div class="estado-vacio">
+                    <h3>😊 No hay órdenes que coincidan</h3>
+                    <p>No se encontraron órdenes con los filtros seleccionados.</p>
+                    <button class="btn-actualizar" onclick="cargarOrdenesModificar()">🔄 Actualizar</button>
+                </div>
+            `;
+            return;
         }
         
-        container.innerHTML = `
-            <div class="orden-existente">
-                <h3>
-                    ${iconoTipo} Orden Actual - ${tipoOrden} ${esDomicilio || esReserva ? '' : `#${ordenData.mesa.numero}`}
-                    <span style="margin-left: auto; font-size: 0.8em; color: #666;">${estadoGeneral}</span>
-                </h3>
-                
-                ${infoCliente}
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; margin-top: 1rem; font-size: 0.9em;">
-                    <div><strong>Productos originales:</strong> ${productosOriginales}</div>
-                    <div><strong>Agregados después:</strong> ${productosAgregados}</div>
-                    <div><strong>Total productos:</strong> ${ordenData.productos.length}</div>
+        container.innerHTML = '';
+        
+        ordenes.forEach(orden => {
+            const tarjeta = crearTarjetaOrden(orden);
+            container.appendChild(tarjeta);
+        });
+    }
+    
+    /**
+     * Crear tarjeta individual de orden
+     */
+    function crearTarjetaOrden(orden) {
+        const clone = document.importNode(template.content, true);
+        const tarjeta = clone.querySelector('.orden-item');
+        
+        // Configurar datos básicos
+        tarjeta.dataset.ordenId = orden.orden_id;
+        tarjeta.dataset.tipo = determinarTipoOrden(orden);
+        
+        // Configurar clases CSS según estado
+        const estadoCSS = determinarEstadoCSS(orden);
+        tarjeta.classList.add(estadoCSS.clase);
+        
+        const header = tarjeta.querySelector('.orden-header');
+        header.classList.add(estadoCSS.clase);
+        
+        // Llenar información básica
+        llenarInformacionBasica(tarjeta, orden);
+        
+        // Llenar información de factura si existe
+        llenarInformacionFactura(tarjeta, orden);
+        
+        // Llenar resumen de productos
+        llenarResumenProductos(tarjeta, orden);
+        
+        // Configurar botones de acción
+        configurarBotonesAccion(tarjeta, orden);
+        
+        // Event listener para seleccionar
+        tarjeta.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('btn-accion')) {
+                seleccionarOrden(orden);
+            }
+        });
+        
+        return tarjeta;
+    }
+    
+    /**
+     * Llenar información básica de la tarjeta
+     */
+    function llenarInformacionBasica(tarjeta, orden) {
+        // Mesa
+        const mesaTexto = orden.es_domicilio ? '🏠 Domicilio' : 
+                         orden.es_reserva ? '📅 Reserva' : 
+                         `Mesa #${orden.mesa.numero}`;
+        tarjeta.querySelector('.mesa-numero').textContent = mesaTexto;
+        
+        // Estado
+        const estadoTexto = obtenerTextoEstado(orden);
+        tarjeta.querySelector('.estado-orden').textContent = estadoTexto;
+        
+        // Tiempo transcurrido
+        tarjeta.querySelector('.tiempo-transcurrido').textContent = 
+            `⏱️ ${orden.tiempo_transcurrido || 'N/A'}`;
+        
+        // Total
+        tarjeta.querySelector('.total-orden').textContent = 
+            `💰 $${(orden.total || 0).toLocaleString()}`;
+        
+        // Info adicional
+        const productosText = `${orden.productos?.length || 0} productos`;
+        tarjeta.querySelector('.productos-count').textContent = productosText;
+        tarjeta.querySelector('.mesero-nombre').textContent = orden.mesero?.nombre || 'N/A';
+    }
+    
+    /**
+     * Llenar información de factura
+     */
+    function llenarInformacionFactura(tarjeta, orden) {
+        const facturaInfo = tarjeta.querySelector('.factura-info');
+        
+        if (orden.factura_info) {
+            facturaInfo.style.display = 'block';
+            
+            if (orden.factura_info.estado_pago === 'PAGADA') {
+                facturaInfo.classList.add('pagada');
+            }
+            
+            tarjeta.querySelector('.factura-numero').textContent = 
+                orden.factura_info.numero || `FAC-${orden.factura_info.id}`;
+            tarjeta.querySelector('.factura-estado').textContent = 
+                orden.factura_info.estado_pago === 'PAGADA' ? 'Pagada' : 'Pendiente';
+            tarjeta.querySelector('.factura-total').textContent = 
+                `$${(orden.factura_info.total || 0).toLocaleString()}`;
+        } else {
+            facturaInfo.style.display = 'none';
+        }
+    }
+    
+    /**
+     * Llenar resumen de productos
+     */
+    function llenarResumenProductos(tarjeta, orden) {
+        const container = tarjeta.querySelector('.productos-resumen');
+        container.innerHTML = '';
+        
+        if (!orden.productos || orden.productos.length === 0) {
+            container.innerHTML = '<p style="color: #888; font-style: italic;">Sin productos</p>';
+            return;
+        }
+        
+        // Mostrar solo los primeros 3 productos
+        const productosAMostrar = orden.productos.slice(0, 3);
+        
+        productosAMostrar.forEach(producto => {
+            const div = document.createElement('div');
+            div.className = 'producto-item-resumen';
+            
+            if (producto.estado === 'LISTO') {
+                div.classList.add('listo');
+            }
+            
+            if (producto.agregado_despues || producto.agregado_post_factura) {
+                div.classList.add('agregado');
+            }
+            
+            const badge = producto.estado === 'LISTO' ? 
+                '<span class="producto-estado-badge listo">✅ Listo</span>' :
+                '<span class="producto-estado-badge pendiente">⏳ Pendiente</span>';
+            
+            div.innerHTML = `
+                <div class="producto-nombre">
+                    ${producto.cantidad}x ${producto.nombre}
+                    ${producto.observaciones ? `<div style="font-size: 0.8em; color: #666;">📝 ${producto.observaciones}</div>` : ''}
                 </div>
-                
-                <div class="productos-existentes">
-                    ${productosHtml}
+                ${badge}
+            `;
+            
+            container.appendChild(div);
+        });
+        
+        // Mostrar "y X más" si hay más productos
+        if (orden.productos.length > 3) {
+            const masDiv = document.createElement('div');
+            masDiv.style.cssText = 'font-size: 0.8em; color: #666; text-align: center; margin-top: 0.5rem; font-style: italic;';
+            masDiv.textContent = `... y ${orden.productos.length - 3} productos más`;
+            container.appendChild(masDiv);
+        }
+    }
+    
+    /**
+     * Configurar botones de acción
+     */
+    function configurarBotonesAccion(tarjeta, orden) {
+        const container = tarjeta.querySelector('.acciones-orden');
+        container.innerHTML = '';
+        
+        // Botón modificar (siempre disponible si puede modificar)
+        if (puedeModificarOrden(orden)) {
+            const btnModificar = document.createElement('button');
+            btnModificar.className = 'btn-accion btn-modificar';
+            btnModificar.textContent = tieneFactura(orden) ? '✏️💰 Modificar + Factura' : '✏️ Modificar Orden';
+            btnModificar.onclick = (e) => {
+                e.stopPropagation();
+                abrirPanelModificacion(orden);
+            };
+            container.appendChild(btnModificar);
+        }
+        
+        // Botón entregar (si puede entregar)
+        if (orden.puede_entregar) {
+            const btnEntregar = document.createElement('button');
+            btnEntregar.className = 'btn-accion btn-entregar';
+            btnEntregar.textContent = '🍽️ Entregar';
+            btnEntregar.onclick = (e) => {
+                e.stopPropagation();
+                entregarOrden(orden.orden_id);
+            };
+            container.appendChild(btnEntregar);
+        }
+        
+        // Botón ver factura (si tiene factura)
+        if (orden.factura_info) {
+            const btnFactura = document.createElement('button');
+            btnFactura.className = 'btn-accion btn-ver-factura';
+            btnFactura.textContent = '🧾 Ver Factura';
+            btnFactura.onclick = (e) => {
+                e.stopPropagation();
+                verFactura(orden.orden_id);
+            };
+            container.appendChild(btnFactura);
+        }
+    }
+    
+    // === FUNCIONES DE UTILIDAD ===
+    
+    function determinarTipoOrden(orden) {
+        if (orden.factura_info) {
+            return orden.factura_info.estado_pago === 'PAGADA' ? 'factura-pagada' : 'factura-pendiente';
+        }
+        return 'orden-sin-factura';
+    }
+    
+    function determinarEstadoCSS(orden) {
+        if (orden.factura_info) {
+            if (orden.factura_info.estado_pago === 'PAGADA') {
+                return { clase: 'factura-pagada' };
+            } else {
+                return { clase: 'factura-pendiente' };
+            }
+        }
+        
+        switch (orden.estado) {
+            case 'EN_PROCESO':
+                return { clase: 'en-proceso' };
+            case 'LISTA':
+                return { clase: 'lista' };
+            case 'SERVIDA':
+                return { clase: 'servida' };
+            default:
+                return { clase: 'en-proceso' };
+        }
+    }
+    
+    function obtenerTextoEstado(orden) {
+        if (orden.factura_info) {
+            if (orden.factura_info.estado_pago === 'PAGADA') {
+                return '✅ Facturada y Pagada';
+            } else {
+                return '🧾 Facturada - Pago Pendiente';
+            }
+        }
+        
+        switch (orden.estado) {
+            case 'EN_PROCESO':
+                return orden.productos_listos_count > 0 ? 
+                    `🔄 Parcial (${orden.productos_listos_count}/${orden.productos.length})` : 
+                    '⏳ En Preparación';
+            case 'LISTA':
+                return '🍽️ Lista para Servir';
+            case 'SERVIDA':
+                return '✅ Servida';
+            default:
+                return '⏳ En Preparación';
+        }
+    }
+    
+    function puedeModificarOrden(orden) {
+        // Se puede modificar si:
+        // 1. Está EN_PROCESO o LISTA
+        // 2. Está SERVIDA pero tiene factura pendiente
+        return orden.estado !== 'SERVIDA' || orden.tiene_factura_pendiente;
+    }
+    
+    function tieneFactura(orden) {
+        return !!orden.factura_info;
+    }
+    
+    // === FUNCIONES DE ACCIÓN ===
+    
+    /**
+     * Seleccionar una orden
+     */
+    function seleccionarOrden(orden) {
+        // Remover selección anterior
+        document.querySelectorAll('.orden-item.seleccionada')
+            .forEach(item => item.classList.remove('seleccionada'));
+        
+        // Seleccionar nueva orden
+        const tarjeta = document.querySelector(`[data-orden-id="${orden.orden_id}"]`);
+        if (tarjeta) {
+            tarjeta.classList.add('seleccionada');
+            ordenSeleccionada = orden;
+            console.log('🎯 Orden seleccionada:', orden.orden_id);
+        }
+    }
+    
+    /**
+     * Abrir panel de modificación
+     */
+    function abrirPanelModificacion(orden) {
+        console.log('🔧 Abriendo panel de modificación para orden:', orden.orden_id);
+        
+        seleccionarOrden(orden);
+        
+        // Configurar título del panel
+        const titulo = document.getElementById('modificacion-titulo');
+        const tipoTexto = tieneFactura(orden) ? 
+            `Modificar Orden con Factura #${orden.factura_info?.numero || orden.factura_info?.id}` :
+            `Modificar Orden #${orden.orden_id}`;
+        titulo.textContent = tipoTexto;
+        
+        // Mostrar panel
+        panelModificacion.classList.add('visible');
+        
+        // Cargar contenido de modificación
+        cargarContenidoModificacion(orden);
+        
+        // Scroll al panel
+        panelModificacion.scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    /**
+     * Cerrar panel de modificación
+     */
+    window.cerrarPanelModificacion = function() {
+        panelModificacion.classList.remove('visible');
+        
+        // Remover selección
+        document.querySelectorAll('.orden-item.seleccionada')
+            .forEach(item => item.classList.remove('seleccionada'));
+        
+        ordenSeleccionada = null;
+        
+        console.log('❌ Panel de modificación cerrado');
+    };
+    
+    /**
+     * Cargar contenido del panel de modificación
+     */
+    function cargarContenidoModificacion(orden) {
+        const content = document.getElementById('modificacion-content');
+        content.innerHTML = '<div class="loading-modificar">Cargando menú de productos...</div>';
+        
+        // Cargar categorías y productos
+        cargarMenuProductosModificacion(orden);
+    }
+
+    /**
+     * Cargar menú de productos para modificación
+     */
+    async function cargarMenuProductosModificacion(orden) {
+        const content = document.getElementById('modificacion-content');
+        
+        try {
+            // Obtener productos desde la pestaña de nuevo pedido
+            const menuOriginal = document.querySelector('#menu-productos');
+            if (!menuOriginal) {
+                throw new Error('No se pudo acceder al menú principal. Carga primero la pestaña "Nuevo Pedido".');
+            }
+            
+            // Extraer categorías y productos
+            const { categorias, productos } = extraerProductosDelMenu(menuOriginal);
+            
+            if (productos.length === 0) {
+                throw new Error('No hay productos disponibles en el menú.');
+            }
+            
+            // Renderizar interfaz
+            renderizarInterfazModificacion(content, categorias, productos, orden);
+            
+            // Inicializar lógica del menú
+            inicializarLogicaMenuModificacion(productos, orden);
+            
+        } catch (error) {
+            console.error('❌ Error cargando menú:', error);
+            content.innerHTML = `
+                <div style="text-align: center; padding: 2rem; background: #f8d7da; border-radius: 8px; color: #721c24;">
+                    <h4>❌ Error al cargar el menú</h4>
+                    <p>${error.message}</p>
+                    <button class="btn-actualizar" onclick="window.recargarPestana('nuevo-pedido')">
+                        🔄 Cargar Menú Principal
+                    </button>
                 </div>
-                
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(23, 162, 184, 0.2);">
-                    <div><strong>Total actual: $${totalOriginal.toLocaleString()}</strong></div>
-                    <div style="font-size: 0.9em; color: #666;">Estado: ${ordenData.estado}</div>
-                </div>
-                
-                ${ordenData.observaciones && !esDomicilio && !esReserva ? `
-                    <div style="background: rgba(255, 193, 7, 0.1); padding: 0.8rem; border-radius: 4px; margin-top: 1rem; border-left: 4px solid var(--amarillo-modificado);">
-                        <strong>📝 Observaciones adicionales:</strong><br>
-                        <em>${ordenData.observaciones}</em>
+            `;
+        }
+    }
+
+    /**
+     * Extraer productos del menú principal
+     */
+    function extraerProductosDelMenu(menuOriginal) {
+        const categorias = [];
+        const productos = [];
+        
+        // Extraer categorías
+        menuOriginal.querySelectorAll('.category-btn').forEach(btn => {
+            if (btn.dataset.categoryId !== 'all') {
+                categorias.push({
+                    id: btn.dataset.categoryId,
+                    nombre: btn.textContent.trim()
+                });
+            }
+        });
+        
+        // Extraer productos
+        menuOriginal.querySelectorAll('.product-item').forEach(item => {
+            productos.push({
+                id: item.dataset.id,
+                nombre: item.dataset.nombre,
+                precio: parseFloat(item.dataset.precio),
+                stock: parseInt(item.dataset.stock),
+                categoriaId: item.dataset.categoryId
+            });
+        });
+        
+        return { categorias, productos };
+    }
+
+    /**
+     * Renderizar interfaz de modificación
+     */
+    function renderizarInterfazModificacion(container, categorias, productos, orden) {
+        const interfazHTML = `
+            <div class="modificacion-grid">
+                <div class="menu-productos-modificacion">
+                    <h4>🍽️ Agregar Productos</h4>
+                    
+                    <div class="categoria-tabs-mod">
+                        <button class="categoria-btn-mod active" data-categoria="all">Todos</button>
+                        ${categorias.map(cat => 
+                            `<button class="categoria-btn-mod" data-categoria="${cat.id}">${cat.nombre}</button>`
+                        ).join('')}
                     </div>
-                ` : ''}
+                    
+                    <div class="productos-grid-mod" id="productos-grid-modificacion">
+                        ${productos.map(producto => renderizarProductoModificacion(producto)).join('')}
+                    </div>
+                </div>
+                
+                <div class="carrito-modificacion">
+                    <h4>🛒 Productos a Agregar</h4>
+                    <div id="carrito-items-mod">
+                        <p style="color: #888; text-align: center; font-style: italic;">
+                            Selecciona productos del menú
+                        </p>
+                    </div>
+                    <div class="carrito-total-mod">
+                        Total Adicional: $<span id="total-modificacion">0</span>
+                    </div>
+                    <button class="btn-confirmar-mod" id="btn-confirmar-modificacion" disabled>
+                        Agregar a la Orden
+                    </button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 2rem; padding: 1rem; background: rgba(23, 162, 184, 0.1); border-radius: 8px; border-left: 4px solid #17a2b8;">
+                <strong>ℹ️ Información de la Orden Actual:</strong><br>
+                📋 ID: ${orden.orden_id} | 
+                🍽️ Mesa: ${orden.es_domicilio ? 'Domicilio' : orden.es_reserva ? 'Reserva' : `#${orden.mesa.numero}`} | 
+                📊 Estado: ${orden.estado} | 
+                💰 Total actual: $${(orden.total || 0).toLocaleString()} | 
+                ${orden.factura_info ? `🧾 Factura: ${orden.factura_info.numero || orden.factura_info.id} (${orden.factura_info.estado_pago})` : '📝 Sin factura'}
+            </div>
+        `;
+        
+        container.innerHTML = interfazHTML;
+    }
+
+    /**
+     * Renderizar producto individual
+     */
+    function renderizarProductoModificacion(producto) {
+        const sinStock = producto.stock <= 0;
+        const stockClass = sinStock ? 'sin-stock' : '';
+        const stockText = sinStock ? 'AGOTADO' : `Stock: ${producto.stock}`;
+        const stockTextClass = sinStock ? 'agotado' : '';
+        
+        return `
+            <div class="producto-item-mod ${stockClass}" 
+                data-producto-id="${producto.id}" 
+                data-categoria="${producto.categoriaId}"
+                data-precio="${producto.precio}"
+                data-stock="${producto.stock}">
+                
+                <div class="producto-nombre-mod">${producto.nombre}</div>
+                <div class="producto-precio-mod">$${producto.precio.toLocaleString()}</div>
+                <div class="stock-info-mod ${stockTextClass}">${stockText}</div>
+                
+                ${sinStock ? 
+                    '<div style="color: #cc0000; font-size: 0.8em; font-weight: 600;">❌ No Disponible</div>' :
+                    `<div class="quantity-controls-mod">
+                        <button class="qty-btn-mod" data-action="decrement">-</button>
+                        <span class="qty-value-mod">0</span>
+                        <button class="qty-btn-mod" data-action="increment">+</button>
+                    </div>
+                    <input type="text" class="obs-input-mod" placeholder="Observaciones..." maxlength="100">`
+                }
             </div>
         `;
     }
 
-    // === PREPARAR MENÚ DE MODIFICACIÓN ===
-    function prepararMenuModificacion() {
-        // Limpiar orden de modificación
-        Object.keys(ordenModificar).forEach(key => delete ordenModificar[key]);
+    // Continúa con las funciones de lógica...
+
+
+
+
+
+    /**
+     * Inicializar lógica del menú de modificación
+     */
+    function inicializarLogicaMenuModificacion(productos, orden) {
+        const carrito = {}; // { productoId: { cantidad, observaciones, precio, nombre } }
+        let stockVirtual = {}; // Control de stock en tiempo real
         
-        // Obtener productos originales y clonar al área de modificación
-        const menuOriginal = document.querySelector('#menu-productos .product-grid');
-        const menuModificar = document.getElementById('productos-modificar');
+        // Inicializar stock virtual
+        productos.forEach(p => {
+            stockVirtual[p.id] = p.stock;
+        });
         
-        if (menuOriginal) {
-            menuModificar.innerHTML = menuOriginal.innerHTML;
-            
-            // Resetear cantidades en el menú de modificación
-            menuModificar.querySelectorAll('.quantity-value').forEach(el => el.textContent = '0');
-            menuModificar.querySelectorAll('.observaciones-input').forEach(el => el.value = '');
-            
-            // ✅ NUEVO: Inicializar stock virtual
-            inicializarStockVirtual();
-            
-            // Mostrar indicadores de stock iniciales
-            document.querySelectorAll('#productos-modificar .product-item').forEach(item => {
-                const id = item.dataset.id;
-                actualizarIndicadorStock(id);
+        // === EVENT LISTENERS ===
+        
+        // Filtros de categoría
+        document.querySelectorAll('.categoria-btn-mod').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.categoria-btn-mod').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const categoria = btn.dataset.categoria;
+                filtrarProductosPorCategoria(categoria);
             });
-            
-        } else {
-            // Si no hay menú original, crear mensaje de ayuda
-            menuModificar.innerHTML = `
-                <p style="color: #666; text-align: center; grid-column: 1 / -1; padding: 2rem;">
-                    ⚠️ No se pudo cargar el menú de productos.<br>
-                    <button class="btn" onclick="window.recargarPestana('nuevo-pedido')" style="margin-top: 1rem;">🔄 Cargar desde Nuevo Pedido</button>
-                </p>
-            `;
-            return;
-        }
+        });
         
-        // Agregar event listeners para el menú de modificación
-        menuModificar.addEventListener('click', e => {
-            if (e.target.classList.contains('quantity-btn')) {
-                const id = e.target.closest('.product-item').dataset.id;
-                manejarCambioCantidad(id, e.target.dataset.action);
+        // Controles de cantidad
+        document.getElementById('productos-grid-modificacion').addEventListener('click', (e) => {
+            if (e.target.classList.contains('qty-btn-mod')) {
+                const productoItem = e.target.closest('.producto-item-mod');
+                const productoId = productoItem.dataset.productoId;
+                const accion = e.target.dataset.action;
+                
+                manejarCambioCantidadModificacion(productoId, accion, carrito, stockVirtual, productos);
             }
         });
         
-        menuModificar.addEventListener('input', e => {
-            if (e.target.classList.contains('observaciones-input')) {
-                const id = e.target.closest('.product-item').dataset.id;
-                if (ordenModificar[id]) {
-                    ordenModificar[id].observaciones = e.target.value;
-                    actualizarResumenModificacion();
+        // Observaciones
+        document.getElementById('productos-grid-modificacion').addEventListener('input', (e) => {
+            if (e.target.classList.contains('obs-input-mod')) {
+                const productoItem = e.target.closest('.producto-item-mod');
+                const productoId = productoItem.dataset.productoId;
+                
+                if (carrito[productoId]) {
+                    carrito[productoId].observaciones = e.target.value;
+                    actualizarCarritoModificacion(carrito);
                 }
             }
         });
         
-        actualizarResumenModificacion();
-    }
-
-    // === MANEJAR CAMBIOS DE CANTIDAD (MEJORADO) ===
-    function manejarCambioCantidad(id, accion) {
-        const productItem = document.querySelector(`#productos-modificar .product-item[data-id="${id}"]`);
-        if (!productItem) return;
-        
-        const stockDisponible = stockVirtual[id] || 0;
-        let cantidadActual = ordenModificar[id] ? ordenModificar[id].cantidad : 0;
-        let cantidadAnterior = cantidadActual;
-
-        if (accion === 'increment' && stockDisponible > 0) {
-            cantidadActual++;
-            // ✅ NUEVO: Reducir stock virtual inmediatamente
-            actualizarStockVirtual(id, 1);
-        } else if (accion === 'decrement' && cantidadActual > 0) {
-            cantidadActual--;
-            // ✅ NUEVO: Restaurar stock virtual inmediatamente
-            restaurarStockVirtual(id, 1);
-        } else if (accion === 'increment' && stockDisponible <= 0) {
-            window.mostrarNotificacion('❌ No hay suficiente stock disponible', 'error');
-            return;
-        }
-
-        if (cantidadActual > 0) {
-            if (!ordenModificar[id]) {
-                ordenModificar[id] = {
-                    id: id,
-                    nombre: productItem.dataset.nombre,
-                    precio: parseFloat(productItem.dataset.precio),
-                    observaciones: productItem.querySelector('.observaciones-input').value
-                };
-            }
-            ordenModificar[id].cantidad = cantidadActual;
-        } else {
-            delete ordenModificar[id];
-        }
-
-        // Actualizar UI del producto
-        productItem.querySelector('.quantity-value').textContent = cantidadActual;
-        
-        // ✅ NUEVO: Actualizar botones según stock disponible
-        const incrementBtn = productItem.querySelector('[data-action="increment"]');
-        const decrementBtn = productItem.querySelector('[data-action="decrement"]');
-        
-        if (stockVirtual[id] <= 0) {
-            incrementBtn.disabled = true;
-            incrementBtn.style.opacity = '0.3';
-            incrementBtn.style.cursor = 'not-allowed';
-        } else {
-            incrementBtn.disabled = false;
-            incrementBtn.style.opacity = '1';
-            incrementBtn.style.cursor = 'pointer';
-        }
-        
-        if (cantidadActual <= 0) {
-            decrementBtn.disabled = true;
-            decrementBtn.style.opacity = '0.3';
-            decrementBtn.style.cursor = 'not-allowed';
-        } else {
-            decrementBtn.disabled = false;
-            decrementBtn.style.opacity = '1';
-            decrementBtn.style.cursor = 'pointer';
-        }
-        
-        actualizarResumenModificacion();
-    }
-
-    // === ACTUALIZAR RESUMEN DE MODIFICACIÓN ===
-    function actualizarResumenModificacion() {
-        const container = document.getElementById('lista-productos-agregar');
-        const totalEl = document.getElementById('total-adicional');
-        const btnAgregar = document.getElementById('btn-agregar-productos');
-        
-        container.innerHTML = '';
-        let totalAdicional = 0;
-        
-        if (Object.keys(ordenModificar).length === 0) {
-            container.innerHTML = '<p style="color: #888; text-align: center;">Selecciona productos para agregar.</p>';
-            btnAgregar.disabled = true;
-            btnAgregar.classList.add('btn-agregar-disabled');
-        } else {
-            btnAgregar.disabled = false;
-            btnAgregar.classList.remove('btn-agregar-disabled');
-            Object.values(ordenModificar).forEach(item => {
-                const subtotal = item.cantidad * item.precio;
-                totalAdicional += subtotal;
-                container.innerHTML += `
-                    <div class="order-item">
-                        <span class="order-item-info">${item.cantidad}x ${item.nombre}</span>
-                        <span>${subtotal.toLocaleString()}</span>
-                        ${item.observaciones ? `<div class="order-item-obs">📝 ${item.observaciones}</div>` : ''}
-                    </div>
-                `;
-            });
-        }
-        
-        totalEl.textContent = totalAdicional.toLocaleString();
-    }
-
-    // === RESTAURAR STOCK EN CASO DE ERROR ===
-    function restaurarTodoElStock() {
-        console.log('🔄 Restaurando todo el stock virtual por error...');
-        Object.keys(ordenModificar).forEach(id => {
-            const cantidad = ordenModificar[id].cantidad;
-            restaurarStockVirtual(id, cantidad);
+        // Botón confirmar
+        document.getElementById('btn-confirmar-modificacion').addEventListener('click', () => {
+            confirmarModificacion(carrito, orden);
         });
         
-        // Limpiar orden y UI
-        Object.keys(ordenModificar).forEach(key => delete ordenModificar[key]);
+        // === FUNCIONES INTERNAS ===
         
-        // Resetear UI
-        document.querySelectorAll('#productos-modificar .quantity-value').forEach(el => el.textContent = '0');
-        document.querySelectorAll('#productos-modificar .quantity-btn').forEach(btn => {
-            btn.disabled = false;
-            btn.style.opacity = '1';
-            btn.style.cursor = 'pointer';
-        });
-        
-        actualizarResumenModificacion();
-    }
-
-    // === FILTROS DE CATEGORÍAS PARA MODIFICACIÓN ===
-    document.addEventListener('click', e => {
-        if (e.target.tagName === 'BUTTON' && e.target.dataset.context === 'modificar') {
-            const selectedCategoryId = e.target.dataset.categoryId;
-            const parentContainer = e.target.closest('#agregar-productos-container');
-            const categoryButtons = parentContainer.querySelectorAll('[data-context="modificar"]');
-            const productItems = parentContainer.querySelectorAll('.product-item');
-            
-            categoryButtons.forEach(btn => btn.classList.remove('active'));
-            e.target.classList.add('active');
-            
-            productItems.forEach(item => {
-                if (selectedCategoryId === 'all' || item.dataset.categoryId === selectedCategoryId) {
-                    item.style.display = 'flex';
+        function filtrarProductosPorCategoria(categoria) {
+            document.querySelectorAll('.producto-item-mod').forEach(item => {
+                const itemCategoria = item.dataset.categoria;
+                if (categoria === 'all' || itemCategoria === categoria) {
+                    item.style.display = 'block';
                 } else {
                     item.style.display = 'none';
                 }
             });
         }
-    });
-
-    // === ENVIAR PRODUCTOS ADICIONALES (LÓGICA CORREGIDA) ===
-    document.getElementById('btn-agregar-productos').addEventListener('click', async () => {
-        if (!ordenSeleccionadaId || Object.keys(ordenModificar).length === 0) return;
         
-        const productosParaAgregar = Object.values(ordenModificar).map(p => ({
-            id: p.id,
-            cantidad: p.cantidad,
-            observaciones: p.observaciones || ''
-        }));
-        
-        // ✅ CORRECCIÓN: Mensaje más específico según el tipo de orden
-        const tipoAccion = ordenTieneFacturaPendiente ? 
-            'agregar productos a la orden facturada (se actualizará el total)' : 
-            'agregar productos a la orden';
+        function manejarCambioCantidadModificacion(productoId, accion, carrito, stockVirtual, productos) {
+            const producto = productos.find(p => p.id === productoId);
+            if (!producto) return;
             
-        if (!confirm(`¿Confirmar ${tipoAccion}?`)) return;
-        
-        const btnAgregar = document.getElementById('btn-agregar-productos');
-        btnAgregar.disabled = true;
-        btnAgregar.textContent = '⏳ Agregando...';
-        
-        // ✅ CORRECCIÓN: URL corregida con manejo de errores
-        let apiUrl;
-        if (ordenTieneFacturaPendiente) {
-            // Usar la URL estándar de agregar productos y manejar en el backend
-            apiUrl = `/api/orden/${ordenSeleccionadaId}/agregar-productos/`;
-        } else {
-            apiUrl = `/api/orden/${ordenSeleccionadaId}/agregar-productos/`;
+            const stockDisponible = stockVirtual[productoId];
+            let cantidadActual = carrito[productoId] ? carrito[productoId].cantidad : 0;
+            
+            if (accion === 'increment' && stockDisponible > 0) {
+                cantidadActual++;
+                stockVirtual[productoId]--;
+            } else if (accion === 'decrement' && cantidadActual > 0) {
+                cantidadActual--;
+                stockVirtual[productoId]++;
+            } else {
+                if (accion === 'increment' && stockDisponible <= 0) {
+                    window.mostrarNotificacion('❌ No hay stock suficiente', 'error');
+                }
+                return;
+            }
+            
+            // Actualizar carrito
+            if (cantidadActual > 0) {
+                if (!carrito[productoId]) {
+                    carrito[productoId] = {
+                        id: productoId,
+                        nombre: producto.nombre,
+                        precio: producto.precio,
+                        observaciones: ''
+                    };
+                }
+                carrito[productoId].cantidad = cantidadActual;
+            } else {
+                delete carrito[productoId];
+            }
+            
+            // Actualizar UI
+            const productoItem = document.querySelector(`[data-producto-id="${productoId}"]`);
+            const qtyDisplay = productoItem.querySelector('.qty-value-mod');
+            const stockInfo = productoItem.querySelector('.stock-info-mod');
+            
+            if (qtyDisplay) qtyDisplay.textContent = cantidadActual;
+            if (stockInfo && !productoItem.classList.contains('sin-stock')) {
+                stockInfo.textContent = `Stock: ${stockVirtual[productoId]}`;
+                if (stockVirtual[productoId] <= 0) {
+                    stockInfo.textContent = 'TEMPORALMENTE AGOTADO';
+                    stockInfo.classList.add('agotado');
+                } else {
+                    stockInfo.classList.remove('agotado');
+                }
+            }
+            
+            actualizarCarritoModificacion(carrito);
         }
+        
+        function actualizarCarritoModificacion(carrito) {
+            const container = document.getElementById('carrito-items-mod');
+            const totalEl = document.getElementById('total-modificacion');
+            const btnConfirmar = document.getElementById('btn-confirmar-modificacion');
             
-        console.log(`📡 Enviando a: ${apiUrl}`);
-        console.log(`💰 Orden tiene factura pendiente: ${ordenTieneFacturaPendiente}`);
+            const items = Object.values(carrito);
+            let total = 0;
+            
+            if (items.length === 0) {
+                container.innerHTML = '<p style="color: #888; text-align: center; font-style: italic;">Selecciona productos del menú</p>';
+                btnConfirmar.disabled = true;
+            } else {
+                container.innerHTML = items.map(item => {
+                    const subtotal = item.cantidad * item.precio;
+                    total += subtotal;
+                    
+                    return `
+                        <div class="carrito-item-mod">
+                            <div>
+                                <strong>${item.cantidad}x ${item.nombre}</strong>
+                                ${item.observaciones ? `<div style="font-size: 0.8em; color: #666;">📝 ${item.observaciones}</div>` : ''}
+                            </div>
+                            <div>$${subtotal.toLocaleString()}</div>
+                        </div>
+                    `;
+                }).join('');
+                
+                btnConfirmar.disabled = false;
+            }
+            
+            totalEl.textContent = total.toLocaleString();
+        }
+        
+        async function confirmarModificacion(carrito, orden) {
+            const items = Object.values(carrito);
+            if (items.length === 0) return;
+            
+            const tieneFactura = !!orden.factura_info;
+            const mensaje = tieneFactura ? 
+                `¿Agregar ${items.length} productos a la orden con factura?\nSe actualizará el total de la factura.` :
+                `¿Agregar ${items.length} productos a la orden?`;
+            
+            if (!confirm(mensaje)) return;
+            
+            const btnConfirmar = document.getElementById('btn-confirmar-modificacion');
+            btnConfirmar.disabled = true;
+            btnConfirmar.textContent = '⏳ Agregando...';
+            
+            try {
+                const productosParaAgregar = items.map(item => ({
+                    id: item.id,
+                    cantidad: item.cantidad,
+                    observaciones: item.observaciones || ''
+                }));
+                
+                const response = await fetch(`/api/orden/${orden.orden_id}/agregar-productos/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': window.csrfToken
+                    },
+                    body: JSON.stringify({
+                        productos: productosParaAgregar,
+                        es_orden_facturada: tieneFactura
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Error en el servidor');
+                }
+                
+                window.mostrarNotificacion(`✅ ${result.mensaje}`, 'success');
+                
+                // Cerrar panel y recargar
+                cerrarPanelModificacion();
+                cargarOrdenesModificar();
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                window.mostrarNotificacion(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                btnConfirmar.disabled = false;
+                btnConfirmar.textContent = 'Agregar a la Orden';
+            }
+        }
+    }
 
+    /**
+     * Entregar orden
+     */
+    async function entregarOrden(ordenId) {
+        if (!confirm('¿Confirmas que esta orden ha sido entregada?\nSe generará una factura pendiente.')) {
+            return;
+        }
+        
         try {
-            const response = await fetch(apiUrl, {
+            const response = await fetch(`/api/mesero/orden/${ordenId}/entregar/`, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'X-CSRFToken': window.csrfToken 
-                },
-                body: JSON.stringify({ 
-                    productos: productosParaAgregar,
-                    es_orden_facturada: ordenTieneFacturaPendiente // ✅ NUEVO: Flag para el backend
-                })
+                headers: { 'X-CSRFToken': window.csrfToken }
             });
             
             const result = await response.json();
             
             if (!response.ok) {
-                throw new Error(result.error || `Error ${response.status}: ${response.statusText}`);
+                throw new Error(result.error);
             }
             
-            window.mostrarNotificacion(`✅ ${result.mensaje}`, 'success');
+            window.mostrarNotificacion(`✅ Orden #${ordenId} entregada exitosamente.`, 'success');
             
-            // ✅ ÉXITO: Limpiar orden sin restaurar stock (ya fue usado)
-            Object.keys(ordenModificar).forEach(key => delete ordenModificar[key]);
-            
-            // Resetear UI
-            document.querySelectorAll('#productos-modificar .quantity-value').forEach(el => el.textContent = '0');
-            
-            actualizarResumenModificacion();
-            seleccionarMesaParaModificar(ordenSeleccionadaId, mesaSeleccionadaId); // Recargar
+            // Recargar órdenes
+            cargarOrdenesModificar();
             
         } catch (error) {
-            console.error('❌ Error agregando productos:', error);
+            console.error('❌ Error entregando orden:', error);
             window.mostrarNotificacion(`❌ Error: ${error.message}`, 'error');
-            
-            // ✅ ERROR: Restaurar todo el stock virtual
-            restaurarTodoElStock();
-            
-        } finally {
-            btnAgregar.disabled = false;
-            btnAgregar.textContent = 'Agregar a la Orden';
         }
-    });
-
-    // === HACER FUNCIONES DISPONIBLES GLOBALMENTE ===
-    window.cargarMesasOcupadas = cargarMesasOcupadas;
-
+    }
+    
+    /**
+     * Ver factura
+     */
+    function verFactura(ordenId) {
+        console.log('🧾 Ver factura para orden:', ordenId);
+        // Implementar modal de factura o redirección
+        window.mostrarNotificacion('🧾 Función de ver factura en desarrollo', 'info');
+    }
+    
+    // === MANEJO DE FILTROS ===
+    
+    /**
+     * Actualizar filtros de estado según el tipo seleccionado
+     */
+    function actualizarFiltrosEstado(tipo) {
+        const estadosContainer = document.getElementById('estados-botones');
+        const estadosLabel = document.getElementById('estados-label');
+        
+        // Limpiar filtro de estado actual
+        filtrosActivos.estado = null;
+        
+        // Configurar según el tipo
+        if (tipo === 'facturas') {
+            estadosLabel.textContent = 'Estado de Pago:';
+            estadosContainer.innerHTML = `
+                <button class="filtro-btn" data-estado="NO_PAGADA">❌ No Pagada</button>
+                <button class="filtro-btn" data-estado="PAGADA">✅ Pagada</button>
+            `;
+        } else if (tipo === 'ordenes') {
+            estadosLabel.textContent = 'Estado de Orden:';
+            estadosContainer.innerHTML = `
+                <button class="filtro-btn" data-estado="EN_PROCESO">⏳ En Preparación</button>
+                <button class="filtro-btn" data-estado="LISTA">🍽️ Lista para Servir</button>
+                <button class="filtro-btn" data-estado="SERVIDA">✅ Servida</button>
+            `;
+        } else {
+            // Para "todos", mostrar ambos tipos de estado
+            estadosLabel.textContent = 'Estado:';
+            estadosContainer.innerHTML = `
+                <button class="filtro-btn" data-estado="EN_PROCESO">⏳ En Preparación</button>
+                <button class="filtro-btn" data-estado="LISTA">🍽️ Lista para Servir</button>
+                <button class="filtro-btn" data-estado="SERVIDA">✅ Servida</button>
+                <button class="filtro-btn" data-estado="NO_PAGADA">🧾 Factura Pendiente</button>
+                <button class="filtro-btn" data-estado="PAGADA">💰 Factura Pagada</button>
+            `;
+        }
+        
+        // Reconfigurar event listeners para los nuevos botones
+        configurarFiltrosEstado();
+    }
+    
+    /**
+     * Configurar event listeners para filtros de estado
+     */
+    function configurarFiltrosEstado() {
+        document.querySelectorAll('#estados-botones [data-estado]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Toggle del filtro
+                if (btn.classList.contains('active')) {
+                    btn.classList.remove('active');
+                    filtrosActivos.estado = null;
+                } else {
+                    document.querySelectorAll('#estados-botones [data-estado]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    filtrosActivos.estado = btn.dataset.estado;
+                }
+                
+                console.log('🔍 Filtro de estado actualizado:', filtrosActivos.estado);
+                aplicarFiltrosYRenderizar();
+            });
+        });
+    }
+    
+    /**
+     * Configurar event listeners para filtros
+     */
+    function configurarFiltros() {
+        // Filtros de tipo
+        document.querySelectorAll('[data-tipo]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Actualizar estado activo
+                document.querySelectorAll('[data-tipo]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const nuevoTipo = btn.dataset.tipo;
+                filtrosActivos.tipo = nuevoTipo;
+                
+                console.log('🔍 Filtro de tipo actualizado:', nuevoTipo);
+                
+                // Actualizar filtros de estado según el tipo
+                actualizarFiltrosEstado(nuevoTipo);
+                
+                // Aplicar filtros
+                aplicarFiltrosYRenderizar();
+            });
+        });
+        
+        // Configurar filtros de estado iniciales
+        configurarFiltrosEstado();
+    }
+    
     // === INICIALIZACIÓN ===
-    cargarMesasOcupadas();
+    
+    // Configurar filtros
+    configurarFiltros();
+    
+    // Cargar órdenes iniciales
+    cargarOrdenesModificar();
+    
+    // Auto-actualización cada 30 segundos
+    const intervalId = setInterval(cargarOrdenesModificar, 30000);
     
     console.log('✅ Modificar orden inicializado correctamente');
     
+    // === CLEANUP ===
     return function cleanup() {
         console.log('🧹 Limpiando modificar orden');
-        const container = document.getElementById('agregar-productos-container');
-        if (container) {
-            container.style.display = 'none';
+        
+        if (intervalId) {
+            clearInterval(intervalId);
         }
         
-        // ✅ NUEVO: Restaurar todo el stock al limpiar
-        if (Object.keys(ordenModificar).length > 0) {
-            console.log('🔄 Restaurando stock virtual al limpiar...');
-            restaurarTodoElStock();
-        }
+        cerrarPanelModificacion();
+        
+        // Limpiar variables
+        ordenesData = [];
+        ordenSeleccionada = null;
+        filtrosActivos = {
+            tipo: 'todos',
+            estado: null
+        };
     };
 };
 
-// === FUNCIONES GLOBALES ===
+// === FUNCIÓN DE ACTUALIZACIÓN GLOBAL ===
 window.actualizar_modificar_orden = function() {
-    if (typeof window.cargarMesasOcupadas === 'function') {
-        console.log('🔄 Actualizando mesas ocupadas...');
-        window.cargarMesasOcupadas();
+    if (typeof window.cargarOrdenesModificar === 'function') {
+        console.log('🔄 Actualizando modificar orden por long polling');
+        window.cargarOrdenesModificar();
     }
-    console.log('🔄 Actualizando modificar orden por long polling');
 };
 
-// Hacer la función de inicialización disponible globalmente antes de que se llame
+// Hacer función de inicialización disponible globalmente
 console.log('✅ Función inicializar_modificar_orden definida globalmente');
-</script>

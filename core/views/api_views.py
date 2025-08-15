@@ -1,6 +1,6 @@
-# core/views/api_views.py
+# core/views/api_views.py - VERSIÓN CORREGIDA
 """
-APIs del sistema de restaurante.
+APIs del sistema de restaurante - VERSIÓN CORREGIDA.
 Contiene todas las APIs para órdenes, mesero, cocina, facturas y long polling.
 """
 
@@ -122,6 +122,7 @@ def limpiar_debounces_usuario(user_id):
 # === API ÓRDENES (CREAR Y GESTIONAR) ===
 
 @require_POST
+@login_required
 @transaction.atomic
 @critical_operation(delay=2.0, error_message="⚠️ Pedido en proceso. Espera 2 segundos antes de crear otro.")
 def api_crear_orden_tiempo_real(request):
@@ -189,12 +190,22 @@ def api_crear_orden_tiempo_real(request):
 @debounce_request(delay=1.0, include_data=True, error_message="⚠️ Modificación en proceso. Espera 1 segundo.")
 def api_agregar_productos_orden(request, orden_id):
     """
-    API UNIFICADA para agregar productos a una orden existente
+    API CORREGIDA para agregar productos a una orden existente
     Maneja tanto órdenes normales como órdenes con factura pendiente
     """
     try:
-        orden = get_object_or_404(Orden, id=orden_id)
-        data = json.loads(request.body)
+        # 🔧 VALIDACIÓN INICIAL: Verificar que la orden exista
+        try:
+            orden = Orden.objects.get(id=orden_id)
+        except Orden.DoesNotExist:
+            return JsonResponse({'error': f'Orden con ID {orden_id} no encontrada'}, status=404)
+        
+        # 🔧 VALIDACIÓN DE JSON: Manejar errores de parsing JSON
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError as e:
+            return JsonResponse({'error': f'JSON inválido: {str(e)}'}, status=400)
+        
         productos_nuevos = data.get('productos', [])
         es_orden_facturada = data.get('es_orden_facturada', False)
         
@@ -203,11 +214,11 @@ def api_agregar_productos_orden(request, orden_id):
         if not productos_nuevos:
             return JsonResponse({'error': 'No hay productos para agregar'}, status=400)
         
-        # Verificar permisos
+        # 🔧 VERIFICAR PERMISOS: Controlar acceso
         if orden.mesero != request.user and not request.user.is_superuser:
             return JsonResponse({'error': 'Solo puedes modificar tus propias órdenes'}, status=403)
               
-        # ✅ VERIFICAR SI LA ORDEN TIENE FACTURA PENDIENTE
+        # 🔧 VERIFICAR SI LA ORDEN TIENE FACTURA PENDIENTE
         tiene_factura_pendiente = False
         factura = None
         
@@ -223,22 +234,38 @@ def api_agregar_productos_orden(request, orden_id):
         except Exception as e:
             print(f"⚠️ Error verificando factura de orden {orden_id}: {e}")
         
-        # Validar que la orden pueda ser modificada
+        # 🔧 VALIDAR QUE LA ORDEN PUEDA SER MODIFICADA
         if orden.estado == 'SERVIDA' and not tiene_factura_pendiente:
             return JsonResponse({
                 'error': 'No se puede modificar una orden servida con factura pagada'
             }, status=400)
         
-        # ✅ VALIDACIÓN COMPLETA DE STOCK ANTES DE PROCESAR
+        # 🔧 VALIDACIÓN COMPLETA DE PRODUCTOS Y STOCK
         productos_validados = []
         for item in productos_nuevos:
             try:
-                producto = Producto.objects.get(id=item['id'])
-                cantidad_solicitada = int(item['cantidad'])
+                # Verificar que existan los campos requeridos
+                if 'id' not in item or 'cantidad' not in item:
+                    return JsonResponse({
+                        'error': 'Faltan campos requeridos en producto: id y cantidad son obligatorios'
+                    }, status=400)
+                
+                producto = Producto.objects.get(
+                    id=item['id'], 
+                    is_active=True, 
+                    is_available=True
+                )
+                
+                try:
+                    cantidad_solicitada = int(item['cantidad'])
+                except (ValueError, TypeError):
+                    return JsonResponse({
+                        'error': f'Cantidad inválida para {producto.nombre}: debe ser un número entero'
+                    }, status=400)
                 
                 if cantidad_solicitada <= 0:
                     return JsonResponse({
-                        'error': f'Cantidad inválida para {producto.nombre}: {cantidad_solicitada}'
+                        'error': f'Cantidad inválida para {producto.nombre}: debe ser mayor a 0'
                     }, status=400)
                 
                 if producto.cantidad < cantidad_solicitada:
@@ -254,16 +281,19 @@ def api_agregar_productos_orden(request, orden_id):
                 
             except Producto.DoesNotExist:
                 return JsonResponse({
-                    'error': f'Producto con ID {item["id"]} no encontrado'
+                    'error': f'Producto con ID {item.get("id", "desconocido")} no encontrado o inactivo'
                 }, status=404)
-            except (ValueError, KeyError) as e:
+            except Exception as e:
                 return JsonResponse({
-                    'error': f'Datos inválidos en producto {item.get("id", "desconocido")}: {str(e)}'
+                    'error': f'Error procesando producto {item.get("id", "desconocido")}: {str(e)}'
                 }, status=400)
         
-        print(f"✅ Validación de stock completada para {len(productos_validados)} productos")
+        if not productos_validados:
+            return JsonResponse({'error': 'No hay productos válidos para agregar'}, status=400)
         
-        # ✅ DETERMINAR MARCADOR SEGÚN TIPO DE ORDEN
+        print(f"✅ Validación completada para {len(productos_validados)} productos")
+        
+        # 🔧 DETERMINAR MARCADOR SEGÚN TIPO DE ORDEN
         if tiene_factura_pendiente or es_orden_facturada:
             marcador_obs = "AGREGADO_POST_FACTURA"
             tipo_agregado = "post-factura"
@@ -273,10 +303,9 @@ def api_agregar_productos_orden(request, orden_id):
         
         print(f"🏷️ Productos serán marcados como: {marcador_obs}")
         
-        # ✅ PROCESAR PRODUCTOS Y ACTUALIZAR STOCK
+        # 🔧 PROCESAR PRODUCTOS Y ACTUALIZAR STOCK
         productos_agregados = []
         total_agregado = 0
-        productos_con_error = []
         
         for item_validado in productos_validados:
             try:
@@ -304,7 +333,7 @@ def api_agregar_productos_orden(request, orden_id):
                 subtotal = cantidad * producto.precio
                 total_agregado += subtotal
                 
-                # ✅ ACTUALIZAR STOCK INMEDIATAMENTE
+                # 🔧 ACTUALIZAR STOCK INMEDIATAMENTE
                 stock_anterior = producto.cantidad
                 producto.cantidad -= cantidad
                 producto.save()
@@ -312,48 +341,68 @@ def api_agregar_productos_orden(request, orden_id):
                 print(f"📦 {producto.nombre}: Stock {stock_anterior} → {producto.cantidad} (-{cantidad})")
                 
             except Exception as e:
-                productos_con_error.append({
-                    'producto': producto.nombre,
-                    'error': str(e)
-                })
                 print(f"❌ Error procesando {producto.nombre}: {e}")
-        
-        # Verificar si hubo errores parciales
-        if productos_con_error:
-            error_msg = "Errores procesando algunos productos: " + \
-                       ", ".join([f"{p['producto']}: {p['error']}" for p in productos_con_error])
-            return JsonResponse({'error': error_msg}, status=500)
+                return JsonResponse({
+                    'error': f'Error interno procesando {producto.nombre}: {str(e)}'
+                }, status=500)
         
         print(f"💰 Total agregado: ${total_agregado:,.2f}")
         
-        # ✅ ACTUALIZAR FACTURA SI EXISTE
+        # 🔧 ACTUALIZAR FACTURA SI EXISTE
         nueva_factura_total = None
         if tiene_factura_pendiente and factura:
-            factura_anterior = factura.total
-            factura.subtotal += total_agregado
-            factura.total += total_agregado
-            factura.save()
-            nueva_factura_total = float(factura.total)
-            print(f"🧾 Factura {factura.id}: ${factura_anterior:,.2f} → ${factura.total:,.2f}")
+            try:
+                factura_anterior = factura.total
+                factura.subtotal += total_agregado
+                factura.total += total_agregado
+                factura.save()
+                nueva_factura_total = float(factura.total)
+                print(f"🧾 Factura {factura.id}: ${factura_anterior:,.2f} → ${factura.total:,.2f}")
+            except Exception as e:
+                print(f"❌ Error actualizando factura: {e}")
+                return JsonResponse({
+                    'error': f'Error actualizando factura: {str(e)}'
+                }, status=500)
         
-        # ✅ ACTUALIZAR ESTADO DE LA ORDEN
+        # 🔧 ACTUALIZAR ESTADO DE LA ORDEN
         estado_anterior = orden.estado
-        if orden.estado == 'LISTA':
-            orden.estado = 'EN_PROCESO'
-            orden.listo_en = None
-            orden.save()
-            print(f"🔄 Orden {orden_id}: {estado_anterior} → EN_PROCESO (productos nuevos)")
-        elif orden.estado == 'SERVIDA' and tiene_factura_pendiente:
-            orden.estado = 'EN_PROCESO'
-            orden.save()
-            print(f"🔄 Orden {orden_id}: SERVIDA → EN_PROCESO (productos post-factura)")
+        try:
+            if orden.estado == 'LISTA':
+                orden.estado = 'EN_PROCESO'
+                orden.listo_en = None
+                orden.save()
+                print(f"📄 Orden {orden_id}: {estado_anterior} → EN_PROCESO (productos nuevos)")
+            elif orden.estado == 'SERVIDA' and tiene_factura_pendiente:
+                orden.estado = 'EN_PROCESO'
+                orden.save()
+                print(f"📄 Orden {orden_id}: SERVIDA → EN_PROCESO (productos post-factura)")
+        except Exception as e:
+            print(f"❌ Error actualizando estado de orden: {e}")
+            return JsonResponse({
+                'error': f'Error actualizando estado de orden: {str(e)}'
+            }, status=500)
         
-        # ✅ NOTIFICAR CAMBIOS EN TIEMPO REAL
-        notificar_cambio_cocina()
-        notificar_cambio_stock()
+        # 🔧 NOTIFICAR CAMBIOS EN TIEMPO REAL
+        try:
+            notificar_cambio_cocina()
+            notificar_cambio_stock()
+        except Exception as e:
+            print(f"⚠️ Error en notificaciones: {e}")
+            # No fallar la operación por esto
         
-        # ✅ PREPARAR RESPUESTA
-        orden_completa = obtener_datos_completos_orden(orden)
+        # 🔧 PREPARAR RESPUESTA SEGURA
+        try:
+            orden_completa = obtener_datos_completos_orden(orden)
+        except Exception as e:
+            print(f"❌ Error obteniendo datos completos: {e}")
+            # Crear respuesta mínima en caso de error
+            orden_completa = {
+                'orden_id': orden.id,
+                'estado': orden.estado,
+                'mesa': {'numero': orden.mesa.numero},
+                'productos': [],
+                'total': float(total_agregado)
+            }
         
         # Mensaje personalizado según el contexto
         if tiene_factura_pendiente:
@@ -377,10 +426,6 @@ def api_agregar_productos_orden(request, orden_id):
         print(f"✅ Respuesta exitosa para orden {orden_id}")
         return JsonResponse(respuesta)
         
-    except json.JSONDecodeError:
-        print(f"❌ Error: JSON inválido en request para orden {orden_id}")
-        return JsonResponse({'error': 'Formato JSON inválido'}, status=400)
-    
     except Exception as e:
         print(f"❌ Error inesperado en api_agregar_productos_orden: {str(e)}")
         import traceback
