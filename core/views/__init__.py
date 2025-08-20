@@ -58,6 +58,9 @@ from .api_views import (
     # Sistema y debug
     api_estadisticas_sistema,
     api_debug_debounce_status,
+
+    api_get_reservas_cocina,  # ✅ NUEVA VISTA IMPORTADA
+    api_marcar_factura_pagada,
 )
 
 # Funciones utilitarias que podrían ser importadas
@@ -66,6 +69,7 @@ from .api_views import (
     extraer_info_cliente_domicilio,
     extraer_info_cliente_reserva,
     limpiar_debounces_usuario,
+
 )
 
 __all__ = [
@@ -123,4 +127,6 @@ __all__ = [
     'extraer_info_cliente_domicilio',
     'extraer_info_cliente_reserva',
     'limpiar_debounces_usuario',
+    'api_get_reservas_cocina',  # ✅ NUEVA VISTA EXPORTADA
+    'api_marcar_factura_pagada',
 ]

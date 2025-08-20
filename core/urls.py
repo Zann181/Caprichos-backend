@@ -50,12 +50,22 @@ urlpatterns = [
     # === API FACTURAS ===
     path('api/factura/orden/<int:orden_id>/', views.api_get_factura_por_orden, name='api_get_factura_por_orden'),
     path('api/orden/<int:orden_id>/agregar-productos-facturada/', views.api_agregar_productos_orden_facturada, name='api_agregar_productos_orden_facturada'),
+    # === API FACTURAS ===
+    path('api/factura/orden/<int:orden_id>/', views.api_get_factura_por_orden, name='api_get_factura_por_orden'),
+    path('api/factura/<int:factura_id>/pagar/', views.api_marcar_factura_pagada, name='api_marcar_factura_pagada'),  # ✅ NUEVA LÍNEA
+        
+    
     # En core/urls.py debe existir:
     path('api/orden/<int:orden_id>/agregar-productos/', views.api_agregar_productos_orden, name='api_agregar_productos_orden'),
 
     # === LONG POLLING (TIEMPO REAL) ===
     path('api/longpolling/cocina/', views.api_longpolling_cocina, name='api_longpolling_cocina'),
     path('api/longpolling/meseros/', views.api_longpolling_meseros, name='api_longpolling_meseros'),
+
+
+    # ✅ AGREGADA:
+    path('api/cocina/reservas/', views.api_get_reservas_cocina, name='api_get_reservas_cocina'),
+
 
     # === SISTEMA Y DEBUG ===
     path('api/sistema/estadisticas/', views.api_estadisticas_sistema, name='api_estadisticas_sistema'),

@@ -53,42 +53,84 @@ def extraer_info_cliente_domicilio(observaciones):
     
     try:
         # Buscar patrones en las observaciones
-        # Formato esperado: "Cliente: Juan Pérez, Tel: 123456789, Dir: Calle 123"
-        nombre_match = re.search(r'Cliente:\s*([^,]+)', observaciones, re.IGNORECASE)
-        telefono_match = re.search(r'Tel(?:éfono)?:\s*([^,]+)', observaciones, re.IGNORECASE)
+        nombre_match = re.search(r'Cliente:\s*([^,\n]+)', observaciones, re.IGNORECASE)
+        telefono_match = re.search(r'Tel(?:éfono)?:\s*([^,\n]+)', observaciones, re.IGNORECASE)
         direccion_match = re.search(r'Dir(?:ección)?:\s*([^,\n]+)', observaciones, re.IGNORECASE)
         
+        nombre_final = 'Cliente Domicilio'
+        if nombre_match:
+            nombre_final = nombre_match.group(1).strip()
+        else:
+            # Usar las primeras palabras como nombre
+            palabras = re.split(r'[,\n]', observaciones)
+            primera_linea = palabras[0] if palabras else ''
+            if primera_linea and len(primera_linea.strip()) > 0:
+                nombre_final = primera_linea.strip()[:30]
+        
+        direccion_final = ''
+        if direccion_match:
+            direccion_final = direccion_match.group(1).strip()
+        else:
+            direccion_final = observaciones[:50] + '...' if len(observaciones) > 50 else observaciones
+        
         return {
-            'nombre': nombre_match.group(1).strip() if nombre_match else 'Cliente Domicilio',
+            'nombre': nombre_final,
             'telefono': telefono_match.group(1).strip() if telefono_match else '',
-            'direccion': direccion_match.group(1).strip() if direccion_match else observaciones[:50] + '...' if len(observaciones) > 50 else observaciones
+            'direccion': direccion_final
         }
-    except Exception:
+    except Exception as e:
+        print(f"Error extrayendo info de domicilio: {e}")
         return {'nombre': 'Cliente Domicilio', 'direccion': observaciones[:50], 'telefono': ''}
 
 
 def extraer_info_cliente_reserva(observaciones):
     """Extrae información del cliente de reserva de las observaciones"""
     if not observaciones:
-        return {'nombre': 'Cliente Reserva', 'personas': 2, 'telefono': '', 'fecha_reserva': '', 'observaciones': ''}
+        return {
+            'nombre': 'Cliente Reserva', 
+            'personas': 2, 
+            'telefono': '', 
+            'fecha_reserva': '', 
+            'hora_reserva': '',
+            'observaciones': ''
+        }
     
     try:
         # Buscar patrones en las observaciones de reserva
-        # Formato esperado: "Reserva: María García, Tel: 987654321, Personas: 4, Fecha: 2025-08-15 19:00"
-        nombre_match = re.search(r'(?:Reserva|Cliente):\s*([^,]+)', observaciones, re.IGNORECASE)
-        telefono_match = re.search(r'Tel(?:éfono)?:\s*([^,]+)', observaciones, re.IGNORECASE)
+        nombre_match = re.search(r'(?:Reserva|Cliente|Nombre):\s*([^,\n]+)', observaciones, re.IGNORECASE)
+        telefono_match = re.search(r'Tel(?:éfono)?:\s*([^,\n]+)', observaciones, re.IGNORECASE)
         personas_match = re.search(r'Personas?:\s*(\d+)', observaciones, re.IGNORECASE)
         fecha_match = re.search(r'Fecha:\s*([^,\n]+)', observaciones, re.IGNORECASE)
+        hora_match = re.search(r'Hora:\s*([^,\n]+)', observaciones, re.IGNORECASE)
+        
+        nombre_final = 'Cliente Reserva'
+        if nombre_match:
+            nombre_final = nombre_match.group(1).strip()
+        else:
+            # Usar las primeras palabras como nombre
+            palabras = re.split(r'[,\n]', observaciones)
+            primera_linea = palabras[0] if palabras else ''
+            if primera_linea and len(primera_linea.strip()) > 0:
+                nombre_final = primera_linea.strip()[:30]
         
         return {
-            'nombre': nombre_match.group(1).strip() if nombre_match else 'Cliente Reserva',
+            'nombre': nombre_final,
             'telefono': telefono_match.group(1).strip() if telefono_match else '',
             'personas': int(personas_match.group(1)) if personas_match else 2,
             'fecha_reserva': fecha_match.group(1).strip() if fecha_match else '',
+            'hora_reserva': hora_match.group(1).strip() if hora_match else '',
             'observaciones': observaciones
         }
-    except Exception:
-        return {'nombre': 'Cliente Reserva', 'personas': 2, 'telefono': '', 'fecha_reserva': '', 'observaciones': observaciones}
+    except Exception as e:
+        print(f"Error extrayendo info de reserva: {e}")
+        return {
+            'nombre': 'Cliente Reserva', 
+            'personas': 2, 
+            'telefono': '', 
+            'fecha_reserva': '', 
+            'hora_reserva': '',
+            'observaciones': observaciones
+        }
 
 
 def limpiar_debounces_usuario(user_id):
@@ -1157,13 +1199,21 @@ def api_get_mesas_ocupadas_detallado(request):
 
 
 # === API COCINA ===
-
 @login_required
 def api_get_ordenes_cocina(request):
-    """API que devuelve las órdenes activas para cocina (maneja productos agregados después)"""
+    """
+    API que devuelve las órdenes activas para cocina - CORREGIDA
+    
+    🔧 CORRECCIÓN PRINCIPAL: Las reservas (mesa 50) NO aparecen en órdenes normales de cocina
+    Las reservas son para fechas futuras y se ven solo en modal especial
+    """
     try:
+        # 🔧 CORRECCIÓN: Excluir reservas (mesa 50) de las órdenes normales de cocina
+        # Las reservas solo se preparan cuando es su fecha/hora programada
         ordenes = Orden.objects.filter(
             estado__in=['EN_PROCESO', 'NUEVA', 'LISTA']
+        ).exclude(
+            mesa__numero=50  # ✅ EXCLUIR RESERVAS
         ).order_by('creado_en')
         
         lista_ordenes = []
@@ -1200,12 +1250,13 @@ def api_get_ordenes_cocina(request):
                         'clase_css': 'nuevo-agregado' if agregado_despues else ('listo' if po.estado == 'LISTO' else '')
                     })
                 
+                # 🔧 CORRECCIÓN: Formato consistente de fecha y observaciones completas
                 orden_data = {
                     'id': orden.id,
                     'mesa': orden.mesa.numero,
                     'mesero': orden.mesero.nombre,
-                    'creado_en': orden.creado_en.strftime('%I:%M %p'),
-                    'observaciones': orden.observaciones if orden.observaciones else '',
+                    'creado_en': orden.creado_en.isoformat(),  # ✅ Formato ISO consistente
+                    'observaciones': orden.observaciones if orden.observaciones else '',  # ✅ Observaciones completas
                     'productos': lista_productos,
                     'completada': todos_listos or orden.estado == 'LISTA',
                     'tiene_agregados': any(p['agregado_despues'] for p in lista_productos)
@@ -1217,11 +1268,79 @@ def api_get_ordenes_cocina(request):
                 print(f"ERROR procesando orden {orden.id}: {str(e)}")
                 continue
         
+        print(f"📊 Órdenes enviadas a cocina: {len(lista_ordenes)} (sin incluir reservas)")
         return JsonResponse(lista_ordenes, safe=False)
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
+# === AGREGAR ESTA FUNCIÓN AL FINAL DE core/views/api_views.py ===
+# No cambies nada más, solo agrega esta función
+
+@login_required
+def api_get_reservas_cocina(request):
+    """API específica para obtener solo las reservas (mesa 50) para planificación"""
+    try:
+        # Solo reservas (mesa 50)
+        reservas = Orden.objects.filter(
+            mesa__numero=50,
+            estado__in=['EN_PROCESO', 'NUEVA', 'LISTA', 'SERVIDA']
+        ).order_by('creado_en')
+        
+        lista_reservas = []
+        for orden in reservas:
+            try:
+                productos_ordenados = orden.productos_ordenados.all()
+                lista_productos = []
+                
+                todos_listos = True
+                for po in productos_ordenados:
+                    if po.estado == 'PENDIENTE':
+                        todos_listos = False
+                    
+                    agregado_despues = po.observaciones and 'AGREGADO_DESPUES' in po.observaciones
+                    
+                    obs_limpia = ''
+                    if po.observaciones:
+                        if 'AGREGADO_DESPUES' in po.observaciones:
+                            parts = po.observaciones.split('|')
+                            obs_limpia = parts[1] if len(parts) > 1 else ''
+                        else:
+                            obs_limpia = po.observaciones
+                    
+                    lista_productos.append({
+                        'id': po.id,
+                        'nombre': po.producto.nombre,
+                        'cantidad': po.cantidad,
+                        'observaciones': obs_limpia,
+                        'estado': po.estado,
+                        'agregado_despues': agregado_despues
+                    })
+                
+                orden_data = {
+                    'id': orden.id,
+                    'mesa': orden.mesa.numero,
+                    'mesero': orden.mesero.nombre,
+                    'creado_en': orden.creado_en.strftime('%I:%M %p'),
+                    'observaciones': orden.observaciones if orden.observaciones else '',
+                    'productos': lista_productos,
+                    'completada': todos_listos or orden.estado == 'LISTA',
+                    'estado': orden.estado,
+                    'es_reserva': True
+                }
+                
+                lista_reservas.append(orden_data)
+                
+            except Exception as e:
+                print(f"ERROR procesando reserva {orden.id}: {str(e)}")
+                continue
+        
+        print(f"📅 Reservas encontradas: {len(lista_reservas)}")
+        return JsonResponse(lista_reservas, safe=False)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 @require_POST
 @login_required
@@ -1265,6 +1384,11 @@ def api_marcar_producto_listo_tiempo_real(request, producto_orden_id):
             'productos_restantes': productos_pendientes,
             'orden_data': orden_data
         }
+        ordenes = Orden.objects.filter(
+            estado__in=['EN_PROCESO', 'NUEVA', 'LISTA']
+        ).exclude(
+            mesa__numero=50  # ✅ EXCLUIR RESERVAS
+        ).order_by('creado_en')
         
         if orden_completa:
             response_data['mensaje'] = f'¡Orden #{orden.id} completa y lista para servir!'
@@ -1532,3 +1656,114 @@ def api_debug_debounce_status(request):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+    
+
+@require_POST
+@login_required
+@transaction.atomic
+@debounce_request(delay=1.0, error_message="⚠️ Procesando pago. Espera un momento.")
+def api_marcar_factura_pagada(request, factura_id):
+    """API para marcar una factura como pagada"""
+    try:
+        factura = get_object_or_404(Factura, id=factura_id)
+        
+        # Verificar permisos
+        if factura.orden.mesero != request.user and not request.user.is_superuser:
+            return JsonResponse({'error': 'No tienes permisos para modificar esta factura'}, status=403)
+        
+        # Verificar que la factura no esté ya pagada
+        if factura.estado_pago == 'PAGADA':
+            return JsonResponse({'error': 'La factura ya está marcada como pagada'}, status=400)
+        
+        # Obtener datos del request
+        data = json.loads(request.body)
+        metodo_pago = data.get('metodo_pago', '').strip()
+        cliente_nombre = data.get('cliente_nombre', '').strip()
+        monto_pagado = data.get('monto_pagado', 0)
+        observaciones_pago = data.get('observaciones', '').strip()
+        
+        # Validaciones
+        if not metodo_pago:
+            return JsonResponse({'error': 'El método de pago es obligatorio'}, status=400)
+        
+        metodos_validos = ['EFECTIVO', 'TARJETA_CREDITO', 'TARJETA_DEBITO', 'TRANSFERENCIA', 'DIGITAL', 'MIXTO']
+        if metodo_pago not in metodos_validos:
+            return JsonResponse({'error': f'Método de pago inválido. Opciones: {", ".join(metodos_validos)}'}, status=400)
+        
+        try:
+            monto_pagado = float(monto_pagado) if monto_pagado else float(factura.total)
+        except (ValueError, TypeError):
+            monto_pagado = float(factura.total)
+        
+        # Calcular cambio o faltante
+        cambio = monto_pagado - float(factura.total)
+        
+        # Actualizar factura
+        factura.estado_pago = 'PAGADA'
+        factura.metodo_pago = metodo_pago
+        factura.pagado_en = timezone.now()
+        
+        # Actualizar cliente si se proporcionó
+        if cliente_nombre:
+            factura.cliente_nombre = cliente_nombre
+        
+        # Agregar observaciones del pago
+        obs_pago = f"Pago: {metodo_pago}"
+        if monto_pagado != float(factura.total):
+            obs_pago += f" - Monto: ${monto_pagado:,.2f}"
+            if cambio > 0:
+                obs_pago += f" - Cambio: ${cambio:,.2f}"
+            elif cambio < 0:
+                obs_pago += f" - Faltante: ${abs(cambio):,.2f}"
+        
+        if observaciones_pago:
+            obs_pago += f" - {observaciones_pago}"
+        
+        if factura.observaciones:
+            factura.observaciones += f"\n{obs_pago}"
+        else:
+            factura.observaciones = obs_pago
+        
+        factura.save()
+        
+        # Liberar la mesa si no está liberada
+        orden = factura.orden
+        if orden.mesa.numero not in [0, 50] and orden.mesa.estado != 'LIBRE':
+            orden.mesa.estado = 'LIBRE'
+            orden.mesa.save()
+        
+        # Preparar respuesta
+        response_data = {
+            'success': True,
+            'mensaje': f'Factura #{factura.numero_factura or factura.id} marcada como pagada',
+            'factura': {
+                'id': factura.id,
+                'numero': factura.numero_factura or f"FAC-{factura.id}",
+                'total': float(factura.total),
+                'monto_pagado': monto_pagado,
+                'cambio': max(0, cambio),
+                'faltante': max(0, abs(cambio)) if cambio < 0 else 0,
+                'metodo_pago': metodo_pago,
+                'estado_pago': factura.estado_pago,
+                'cliente_nombre': factura.cliente_nombre,
+                'pagado_en': factura.pagado_en.isoformat(),
+                'observaciones': factura.observaciones
+            },
+            'orden': {
+                'id': orden.id,
+                'mesa_liberada': orden.mesa.numero not in [0, 50]
+            }
+        }
+        
+        if cambio > 0:
+            response_data['mensaje'] += f' - Cambio: ${cambio:,.2f}'
+        elif cambio < 0:
+            response_data['mensaje'] += f' - Faltante registrado: ${abs(cambio):,.2f}'
+        
+        return JsonResponse(response_data)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Formato JSON inválido'}, status=400)
+    except Exception as e:
+        print(f"❌ Error en api_marcar_factura_pagada: {str(e)}")
+        return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)

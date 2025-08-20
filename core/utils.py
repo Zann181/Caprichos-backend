@@ -243,3 +243,32 @@ def calcular_total_orden(orden):
     except Exception as e:
         print(f"Error calculando total de orden {orden.id}: {str(e)}")
         return 0
+
+
+
+def calcular_tiempo_transcurrido(fecha_creacion):
+    """Calcula el tiempo transcurrido desde la creación - VERSIÓN CORREGIDA"""
+    try:
+        ahora = timezone.now()
+        
+        # Asegurar que ambas fechas estén en timezone-aware
+        if timezone.is_naive(fecha_creacion):
+            fecha_creacion = timezone.make_aware(fecha_creacion)
+        
+        delta = ahora - fecha_creacion
+        minutos = int(delta.total_seconds() / 60)
+        
+        # Verificar que los minutos sean válidos
+        if minutos < 0:
+            return "0min"
+        
+        if minutos < 60:
+            return f"{minutos}min"
+        else:
+            horas = minutos // 60
+            mins = minutos % 60
+            return f"{horas}h {mins}m"
+            
+    except Exception as e:
+        print(f"❌ Error calculando tiempo transcurrido: {e}")
+        return "0min"

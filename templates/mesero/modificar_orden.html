@@ -1,1994 +1,2461 @@
-<style>
-    /* === ESTILOS PARA MODIFICAR ORDEN === */
-    .modificar-container {
-        max-width: 1400px;
-        margin: 0 auto;
-    }
-    
-    /* Filtros principales */
-    .filtros-principales {
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 2rem;
-        padding: 1rem;
-        background: var(--blanco-hueso);
-        border: 1px solid var(--gris-piedra);
-        border-radius: 8px;
-        flex-wrap: wrap;
-        align-items: center;
-    }
-    
-    .filtro-grupo {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    
-    .filtro-label {
-        font-weight: 600;
-        color: var(--carbon-suave);
-        font-size: 0.9em;
-    }
-    
-    .filtro-botones {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-    }
-    
-    .filtro-btn {
-        padding: 0.5rem 1rem;
-        border: 1px solid var(--gris-piedra);
-        background: white;
-        border-radius: 20px;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-size: 0.85em;
-        white-space: nowrap;
-    }
-    
-    .filtro-btn:hover {
-        border-color: var(--naranja-tostado);
-        background-color: rgba(232, 119, 46, 0.1);
-    }
-    
-    .filtro-btn.active {
-        background-color: var(--naranja-tostado);
-        color: white;
-        border-color: var(--naranja-tostado);
-    }
-    
-    .btn-actualizar {
-        margin-left: auto;
-        padding: 0.5rem 1rem;
-        background-color: var(--azul-info);
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 0.9em;
-    }
-    
-    .btn-actualizar:hover {
-        opacity: 0.85;
-    }
-    
-    /* Grid de órdenes */
-    .ordenes-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
-    }
-    
-    /* Tarjetas de orden */
-    .orden-item {
-        background: white;
-        border: 1px solid var(--gris-piedra);
-        border-radius: 8px;
-        overflow: hidden;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        position: relative;
-    }
-    
-    .orden-item:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        transform: translateY(-2px);
-    }
-    
-    .orden-item.seleccionada {
-        border-color: var(--naranja-tostado);
-        box-shadow: 0 4px 12px rgba(232, 119, 46, 0.2);
-    }
-    
-    /* Estados de orden */
-    .orden-item.en-proceso {
-        border-left: 4px solid #ffc107;
-    }
-    
-    .orden-item.lista {
-        border-left: 4px solid #28a745;
-    }
-    
-    .orden-item.servida {
-        border-left: 4px solid #6c757d;
-    }
-    
-    .orden-item.factura-pendiente {
-        border-left: 4px solid #dc3545;
-    }
-    
-    .orden-item.factura-pagada {
-        border-left: 4px solid #20c997;
-    }
-    
-    /* Header de orden */
-    .orden-header {
-        padding: 1rem;
-        background: var(--carbon-suave);
-        color: white;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .orden-header.en-proceso {
-        background: linear-gradient(135deg, #ffc107, #e0a800);
-    }
-    
-    .orden-header.lista {
-        background: linear-gradient(135deg, #28a745, #20c997);
-    }
-    
-    .orden-header.servida {
-        background: linear-gradient(135deg, #6c757d, #5a6268);
-    }
-    
-    .orden-header.factura-pendiente {
-        background: linear-gradient(135deg, #dc3545, #c82333);
-    }
-    
-    .orden-header.factura-pagada {
-        background: linear-gradient(135deg, #20c997, #17a2b8);
-    }
-    
-    .orden-info-principal {
-        flex: 1;
-    }
-    
-    .mesa-numero {
-        font-size: 1.2em;
-        font-weight: 700;
-        margin-bottom: 0.25rem;
-    }
-    
-    .estado-orden {
-        font-size: 0.9em;
-        opacity: 0.9;
-    }
-    
-    .orden-meta {
-        text-align: right;
-        font-size: 0.85em;
-    }
-    
-    .tiempo-transcurrido {
-        font-weight: 600;
-    }
-    
-    .total-orden {
-        margin-top: 0.25rem;
-    }
-    
-    /* Cuerpo de orden */
-    .orden-body {
-        padding: 1rem;
-    }
-    
-    .productos-resumen {
-        margin-bottom: 1rem;
-    }
-    
-    .producto-item-resumen {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid #f0f0f0;
-        font-size: 0.9em;
-    }
-    
-    .producto-item-resumen:last-child {
-        border-bottom: none;
-    }
-    
-    .producto-item-resumen.listo {
-        color: #28a745;
-        font-weight: 600;
-    }
-    
-    .producto-item-resumen.agregado {
-        background: rgba(255, 193, 7, 0.1);
-        padding: 0.5rem;
-        border-radius: 4px;
-        margin: 0.25rem 0;
-        border-left: 3px solid #ffc107;
-    }
-    
-    .producto-nombre {
-        flex: 1;
-    }
-    
-    .producto-estado-badge {
-        font-size: 0.8em;
-        padding: 2px 6px;
-        border-radius: 10px;
-        font-weight: 600;
-    }
-    
-    .producto-estado-badge.listo {
-        background: #d4edda;
-        color: #155724;
-    }
-    
-    .producto-estado-badge.pendiente {
-        background: #fff3cd;
-        color: #856404;
-    }
-    
-    /* Información adicional */
-    .info-adicional {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
-        margin-bottom: 1rem;
-        font-size: 0.85em;
-    }
-    
-    .info-item {
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .info-label {
-        font-weight: 600;
-        color: #666;
-        margin-bottom: 0.25rem;
-    }
-    
-    .info-valor {
-        color: var(--carbon-suave);
-    }
-    
-    /* Factura info */
-    .factura-info {
-        background: rgba(220, 53, 69, 0.1);
-        border: 1px solid rgba(220, 53, 69, 0.2);
-        border-radius: 4px;
-        padding: 0.75rem;
-        margin-bottom: 1rem;
-    }
-    
-    .factura-info.pagada {
-        background: rgba(32, 201, 151, 0.1);
-        border-color: rgba(32, 201, 151, 0.2);
-    }
-    
-    .factura-numero {
-        font-weight: 700;
-        color: #dc3545;
-    }
-    
-    .factura-info.pagada .factura-numero {
-        color: #20c997;
-    }
-    
-    /* Botones de acción */
-    .acciones-orden {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid #eee;
-    }
-    
-    .btn-accion {
-        padding: 0.5rem 1rem;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 0.85em;
-        font-weight: 600;
-        transition: all 0.2s;
-        flex: 1;
-        min-width: 100px;
-    }
-    
-    .btn-modificar {
-        background: var(--naranja-tostado);
-        color: white;
-    }
-    
-    .btn-modificar:hover {
-        opacity: 0.85;
-    }
-    
-    .btn-entregar {
-        background: #28a745;
-        color: white;
-    }
-    
-    .btn-entregar:hover {
-        opacity: 0.85;
-    }
-    
-    .btn-ver-factura {
-        background: var(--azul-info);
-        color: white;
-    }
-    
-    .btn-ver-factura:hover {
-        opacity: 0.85;
-    }
-    
-    /* Estados vacíos */
-    .estado-vacio {
-        text-align: center;
-        padding: 3rem;
-        color: #888;
-        background: #f8f9fa;
-        border-radius: 8px;
-        border: 2px dashed #dee2e6;
-        grid-column: 1 / -1;
-    }
-    
-    .estado-vacio h3 {
-        margin-bottom: 1rem;
-        color: #666;
-    }
-    
-    /* Loading */
-    .loading-modificar {
-        text-align: center;
-        padding: 3rem;
-        color: #666;
-        grid-column: 1 / -1;
-    }
-    
-    .loading-modificar::after {
-        content: '';
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        border: 2px solid var(--gris-piedra);
-        border-radius: 50%;
-        border-top: 2px solid var(--naranja-tostado);
-        animation: spin 1s linear infinite;
-        margin-left: 10px;
-    }
-    
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    /* Panel de modificación */
-    .panel-modificacion {
-        display: none;
-        background: white;
-        border: 1px solid var(--gris-piedra);
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin-top: 2rem;
-    }
-    
-    .panel-modificacion.visible {
-        display: block;
-    }
-    
-    .modificacion-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-        padding-bottom: 1rem;
-        border-bottom: 2px solid var(--gris-piedra);
-    }
-    
-    .btn-cerrar-panel {
-        background: #6c757d;
-        color: white;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-    
-    .btn-cerrar-panel:hover {
-        opacity: 0.85;
-    }
-
-    /* === ESTILOS PARA MENÚ DE PRODUCTOS EN MODIFICACIÓN === */
-    .modificacion-grid {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 2rem;
-        margin-top: 2rem;
-    }
-
-    .menu-productos-modificacion {
-        background: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 8px;
-    }
-
-    .categoria-tabs-mod {
-        display: flex;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .categoria-btn-mod {
-        padding: 0.5rem 1rem;
-        border: 1px solid var(--naranja-tostado);
-        background: white;
-        color: var(--naranja-tostado);
-        border-radius: 15px;
-        cursor: pointer;
-        font-size: 0.85em;
-        transition: all 0.2s;
-    }
-
-    .categoria-btn-mod:hover,
-    .categoria-btn-mod.active {
-        background: var(--naranja-tostado);
-        color: white;
-    }
-
-    .productos-grid-mod {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 1rem;
-    }
-
-    .producto-item-mod {
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 1rem;
-        text-align: center;
-        transition: all 0.2s;
-    }
-
-    .producto-item-mod:hover {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    .producto-item-mod.sin-stock {
-        background: #ffe6e6;
-        border-color: #ff4444;
-        opacity: 0.7;
-    }
-
-    .producto-item-mod.sin-stock .producto-nombre-mod {
-        color: #cc0000;
-        text-decoration: line-through;
-    }
-
-    .producto-nombre-mod {
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-        font-size: 0.9em;
-    }
-
-    .producto-precio-mod {
-        color: var(--naranja-tostado);
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-
-    .stock-info-mod {
-        font-size: 0.8em;
-        color: #666;
-        margin-bottom: 1rem;
-    }
-
-    .stock-info-mod.agotado {
-        color: #cc0000;
-        font-weight: 600;
-    }
-
-    .quantity-controls-mod {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .qty-btn-mod {
-        width: 30px;
-        height: 30px;
-        border: 1px solid #ddd;
-        background: white;
-        border-radius: 50%;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .qty-btn-mod:hover {
-        background: var(--naranja-tostado);
-        color: white;
-    }
-
-    .qty-btn-mod:disabled {
-        opacity: 0.3;
-        cursor: not-allowed;
-    }
-
-    .qty-value-mod {
-        min-width: 35px;
-        text-align: center;
-        font-weight: 600;
-    }
-
-    .obs-input-mod {
-        width: 100%;
-        padding: 0.25rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 0.8em;
-    }
-
-    .carrito-modificacion {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 8px;
-        border: 1px solid #ddd;
-        position: sticky;
-        top: 1rem;
-    }
-
-    .carrito-item-mod {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.75rem 0;
-        border-bottom: 1px solid #eee;
-    }
-
-    .carrito-item-mod:last-child {
-        border-bottom: none;
-    }
-
-    .carrito-total-mod {
-        font-size: 1.2em;
-        font-weight: 700;
-        text-align: right;
-        margin: 1rem 0;
-        padding-top: 1rem;
-        border-top: 2px solid var(--gris-piedra);
-    }
-
-    .btn-confirmar-mod {
-        width: 100%;
-        background: var(--verde-listo);
-        color: white;
-        border: none;
-        padding: 1rem;
-        border-radius: 5px;
-        font-weight: 600;
-        cursor: pointer;
-    }
-
-    .btn-confirmar-mod:hover {
-        opacity: 0.85;
-    }
-
-    .btn-confirmar-mod:disabled {
-        background: #ccc;
-        cursor: not-allowed;
-    }
-
-    /* === ESTILOS PARA DETALLE COMPLETO DE ORDEN === */
-    .detalle-orden-completo {
-        margin-top: 2rem;
-        background: white;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        overflow: hidden;
-    }
-
-    .orden-header-detalle {
-        background: linear-gradient(135deg, #17a2b8, #138496);
-        color: white;
-        padding: 1.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-    }
-
-    .orden-info-principal-detalle h4 {
-        margin: 0 0 0.5rem 0;
-        font-size: 1.3em;
-    }
-
-    .meta-orden {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-        font-size: 0.9em;
-        opacity: 0.95;
-    }
-
-    .meta-orden span {
-        background: rgba(255,255,255,0.2);
-        padding: 0.25rem 0.5rem;
-        border-radius: 12px;
-        font-size: 0.85em;
-    }
-
-    .totales-orden-detalle {
-        text-align: right;
-    }
-
-    .total-actual {
-        font-size: 1.2em;
-        font-weight: 700;
-        margin-bottom: 0.25rem;
-    }
-
-    .productos-count {
-        font-size: 0.9em;
-        opacity: 0.9;
-    }
-
-    .info-cliente-detalle,
-    .info-factura-detalle {
-        padding: 1rem 1.5rem;
-        border-left: 4px solid #17a2b8;
-        background: rgba(23, 162, 184, 0.05);
-        margin: 0;
-    }
-
-    .info-factura-detalle {
-        border-left-color: #dc3545;
-        background: rgba(220, 53, 69, 0.05);
-    }
-
-    .info-cliente-detalle h5,
-    .info-factura-detalle h5 {
-        margin: 0 0 0.75rem 0;
-        color: #17a2b8;
-        font-size: 1em;
-    }
-
-    .info-factura-detalle h5 {
-        color: #dc3545;
-    }
-
-    .cliente-grid,
-    .factura-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 0.5rem;
-        font-size: 0.9em;
-    }
-
-    .direccion-completa {
-        grid-column: 1 / -1;
-    }
-
-    .productos-orden-detalle {
-        padding: 1.5rem;
-    }
-
-    .productos-orden-detalle h5 {
-        margin: 0 0 1rem 0;
-        color: var(--carbon-suave);
-        border-bottom: 2px solid var(--gris-piedra);
-        padding-bottom: 0.5rem;
-    }
-
-    .seccion-productos-originales,
-    .seccion-productos-agregados {
-        margin-bottom: 1.5rem;
-    }
-
-    .seccion-productos-originales h6,
-    .seccion-productos-agregados h6 {
-        margin: 0 0 0.75rem 0;
-        color: #666;
-        font-size: 0.95em;
-    }
-
-    .lista-productos-detalle {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .producto-detalle-item {
-        padding: 0.75rem;
-        border: 1px solid #eee;
-        border-radius: 6px;
-        background: #fafafa;
-    }
-
-    .producto-detalle-item.producto-listo {
-        background: #f8fff8;
-        border-color: #d4edda;
-    }
-
-    .producto-detalle-item.producto-agregado {
-        background: #fff8e1;
-        border-color: #ffc107;
-        border-left: 3px solid #ffc107;
-    }
-
-    .producto-info-detalle {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-
-    .producto-principal {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        font-weight: 600;
-    }
-
-    .estado-icono {
-        font-size: 1.1em;
-    }
-
-    .cantidad-nombre {
-        flex: 1;
-    }
-
-    .precio-unit {
-        color: #666;
-        font-size: 0.9em;
-    }
-
-    .producto-secundario {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.85em;
-        color: #666;
-    }
-
-    .marcador-agregado {
-        background: #ffc107;
-        color: #856404;
-        padding: 0.125rem 0.5rem;
-        border-radius: 8px;
-        font-size: 0.8em;
-        font-weight: 600;
-    }
-
-    .observaciones-producto {
-        font-size: 0.85em;
-        color: var(--naranja-tostado);
-        font-style: italic;
-        padding: 0.25rem 0.5rem;
-        background: rgba(232, 119, 46, 0.1);
-        border-radius: 4px;
-        margin-top: 0.25rem;
-    }
-
-    .tiempo-listo {
-        font-size: 0.8em;
-        color: #28a745;
-        font-weight: 600;
-    }
-
-    .resumen-productos-detalle {
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid #eee;
-    }
-
-    .estado-productos-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 1rem;
-    }
-
-    .estado-productos-item {
-        text-align: center;
-        padding: 0.75rem;
-        border-radius: 6px;
-        background: #f8f9fa;
-    }
-
-    .estado-productos-item.listos {
-        background: #d4edda;
-        color: #155724;
-    }
-
-    .estado-productos-item.pendientes {
-        background: #fff3cd;
-        color: #856404;
-    }
-
-    .estado-productos-item.total {
-        background: #d1ecf1;
-        color: #0c5460;
-    }
-
-    .estado-productos-item .numero {
-        display: block;
-        font-size: 1.5em;
-        font-weight: 700;
-        margin-bottom: 0.25rem;
-    }
-
-    .estado-productos-item .label {
-        font-size: 0.85em;
-        font-weight: 600;
-    }
-
-    .observaciones-generales {
-        padding: 1rem 1.5rem;
-        background: rgba(255, 193, 7, 0.1);
-        border-top: 1px solid #eee;
-    }
-
-    .observaciones-generales h5 {
-        margin: 0 0 0.5rem 0;
-        color: #856404;
-    }
-
-    .observaciones-texto {
-        background: white;
-        padding: 0.75rem;
-        border-radius: 4px;
-        border-left: 3px solid #ffc107;
-        font-style: italic;
-    }
-
-    .sin-productos {
-        text-align: center;
-        padding: 2rem;
-        color: #666;
-        font-style: italic;
-        background: #f8f9fa;
-        border-radius: 6px;
-    }
-
-    /* Responsive */
-    @media (max-width: 900px) {
-        .modificacion-grid {
-            grid-template-columns: 1fr;
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modificar Órdenes - Sistema Restaurante</title>
+    <style>
+        /* === VARIABLES CSS === */
+        :root {
+            --naranja-tostado: #e8772e;
+            --azul-info: #17a2b8;
+            --verde-listo: #28a745;
+            --carbon-suave: #343a40;
+            --gris-piedra: #dee2e6;
+            --blanco-hueso: #f8f9fa;
+            --rojo-error: #dc3545;
+            --amarillo-warning: #ffc107;
         }
-        
-        .carrito-modificacion {
-            position: static;
+
+        /* === RESET Y BASE === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-    }
-    
-    @media (max-width: 768px) {
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            color: var(--carbon-suave);
+            line-height: 1.6;
+        }
+
+        /* === CONTENEDOR PRINCIPAL === */
+        .modificar-container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 1rem;
+            min-height: 100vh;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, var(--carbon-suave), #495057);
+            color: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .page-header h2 {
+            font-size: 2.5em;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .page-header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        /* === FILTROS PRINCIPALES === */
         .filtros-principales {
-            flex-direction: column;
-            align-items: stretch;
-        }
-        
-        .filtro-grupo {
-            width: 100%;
-        }
-        
-        .filtro-botones {
-            justify-content: center;
-        }
-        
-        .btn-actualizar {
-            margin-left: 0;
-            align-self: center;
-        }
-        
-        .ordenes-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .info-adicional {
-            grid-template-columns: 1fr;
-        }
-        
-        .acciones-orden {
-            flex-direction: column;
-        }
-        
-        .btn-accion {
-            flex: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border: 1px solid var(--gris-piedra);
+            border-radius: 12px;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
-        .orden-header-detalle {
-            flex-direction: column;
-            gap: 1rem;
+        .filtro-grupo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1;
+            min-width: 200px;
         }
-        
-        .totales-orden-detalle {
-            text-align: left;
+
+        .filtro-label {
+            font-weight: 700;
+            color: var(--carbon-suave);
+            font-size: 0.95em;
+            white-space: nowrap;
+            min-width: 60px;
         }
-        
-        .meta-orden {
-            flex-direction: column;
+
+        .filtro-botones {
+            display: flex;
             gap: 0.5rem;
+            flex-wrap: wrap;
+            flex: 1;
         }
-        
-        .cliente-grid,
-        .factura-grid {
-            grid-template-columns: 1fr;
+
+        .filtro-btn {
+            padding: 0.75rem 1.25rem;
+            border: 2px solid #dee2e6;
+            background: white;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+            font-weight: 600;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
         }
-        
-        .producto-principal {
+
+        .filtro-btn:hover {
+            border-color: var(--naranja-tostado);
+            background: linear-gradient(135deg, rgba(232, 119, 46, 0.1), rgba(232, 119, 46, 0.2));
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(232, 119, 46, 0.2);
+        }
+
+        .filtro-btn.active {
+            background: linear-gradient(135deg, var(--naranja-tostado), #d9642a);
+            color: white;
+            border-color: var(--naranja-tostado);
+            transform: scale(1.05);
+            box-shadow: 0 4px 16px rgba(232, 119, 46, 0.4);
+        }
+
+        .btn-actualizar {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, var(--azul-info), #0e7bb8);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+        }
+
+        .btn-actualizar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(23, 162, 184, 0.4);
+        }
+
+        /* === TABLA DE ÓRDENES === */
+        .ordenes-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            margin-bottom: 2rem;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            border: 1px solid #dee2e6;
+        }
+
+        .ordenes-table-header {
+            display: grid;
+            grid-template-columns: 120px 1fr 200px 150px 120px 200px;
+            gap: 1rem;
+            padding: 1.25rem 1.5rem;
+            background: linear-gradient(135deg, var(--carbon-suave), #495057);
+            color: white;
+            font-weight: 700;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        /* === TARJETAS DE ORDEN === */
+        .orden-item {
+            display: grid;
+            grid-template-columns: 120px 1fr 200px 150px 120px 200px;
+            gap: 1rem;
+            padding: 1.25rem 1.5rem;
+            background: white;
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            cursor: pointer;
+            position: relative;
+            align-items: center;
+            min-height: 70px;
+        }
+
+        .orden-item:hover {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            transform: translateX(4px);
+            box-shadow: 4px 0 0 0 var(--naranja-tostado);
+        }
+
+        .orden-item.seleccionada {
+            background: linear-gradient(135deg, rgba(232, 119, 46, 0.05), rgba(232, 119, 46, 0.02));
+            box-shadow: 4px 0 0 0 var(--naranja-tostado), 0 2px 8px rgba(232, 119, 46, 0.1);
+            transform: translateX(4px);
+        }
+
+        .orden-item.expandida {
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            background: linear-gradient(135deg, #fff, #f8f9fa);
+        }
+
+        /* === INDICADORES DE ESTADO === */
+        .orden-item.en-proceso::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, #ffc107, #e0a800);
+        }
+
+        .orden-item.lista::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, #28a745, #20c997);
+        }
+
+        .orden-item.servida::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, #6c757d, #5a6268);
+        }
+
+        .orden-item.factura-pendiente::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, #dc3545, #c82333);
+        }
+
+        .orden-item.factura-pagada::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, #20c997, #17a2b8);
+        }
+
+        /* === COLUMNAS DE LA TABLA === */
+        .orden-mesa {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            font-size: 1.1em;
+            color: var(--carbon-suave);
+        }
+
+        .orden-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-width: 0;
+        }
+
+        .orden-titulo {
+            font-weight: 700;
+            color: var(--carbon-suave);
+            font-size: 1em;
+            margin: 0;
+        }
+
+        .orden-descripcion {
+            font-size: 0.85em;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
             flex-wrap: wrap;
         }
-        
-        .estado-productos-grid {
-            grid-template-columns: 1fr;
+
+        .productos-preview {
+            font-size: 0.8em;
+            color: #888;
+            font-style: italic;
+            margin-top: 0.25rem;
         }
+
+        .orden-estado {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .estado-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 700;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-width: 120px;
+            white-space: nowrap;
+        }
+
+        .estado-badge.en-proceso {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            color: #856404;
+            border: 1px solid #ffc107;
+        }
+
+        .estado-badge.lista {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+            border: 1px solid #28a745;
+        }
+
+        .estado-badge.servida {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            color: #495057;
+            border: 1px solid #6c757d;
+        }
+
+        .estado-badge.factura-pendiente {
+            background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+            color: #721c24;
+            border: 1px solid #dc3545;
+        }
+
+        .estado-badge.factura-pagada {
+            background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+            color: #0c5460;
+            border: 1px solid #17a2b8;
+        }
+
+        .orden-mesero, .orden-total {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .total-valor {
+            font-size: 1.2em;
+            font-weight: 800;
+            color: var(--naranja-tostado);
+        }
+
+        .orden-acciones {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* === BOTONES DE ACCIÓN === */
+        .btn-accion {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: 600;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            min-width: 80px;
+            white-space: nowrap;
+        }
+
+        .btn-modificar {
+            background: linear-gradient(135deg, var(--naranja-tostado), #d9642a);
+            color: white;
+            box-shadow: 0 2px 8px rgba(232, 119, 46, 0.3);
+        }
+
+        .btn-modificar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(232, 119, 46, 0.4);
+        }
+
+        .btn-entregar {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-entregar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+        }
+
+        .btn-ver-factura {
+            background: linear-gradient(135deg, var(--azul-info), #0e7bb8);
+            color: white;
+            box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+        }
+
+        .btn-ver-factura:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
+        }
+
+        /* === DETALLES EXPANDIDOS === */
+        .orden-detalles {
+            grid-column: 1 / -1;
+            padding: 2rem;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-top: 2px solid var(--gris-piedra);
+            margin-top: 1rem;
+            border-radius: 0 0 12px 12px;
+            display: none;
+            animation: expandirDetalles 0.3s ease-out;
+        }
+
+        .orden-detalles.visible {
+            display: block;
+        }
+
+        @keyframes expandirDetalles {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .detalles-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .detalle-seccion {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .detalle-titulo {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: var(--carbon-suave);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--gris-piedra);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .productos-lista {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .producto-detalle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #dee2e6;
+        }
+
+        .producto-detalle.listo {
+            border-left-color: var(--verde-listo);
+            background: rgba(40, 167, 69, 0.1);
+        }
+
+        .producto-detalle.pendiente {
+            border-left-color: var(--amarillo-warning);
+            background: rgba(255, 193, 7, 0.1);
+        }
+
+        .producto-info {
+            flex: 1;
+        }
+
+        .producto-nombre {
+            font-weight: 600;
+            color: var(--carbon-suave);
+        }
+
+        .producto-observaciones {
+            font-size: 0.85em;
+            color: #666;
+            font-style: italic;
+            margin-top: 0.25rem;
+        }
+
+        .producto-estado-icon {
+            font-size: 1.2em;
+            margin-left: 1rem;
+        }
+
+        /* === VENTANAS EMERGENTES (MODALS) === */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.visible {
+            display: flex;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--gris-piedra);
+        }
+
+        .modal-titulo {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--carbon-suave);
+            margin: 0;
+        }
+
+        .btn-cerrar-modal {
+            background: linear-gradient(135deg, #6c757d, #5a6268);
+            color: white;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2em;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .btn-cerrar-modal:hover {
+            transform: scale(1.1);
+            background: linear-gradient(135deg, #5a6268, #495057);
+        }
+
+        /* === MODAL DE MODIFICACIÓN === */
+        .modificacion-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            min-height: 500px;
+        }
+
+        .menu-productos {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
+        }
+
+        .categorias-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .categoria-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--naranja-tostado);
+            background: white;
+            color: var(--naranja-tostado);
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+
+        .categoria-btn:hover,
+        .categoria-btn.active {
+            background: var(--naranja-tostado);
+            color: white;
+        }
+
+        .productos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+
+        .producto-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .producto-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .producto-card.selected {
+            border-color: var(--naranja-tostado);
+            background: rgba(232, 119, 46, 0.1);
+        }
+
+        .carrito-lateral {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
+            position: sticky;
+            top: 1rem;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .carrito-items {
+            margin: 1rem 0;
+        }
+
+        .carrito-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .carrito-total {
+            font-size: 1.2em;
+            font-weight: 700;
+            text-align: right;
+            margin: 1rem 0;
+            padding-top: 1rem;
+            border-top: 2px solid var(--gris-piedra);
+        }
+
+        .btn-confirmar {
+            width: 100%;
+            background: var(--verde-listo);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-confirmar:hover {
+            background: #1e7e34;
+            transform: translateY(-2px);
+        }
+
+        .btn-confirmar:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* === MODAL DE FACTURA === */
+        .factura-content {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .factura-header {
+            background: linear-gradient(135deg, var(--azul-info), #0e7bb8);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px 12px 0 0;
+            text-align: center;
+            margin: -2rem -2rem 2rem -2rem;
+        }
+
+        .factura-numero {
+            font-size: 2em;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .factura-fecha {
+            opacity: 0.9;
+        }
+
+        .factura-detalle {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .factura-productos {
+            margin: 1.5rem 0;
+        }
+
+        .factura-producto {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .factura-total-final {
+            background: var(--carbon-suave);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+
+        /* === ESTADOS ESPECIALES === */
+        .estado-vacio {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 20px;
+            border: 3px dashed #dee2e6;
+            color: #6c757d;
+        }
+
+        .loading {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 4rem;
+            color: #666;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .loading::after {
+            content: '';
+            width: 24px;
+            height: 24px;
+            border: 3px solid #f0f0f0;
+            border-radius: 50%;
+            border-top: 3px solid var(--naranja-tostado);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 1200px) {
+            .ordenes-table-header,
+            .orden-item {
+                grid-template-columns: 80px 1fr 160px 120px 160px;
+                gap: 0.5rem;
+            }
+            
+            .orden-mesero {
+                display: none;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .filtros-principales {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1.5rem;
+            }
+            
+            .filtro-grupo {
+                flex-direction: column;
+                align-items: stretch;
+                min-width: unset;
+            }
+            
+            .ordenes-table-header,
+            .orden-item {
+                grid-template-columns: 1fr auto;
+                gap: 1rem;
+                padding: 1rem;
+            }
+            
+            .orden-estado,
+            .orden-total,
+            .orden-acciones {
+                grid-column: 1 / -1;
+                margin-top: 0.75rem;
+            }
+            
+            .ordenes-table-header {
+                display: none;
+            }
+
+            .modificacion-content {
+                grid-template-columns: 1fr;
+            }
+
+            .detalles-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .modificar-container {
+                padding: 0.5rem;
+            }
+            
+            .modal-content {
+                padding: 1rem;
+                margin: 1rem;
+            }
+        }
+
+/* === AGREGAR ESTOS ESTILOS AL CSS EXISTENTE === */
+
+/* === BARRA DE BÚSQUEDA === */
+.busqueda-container {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.busqueda-input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 2px solid #dee2e6;
+    border-radius: 25px;
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+
+.busqueda-input:focus {
+    outline: none;
+    border-color: var(--naranja-tostado);
+    box-shadow: 0 0 0 3px rgba(232, 119, 46, 0.1);
+}
+
+.btn-buscar, .btn-limpiar {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 25px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-buscar {
+    background: var(--azul-info);
+    color: white;
+}
+
+.btn-limpiar {
+    background: #6c757d;
+    color: white;
+}
+
+/* === INFORMACIÓN DE RESULTADOS === */
+.info-resultados {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background: white;
+    border-radius: 8px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+/* === PAGINACIÓN === */
+.paginacion-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin: 2rem 0;
+    padding: 1rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    flex-wrap: wrap;
+}
+
+.btn-pagina {
+    padding: 0.75rem 1rem;
+    border: 2px solid #dee2e6;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 600;
+    min-width: 45px;
+    text-align: center;
+}
+
+.btn-pagina:hover:not(:disabled) {
+    border-color: var(--naranja-tostado);
+    background: rgba(232, 119, 46, 0.1);
+    transform: translateY(-2px);
+}
+
+.btn-pagina.active {
+    background: var(--naranja-tostado);
+    color: white;
+    border-color: var(--naranja-tostado);
+}
+
+.btn-pagina:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.page-size-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: 1rem;
+    padding-left: 1rem;
+    border-left: 2px solid #dee2e6;
+}
+
+.page-size-selector label {
+    font-weight: 600;
+    color: var(--carbon-suave);
+}
+
+.page-size-selector select {
+    padding: 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background: white;
+}
+
+/* === MODAL DE PAGO === */
+.modal-pago {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    backdrop-filter: blur(3px);
+}
+
+.modal-pago.visible {
+    display: flex;
+    animation: fadeInPago 0.3s ease-out;
+}
+
+@keyframes fadeInPago {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-pago-content {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: slideInPago 0.3s ease-out;
+}
+
+@keyframes slideInPago {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
     }
-</style>
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
 
+.modal-pago-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--gris-piedra);
+}
 
-<div class="modificar-container">
-    <h2>🔧 Modificar Órdenes y Facturas</h2>
-    <p>Selecciona una orden o factura para modificar y agregar productos:</p>
+.modal-pago-titulo {
+    font-size: 1.5em;
+    font-weight: 700;
+    color: var(--carbon-suave);
+    margin: 0;
+}
 
-    <!-- FILTROS PRINCIPALES -->
-    <div class="filtros-principales">
-        <div class="filtro-grupo">
-            <div class="filtro-label">Tipo:</div>
-            <div class="filtro-botones">
-                <button class="filtro-btn active" data-tipo="todos">📋 Todos</button>
-                <button class="filtro-btn" data-tipo="ordenes">🍽️ Solo Órdenes</button>
-                <button class="filtro-btn" data-tipo="facturas">🧾 Solo Facturas</button>
-            </div>
+.btn-cerrar-pago {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 0.75rem 1rem;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2em;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.btn-cerrar-pago:hover {
+    transform: scale(1.1);
+    background: #c82333;
+}
+
+/* === FORMULARIO DE PAGO === */
+.form-pago {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-group-pago {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-label-pago {
+    font-weight: 600;
+    color: var(--carbon-suave);
+    font-size: 0.95em;
+}
+
+.form-input-pago, .form-select-pago, .form-textarea-pago {
+    padding: 0.75rem 1rem;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s;
+    background: white;
+}
+
+.form-input-pago:focus, .form-select-pago:focus, .form-textarea-pago:focus {
+    outline: none;
+    border-color: var(--naranja-tostado);
+    box-shadow: 0 0 0 3px rgba(232, 119, 46, 0.1);
+}
+
+.form-textarea-pago {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.monto-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    align-items: end;
+}
+
+.monto-info {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--azul-info);
+}
+
+.monto-total {
+    font-size: 1.2em;
+    font-weight: 700;
+    color: var(--azul-info);
+    margin-bottom: 0.5rem;
+}
+
+.monto-detalle {
+    font-size: 0.9em;
+    color: #666;
+}
+
+.cambio-info {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-align: center;
+    display: none;
+}
+
+.cambio-info.positivo {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.cambio-info.negativo {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.botones-pago {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.btn-cancelar-pago {
+    flex: 1;
+    padding: 1rem;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-cancelar-pago:hover {
+    background: #5a6268;
+}
+
+.btn-confirmar-pago {
+    flex: 2;
+    padding: 1rem;
+    background: var(--verde-listo);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 1.1em;
+}
+
+.btn-confirmar-pago:hover {
+    background: #1e7e34;
+    transform: translateY(-2px);
+}
+
+.btn-confirmar-pago:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* === RESPONSIVE PARA PAGINACIÓN === */
+@media (max-width: 768px) {
+    .paginacion-container {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .page-size-selector {
+        margin-left: 0;
+        padding-left: 0;
+        border-left: none;
+        border-top: 1px solid #dee2e6;
+        padding-top: 1rem;
+    }
+    
+    .busqueda-container {
+        flex-direction: column;
+    }
+    
+    .info-resultados {
+        flex-direction: column;
+        gap: 0.5rem;
+        text-align: center;
+    }
+    
+    .modal-pago-content {
+        padding: 1rem;
+        margin: 1rem;
+    }
+    
+    .monto-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .botones-pago {
+        flex-direction: column;
+    }
+}
+    </style>
+</head>
+<body>
+    <div class="modificar-container">
+        <!-- HEADER DE LA PÁGINA -->
+        <div class="page-header">
+            <h2>🔧 Modificar Órdenes y Facturas</h2>
+            <p>Gestiona tus órdenes, agrega productos y maneja facturas de forma dinámica</p>
         </div>
 
-        <div class="filtro-grupo" id="filtro-estados">
-            <div class="filtro-label" id="estados-label">Estado:</div>
-            <div class="filtro-botones" id="estados-botones">
-                <!-- Los botones se generan dinámicamente según el tipo seleccionado -->
-                <button class="filtro-btn" data-estado="EN_PROCESO">⏳ En Preparación</button>
-                <button class="filtro-btn" data-estado="LISTA">🍽️ Lista para Servir</button>
-                <button class="filtro-btn" data-estado="SERVIDA">✅ Servida</button>
+        <!-- FILTROS PRINCIPALES -->
+        <div class="filtros-principales">
+            <div class="filtro-grupo">
+                <div class="filtro-label">Tipo:</div>
+                <div class="filtro-botones">
+                    <button class="filtro-btn active" data-tipo="todos">📋 Todos</button>
+                    <button class="filtro-btn" data-tipo="ordenes">🍽️ Solo Órdenes</button>
+                    <button class="filtro-btn" data-tipo="facturas">🧾 Solo Facturas</button>
+                </div>
             </div>
-        </div>
 
-        <button class="btn-actualizar" onclick="cargarOrdenesModificar()">
-            🔄 Actualizar
-        </button>
-    </div>
+            <div class="filtro-grupo" id="filtro-estados">
+                <div class="filtro-label" id="estados-label">Estado:</div>
+                <div class="filtro-botones" id="estados-botones">
+                    <button class="filtro-btn" data-estado="EN_PROCESO">⏳ En Preparación</button>
+                    <button class="filtro-btn" data-estado="LISTA">🍽️ Lista para Servir</button>
+                    <button class="filtro-btn" data-estado="SERVIDA">✅ Servida</button>
+                </div>
+            </div>
 
-    <!-- GRID DE ÓRDENES -->
-    <div class="ordenes-grid" id="ordenes-modificar-container">
-        <div class="loading-modificar">Cargando órdenes disponibles...</div>
-    </div>
-
-    <!-- PANEL DE MODIFICACIÓN (OCULTO INICIALMENTE) -->
-    <div class="panel-modificacion" id="panel-modificacion">
-        <div class="modificacion-header">
-            <h3 id="modificacion-titulo">Modificar Orden</h3>
-            <button class="btn-cerrar-panel" onclick="cerrarPanelModificacion()">
-                ✕ Cerrar
+            <button class="btn-actualizar" onclick="cargarOrdenes()">
+                🔄 Actualizar
             </button>
         </div>
-        
-        <div id="modificacion-content">
-            <!-- Aquí se cargará el contenido de modificación -->
+
+        <!-- BARRA DE BÚSQUEDA -->
+        <div class="busqueda-container">
+            <input type="text" 
+                id="busqueda-ordenes" 
+                class="busqueda-input" 
+                placeholder="🔍 Buscar por ID de orden, mesa, productos, número de factura...">
+            <button class="btn-buscar" onclick="buscarOrdenes()">🔍 Buscar</button>
+            <button class="btn-limpiar" onclick="limpiarBusqueda()">✖️ Limpiar</button>
+        </div>
+
+        <!-- INFORMACIÓN DE RESULTADOS -->
+        <div class="info-resultados">
+            <div id="info-resultados">Cargando...</div>
+            <div>
+                <span id="filtro-actual">Filtro: Todos</span>
+            </div>
+        </div>
+
+
+        <!-- TABLA DE ÓRDENES -->
+        <div class="ordenes-grid" id="ordenes-container">
+            <div class="ordenes-table-header">
+                <div>🍽️ Mesa</div>
+                <div>📋 Información</div>
+                <div>📊 Estado</div>
+                <div>👨‍🍳 Mesero</div>
+                <div>💰 Total</div>
+                <div>⚡ Acciones</div>
+            </div>
+            <div class="loading">Cargando órdenes disponibles...</div>
         </div>
     </div>
-</div>
 
-<!-- TEMPLATE PARA ÓRDEN ITEM -->
-<template id="orden-item-template">
-    <div class="orden-item" data-orden-id="" data-tipo="">
-        <div class="orden-header">
-            <div class="orden-info-principal">
-                <div class="mesa-numero"></div>
-                <div class="estado-orden"></div>
+    <!-- MODAL DE MODIFICACIÓN -->
+    <div class="modal-overlay" id="modal-modificacion">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-titulo" id="modificacion-titulo">Modificar Orden</h3>
+                <button class="btn-cerrar-modal" onclick="cerrarModal('modal-modificacion')">✕</button>
             </div>
-            <div class="orden-meta">
-                <div class="tiempo-transcurrido"></div>
-                <div class="total-orden"></div>
-            </div>
-        </div>
-        
-        <div class="orden-body">
-            <div class="info-adicional">
-                <div class="info-item">
-                    <div class="info-label">Productos:</div>
-                    <div class="info-valor productos-count"></div>
+            
+            <div class="modificacion-content">
+                <div class="menu-productos">
+                    <h4>🍽️ Agregar Productos</h4>
+                    
+                    <div class="categorias-tabs">
+                        <button class="categoria-btn active" data-categoria="all">Todos</button>
+                        <button class="categoria-btn" data-categoria="entradas">🥗 Entradas</button>
+                        <button class="categoria-btn" data-categoria="principales">🍖 Principales</button>
+                        <button class="categoria-btn" data-categoria="bebidas">🥤 Bebidas</button>
+                        <button class="categoria-btn" data-categoria="postres">🍰 Postres</button>
+                    </div>
+                    
+                    <div class="productos-grid" id="productos-grid">
+                        <!-- Los productos se cargan dinámicamente -->
+                    </div>
                 </div>
-                <div class="info-item">
-                    <div class="info-label">Mesero:</div>
-                    <div class="info-valor mesero-nombre"></div>
+                
+                <div class="carrito-lateral">
+                    <h4>🛒 Productos a Agregar</h4>
+                    <div class="carrito-items" id="carrito-items">
+                        <p style="color: #888; text-align: center; font-style: italic;">
+                            Selecciona productos del menú
+                        </p>
+                    </div>
+                    <div class="carrito-total">
+                        Total Adicional: $<span id="total-modificacion">0</span>
+                    </div>
+                    <button class="btn-confirmar" id="btn-confirmar-modificacion" disabled>
+                        Agregar a la Orden
+                    </button>
                 </div>
             </div>
-            
-            <div class="factura-info" style="display: none;">
-                <div><strong>🧾 Factura:</strong> <span class="factura-numero"></span></div>
-                <div>Estado: <span class="factura-estado"></span></div>
-                <div>Total: <span class="factura-total"></span></div>
-            </div>
-            
-            <div class="productos-resumen"></div>
-            
-            <div class="acciones-orden">
-                <button class="btn-accion btn-modificar" onclick="">
-                    ✏️ Modificar
-                </button>
+
+            <!-- Detalle de la orden actual -->
+            <div id="orden-detalle-completo">
+                <!-- Se carga dinámicamente -->
             </div>
         </div>
     </div>
-</template>
 
+    <!-- MODAL DE FACTURA -->
+    <div class="modal-overlay" id="modal-factura">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-titulo" id="factura-titulo">Ver Factura</h3>
+                <button class="btn-cerrar-modal" onclick="cerrarModal('modal-factura')">✕</button>
+            </div>
+            
+            <div class="factura-content" id="factura-content">
+                <!-- Se carga dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- TEMPLATE PARA ORDEN ITEM -->
+    <template id="orden-item-template">
+        <div class="orden-item" data-orden-id="" data-tipo="">
+            <div class="orden-mesa">
+                <span class="mesa-icono"></span>
+                <span class="mesa-numero"></span>
+            </div>
+            
+            <div class="orden-info">
+                <h4 class="orden-titulo"></h4>
+                <div class="orden-descripcion">
+                    <span class="productos-count"></span>
+                    <span class="tiempo-transcurrido"></span>
+                </div>
+                <div class="productos-preview"></div>
+                <div class="factura-info" style="display: none;">
+                    <small>🧾 <span class="factura-numero"></span> - <span class="factura-estado"></span></small>
+                </div>
+            </div>
+            
+            <div class="orden-estado">
+                <div class="estado-badge"></div>
+                <div class="progreso-productos"></div>
+            </div>
+            
+            <div class="orden-mesero">
+                <div class="mesero-nombre"></div>
+                <div class="mesero-tiempo"></div>
+            </div>
+            
+            <div class="orden-total">
+                <div class="total-valor"></div>
+                <div class="total-productos"></div>
+            </div>
+            
+            <div class="orden-acciones">
+                <!-- Los botones se agregan dinámicamente -->
+            </div>
+
+            <!-- DETALLES EXPANDIBLES -->
+            <div class="orden-detalles">
+                <div class="detalles-grid">
+                    <div class="detalle-seccion">
+                        <h5 class="detalle-titulo">📊 Información General</h5>
+                        <div class="info-general">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                    </div>
+                    
+                    <div class="detalle-seccion">
+                        <h5 class="detalle-titulo">🍽️ Productos de la Orden</h5>
+                        <div class="productos-lista">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="detalle-seccion" style="grid-column: 1 / -1;">
+                    <h5 class="detalle-titulo">📝 Observaciones</h5>
+                    <div class="observaciones-content">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+    </template>
 
 
 // templates/mesero/modificar_orden.html - PARTE 3: JAVASCRIPT COMPLETO
 
 <script>
-window.inicializar_modificar_orden = function() {
-    console.log('🔧 Inicializando modificar orden (nueva versión)...');
+
+        // Variables globales adicionales
+let paginacionData = {
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    pageSize: 20,
+    hasNext: false,
+    hasPrevious: false
+};
+
+let busquedaActual = '';
+let timeoutBusqueda = null;
+
+/**
+ * Cargar órdenes con paginación
+ */
+async function cargarOrdenes(page = 1, mantenerFiltros = true) {
+    const container = document.getElementById('ordenes-container');
+    const header = container.querySelector('.ordenes-table-header');
     
-    // === VARIABLES GLOBALES ===
-    let filtrosActivos = {
-        tipo: 'todos',
-        estado: null  // Unificado: puede ser estado de orden o factura según el tipo
-    };
-    
-    let ordenesData = [];
-    let ordenSeleccionada = null;
-    
-    // === ELEMENTOS DEL DOM ===
-    const container = document.getElementById('ordenes-modificar-container');
-    const template = document.getElementById('orden-item-template');
-    const panelModificacion = document.getElementById('panel-modificacion');
-    
-    // === FUNCIONES PRINCIPALES ===
-    
-    /**
-     * Cargar órdenes desde el servidor
-     */
-    window.cargarOrdenesModificar = async function() {
-        container.innerHTML = '<div class="loading-modificar">Cargando órdenes disponibles...</div>';
+    // Mostrar loading solo si es página nueva
+    if (page === 1) {
+        container.innerHTML = '';
+        if (header) container.appendChild(header);
         
-        try {
-            // Obtener todas las órdenes del mesero
-            const response = await fetch('/api/mesero/todas-ordenes/?filtro=todas');
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
-            const ordenes = await response.json();
-            console.log('📋 Órdenes cargadas:', ordenes.length);
-            
-            ordenesData = ordenes;
-            aplicarFiltrosYRenderizar();
-            
-        } catch (error) {
-            console.error('❌ Error cargando órdenes:', error);
-            container.innerHTML = `
-                <div class="estado-vacio">
-                    <h3>❌ Error al cargar órdenes</h3>
-                    <p>${error.message}</p>
-                    <button class="btn-actualizar" onclick="cargarOrdenesModificar()">🔄 Reintentar</button>
-                </div>
-            `;
-        }
-    };
-    
-    /**
-     * Aplicar filtros y renderizar órdenes
-     */
-    function aplicarFiltrosYRenderizar() {
-        let ordenesFiltradas = ordenesData.filter(orden => {
-            // Filtro por tipo
-            if (filtrosActivos.tipo === 'ordenes' && !puedeModificarOrden(orden)) {
-                return false;
-            }
-            if (filtrosActivos.tipo === 'facturas' && !tieneFactura(orden)) {
-                return false;
-            }
-            
-            // Filtro por estado (contextual según el tipo)
-            if (filtrosActivos.estado) {
-                if (filtrosActivos.tipo === 'facturas') {
-                    // Para facturas, filtrar por estado de pago
-                    if (!orden.factura_info) return false;
-                    if (orden.factura_info.estado_pago !== filtrosActivos.estado) {
-                        return false;
-                    }
-                } else {
-                    // Para órdenes (o todos), filtrar por estado de orden
-                    if (orden.estado !== filtrosActivos.estado) {
-                        return false;
-                    }
-                }
-            }
-            
-            return true;
-        });
-        
-        console.log(`🔍 Filtros aplicados: ${ordenesFiltradas.length} de ${ordenesData.length} órdenes`);
-        renderizarOrdenes(ordenesFiltradas);
+        const loading = document.createElement('div');
+        loading.className = 'loading';
+        loading.textContent = 'Cargando órdenes disponibles...';
+        container.appendChild(loading);
     }
     
-    /**
-     * Renderizar lista de órdenes
-     */
-    function renderizarOrdenes(ordenes) {
-        if (ordenes.length === 0) {
-            container.innerHTML = `
-                <div class="estado-vacio">
+    try {
+        // Construir URL con parámetros
+        const params = new URLSearchParams({
+            page: page,
+            page_size: paginacionData.pageSize,
+            filtro: filtrosActivos.tipo || 'todas'
+        });
+        
+        if (busquedaActual) {
+            params.append('search', busquedaActual);
+        }
+        
+        if (filtrosActivos.estado) {
+            params.append('estado', filtrosActivos.estado);
+        }
+        
+        const url = `/api/mesero/todas-ordenes/?${params.toString()}`;
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('📋 Datos paginados recibidos:', data);
+        
+        // Actualizar datos globales
+        ordenesData = data.ordenes || [];
+        paginacionData = data.pagination || paginacionData;
+        
+        // Cargar productos si es necesario
+        if (productosDisponibles.length === 0) {
+            await cargarProductosDisponibles();
+        }
+        
+        // Renderizar órdenes
+        renderizarOrdenes(ordenesData);
+        
+        // Renderizar controles de paginación
+        renderizarPaginacion();
+        
+        // Actualizar info de resultados
+        actualizarInfoResultados();
+        
+    } catch (error) {
+        console.error('❌ Error cargando órdenes:', error);
+        mostrarError(error.message);
+    }
+}
+
+/**
+ * Renderizar controles de paginación
+ */
+function renderizarPaginacion() {
+    const container = document.getElementById('paginacion-container');
+    if (!container) return;
+    
+    const { currentPage, totalPages, hasNext, hasPrevious } = paginacionData;
+    
+    if (totalPages <= 1) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'flex';
+    
+    let html = '';
+    
+    // Botón anterior
+    html += `
+        <button class="btn-pagina" 
+                onclick="cambiarPagina(${currentPage - 1})" 
+                ${!hasPrevious ? 'disabled' : ''}>
+            ⬅️ Anterior
+        </button>
+    `;
+    
+    // Números de página (con lógica inteligente)
+    const rangoPaginas = generarRangoPaginas(currentPage, totalPages);
+    
+    rangoPaginas.forEach(page => {
+        if (page === '...') {
+            html += '<span style="padding: 0.75rem;">...</span>';
+        } else {
+            const isActive = page === currentPage;
+            html += `
+                <button class="btn-pagina ${isActive ? 'active' : ''}" 
+                        onclick="cambiarPagina(${page})">
+                    ${page}
+                </button>
+            `;
+        }
+    });
+    
+    // Botón siguiente
+    html += `
+        <button class="btn-pagina" 
+                onclick="cambiarPagina(${currentPage + 1})" 
+                ${!hasNext ? 'disabled' : ''}>
+            Siguiente ➡️
+        </button>
+    `;
+    
+    // Selector de tamaño de página
+    html += `
+        <div class="page-size-selector">
+            <label>Mostrar:</label>
+            <select onchange="cambiarTamañoPagina(this.value)">
+                <option value="10" ${paginacionData.pageSize === 10 ? 'selected' : ''}>10</option>
+                <option value="20" ${paginacionData.pageSize === 20 ? 'selected' : ''}>20</option>
+                <option value="50" ${paginacionData.pageSize === 50 ? 'selected' : ''}>50</option>
+                <option value="100" ${paginacionData.pageSize === 100 ? 'selected' : ''}>100</option>
+            </select>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+/**
+ * Generar rango inteligente de páginas
+ */
+function generarRangoPaginas(currentPage, totalPages) {
+    const rango = [];
+    
+    if (totalPages <= 7) {
+        // Mostrar todas las páginas
+        for (let i = 1; i <= totalPages; i++) {
+            rango.push(i);
+        }
+    } else {
+        // Lógica inteligente
+        rango.push(1);
+        
+        if (currentPage > 4) {
+            rango.push('...');
+        }
+        
+        const start = Math.max(2, currentPage - 1);
+        const end = Math.min(totalPages - 1, currentPage + 1);
+        
+        for (let i = start; i <= end; i++) {
+            if (!rango.includes(i)) {
+                rango.push(i);
+            }
+        }
+        
+        if (currentPage < totalPages - 3) {
+            rango.push('...');
+        }
+        
+        if (!rango.includes(totalPages)) {
+            rango.push(totalPages);
+        }
+    }
+    
+    return rango;
+}
+
+/**
+ * Cambiar página
+ */
+function cambiarPagina(page) {
+    if (page < 1 || page > paginacionData.totalPages || page === paginacionData.currentPage) {
+        return;
+    }
+    
+    cargarOrdenes(page);
+    
+    // Scroll al top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/**
+ * Cambiar tamaño de página
+ */
+function cambiarTamañoPagina(newSize) {
+    paginacionData.pageSize = parseInt(newSize);
+    cargarOrdenes(1); // Volver a página 1
+}
+
+/**
+ * Actualizar información de resultados
+ */
+function actualizarInfoResultados() {
+    const infoElement = document.getElementById('info-resultados');
+    if (!infoElement) return;
+    
+    const { currentPage, totalCount, pageSize } = paginacionData;
+    const inicio = (currentPage - 1) * pageSize + 1;
+    const fin = Math.min(currentPage * pageSize, totalCount);
+    
+    if (totalCount === 0) {
+        infoElement.textContent = 'No se encontraron resultados';
+    } else {
+        infoElement.textContent = `Mostrando ${inicio}-${fin} de ${totalCount} órdenes`;
+    }
+}
+
+/**
+ * Funciones de búsqueda
+ */
+function buscarOrdenes() {
+    const input = document.getElementById('busqueda-ordenes');
+    busquedaActual = input.value.trim();
+    cargarOrdenes(1); // Buscar desde página 1
+}
+
+function limpiarBusqueda() {
+    const input = document.getElementById('busqueda-ordenes');
+    input.value = '';
+    busquedaActual = '';
+    cargarOrdenes(1);
+}
+
+// Búsqueda en tiempo real con debounce
+document.addEventListener('DOMContentLoaded', () => {
+    const inputBusqueda = document.getElementById('busqueda-ordenes');
+    if (inputBusqueda) {
+        inputBusqueda.addEventListener('input', (e) => {
+            clearTimeout(timeoutBusqueda);
+            timeoutBusqueda = setTimeout(() => {
+                busquedaActual = e.target.value.trim();
+                cargarOrdenes(1);
+            }, 500); // Esperar 500ms después de que el usuario deje de escribir
+        });
+        
+        // Buscar con Enter
+        inputBusqueda.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                clearTimeout(timeoutBusqueda);
+                buscarOrdenes();
+            }
+        });
+    }
+});
+
+// Exponer funciones globalmente
+window.cambiarPagina = cambiarPagina;
+window.cambiarTamañoPagina = cambiarTamañoPagina;
+window.buscarOrdenes = buscarOrdenes;
+window.limpiarBusqueda = limpiarBusqueda;
+
+        // === VARIABLES GLOBALES ===
+        let filtrosActivos = {
+            tipo: 'todos',
+            estado: null
+        };
+        
+        let ordenesData = [];
+        let ordenSeleccionada = null;
+        let carritoModificacion = {};
+        let productosDisponibles = [];
+        let intervalId = null;
+
+        // === FUNCIONES PRINCIPALES ===
+        
+        /**
+         * Cargar órdenes desde el servidor
+         */
+        async function cargarOrdenes() {
+            const container = document.getElementById('ordenes-container');
+            const header = container.querySelector('.ordenes-table-header');
+            
+            container.innerHTML = '';
+            if (header) {
+                container.appendChild(header);
+            } else {
+                container.appendChild(crearHeaderTabla());
+            }
+            
+            const loading = document.createElement('div');
+            loading.className = 'loading';
+            loading.textContent = 'Cargando órdenes disponibles...';
+            container.appendChild(loading);
+            
+            try {
+                // Conectar al backend - API de todas las órdenes del mesero
+                const response = await fetch('/api/mesero/todas-ordenes/?filtro=todas', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+                
+                const ordenes = await response.json();
+                console.log('📋 Órdenes cargadas desde backend:', ordenes.length);
+                
+                ordenesData = ordenes;
+                
+                // Cargar productos disponibles para modificación
+                await cargarProductosDisponibles();
+                
+                aplicarFiltrosYRenderizar();
+                
+            } catch (error) {
+                console.error('❌ Error cargando órdenes:', error);
+                mostrarError(error.message);
+            }
+        }
+
+        /**
+         * Cargar productos disponibles desde el backend
+         */
+        async function cargarProductosDisponibles() {
+            try {
+                const response = await fetch('/api/productos/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error cargando productos: ${response.status}`);
+                }
+                
+                const productos = await response.json();
+                productosDisponibles = productos.map(p => ({
+                    id: p.id,
+                    nombre: p.nombre,
+                    precio: p.precio,
+                    categoria: p.id_categoria__nombre || 'Sin categoría',
+                    stock: p.cantidad
+                }));
+                
+                console.log('🛒 Productos disponibles cargados:', productosDisponibles.length);
+                
+            } catch (error) {
+                console.error('❌ Error cargando productos:', error);
+                productosDisponibles = [];
+            }
+        }
+
+        /**
+         * Obtener token CSRF
+         */
+        function getCsrfToken() {
+            const token = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (token) {
+                return token.value;
+            }
+            // Buscar en cookies como alternativa
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'csrftoken') {
+                    return value;
+                }
+            }
+            return '';
+        }
+
+        /**
+         * Crear header de la tabla
+         */
+        function crearHeaderTabla() {
+            const header = document.createElement('div');
+            header.className = 'ordenes-table-header';
+            header.innerHTML = `
+                <div>🍽️ Mesa</div>
+                <div>📋 Información</div>
+                <div>📊 Estado</div>
+                <div>👨‍🍳 Mesero</div>
+                <div>💰 Total</div>
+                <div>⚡ Acciones</div>
+            `;
+            return header;
+        }
+
+        /**
+         * Mostrar error en el container
+         */
+        function mostrarError(mensaje) {
+            const container = document.getElementById('ordenes-container');
+            const header = container.querySelector('.ordenes-table-header');
+            
+            container.innerHTML = '';
+            if (header) container.appendChild(header);
+            
+            const estadoError = document.createElement('div');
+            estadoError.className = 'estado-vacio';
+            estadoError.innerHTML = `
+                <h3>❌ Error al cargar órdenes</h3>
+                <p>${mensaje}</p>
+                <button class="btn-actualizar" onclick="cargarOrdenes()">🔄 Reintentar</button>
+            `;
+            container.appendChild(estadoError);
+        }
+
+        /**
+         * Aplicar filtros y renderizar órdenes
+         */
+        function aplicarFiltrosYRenderizar() {
+            let ordenesFiltradas = ordenesData.filter(orden => {
+                // Filtro por tipo
+                if (filtrosActivos.tipo === 'ordenes' && !puedeModificarOrden(orden)) {
+                    return false;
+                }
+                if (filtrosActivos.tipo === 'facturas' && !tieneFactura(orden)) {
+                    return false;
+                }
+                
+                // Filtro por estado
+                if (filtrosActivos.estado) {
+                    if (filtrosActivos.tipo === 'facturas') {
+                        if (!orden.factura_info || orden.factura_info.estado_pago !== filtrosActivos.estado) {
+                            return false;
+                        }
+                    } else {
+                        if (orden.estado !== filtrosActivos.estado) {
+                            return false;
+                        }
+                    }
+                }
+                
+                return true;
+            });
+            
+            console.log(`🔍 Filtros aplicados: ${ordenesFiltradas.length} de ${ordenesData.length} órdenes`);
+            renderizarOrdenes(ordenesFiltradas);
+        }
+
+        /**
+         * Renderizar lista de órdenes
+         */
+        function renderizarOrdenes(ordenes) {
+            const container = document.getElementById('ordenes-container');
+            const header = container.querySelector('.ordenes-table-header');
+            
+            container.innerHTML = '';
+            if (header) container.appendChild(header);
+            
+            if (ordenes.length === 0) {
+                const estadoVacio = document.createElement('div');
+                estadoVacio.className = 'estado-vacio';
+                estadoVacio.innerHTML = `
                     <h3>😊 No hay órdenes que coincidan</h3>
                     <p>No se encontraron órdenes con los filtros seleccionados.</p>
-                    <button class="btn-actualizar" onclick="cargarOrdenesModificar()">🔄 Actualizar</button>
-                </div>
-            `;
-            return;
-        }
-        
-        container.innerHTML = '';
-        
-        ordenes.forEach(orden => {
-            const tarjeta = crearTarjetaOrden(orden);
-            container.appendChild(tarjeta);
-        });
-    }
-    
-    /**
-     * Crear tarjeta individual de orden
-     */
-    function crearTarjetaOrden(orden) {
-        const clone = document.importNode(template.content, true);
-        const tarjeta = clone.querySelector('.orden-item');
-        
-        // Configurar datos básicos
-        tarjeta.dataset.ordenId = orden.orden_id;
-        tarjeta.dataset.tipo = determinarTipoOrden(orden);
-        
-        // Configurar clases CSS según estado
-        const estadoCSS = determinarEstadoCSS(orden);
-        tarjeta.classList.add(estadoCSS.clase);
-        
-        const header = tarjeta.querySelector('.orden-header');
-        header.classList.add(estadoCSS.clase);
-        
-        // Llenar información básica
-        llenarInformacionBasica(tarjeta, orden);
-        
-        // Llenar información de factura si existe
-        llenarInformacionFactura(tarjeta, orden);
-        
-        // Llenar resumen de productos
-        llenarResumenProductos(tarjeta, orden);
-        
-        // Configurar botones de acción
-        configurarBotonesAccion(tarjeta, orden);
-        
-        // Event listener para seleccionar
-        tarjeta.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('btn-accion')) {
-                seleccionarOrden(orden);
-            }
-        });
-        
-        return tarjeta;
-    }
-    
-    /**
-     * Llenar información básica de la tarjeta
-     */
-    function llenarInformacionBasica(tarjeta, orden) {
-        // Mesa
-        const mesaTexto = orden.es_domicilio ? '🏠 Domicilio' : 
-                         orden.es_reserva ? '📅 Reserva' : 
-                         `Mesa #${orden.mesa.numero}`;
-        tarjeta.querySelector('.mesa-numero').textContent = mesaTexto;
-        
-        // Estado
-        const estadoTexto = obtenerTextoEstado(orden);
-        tarjeta.querySelector('.estado-orden').textContent = estadoTexto;
-        
-        // Tiempo transcurrido
-        tarjeta.querySelector('.tiempo-transcurrido').textContent = 
-            `⏱️ ${orden.tiempo_transcurrido || 'N/A'}`;
-        
-        // Total
-        tarjeta.querySelector('.total-orden').textContent = 
-            `💰 $${(orden.total || 0).toLocaleString()}`;
-        
-        // Info adicional
-        const productosText = `${orden.productos?.length || 0} productos`;
-        tarjeta.querySelector('.productos-count').textContent = productosText;
-        tarjeta.querySelector('.mesero-nombre').textContent = orden.mesero?.nombre || 'N/A';
-    }
-    
-    /**
-     * Llenar información de factura
-     */
-    function llenarInformacionFactura(tarjeta, orden) {
-        const facturaInfo = tarjeta.querySelector('.factura-info');
-        
-        if (orden.factura_info) {
-            facturaInfo.style.display = 'block';
-            
-            if (orden.factura_info.estado_pago === 'PAGADA') {
-                facturaInfo.classList.add('pagada');
+                    <button class="btn-actualizar" onclick="cargarOrdenes()">🔄 Actualizar</button>
+                `;
+                container.appendChild(estadoVacio);
+                return;
             }
             
-            tarjeta.querySelector('.factura-numero').textContent = 
-                orden.factura_info.numero || `FAC-${orden.factura_info.id}`;
-            tarjeta.querySelector('.factura-estado').textContent = 
-                orden.factura_info.estado_pago === 'PAGADA' ? 'Pagada' : 'Pendiente';
-            tarjeta.querySelector('.factura-total').textContent = 
-                `$${(orden.factura_info.total || 0).toLocaleString()}`;
-        } else {
-            facturaInfo.style.display = 'none';
-        }
-    }
-    
-    /**
-     * Llenar resumen de productos
-     */
-    function llenarResumenProductos(tarjeta, orden) {
-        const container = tarjeta.querySelector('.productos-resumen');
-        container.innerHTML = '';
-        
-        if (!orden.productos || orden.productos.length === 0) {
-            container.innerHTML = '<p style="color: #888; font-style: italic;">Sin productos</p>';
-            return;
-        }
-        
-        // Mostrar solo los primeros 3 productos
-        const productosAMostrar = orden.productos.slice(0, 3);
-        
-        productosAMostrar.forEach(producto => {
-            const div = document.createElement('div');
-            div.className = 'producto-item-resumen';
-            
-            if (producto.estado === 'LISTO') {
-                div.classList.add('listo');
-            }
-            
-            if (producto.agregado_despues || producto.agregado_post_factura) {
-                div.classList.add('agregado');
-            }
-            
-            const badge = producto.estado === 'LISTO' ? 
-                '<span class="producto-estado-badge listo">✅ Listo</span>' :
-                '<span class="producto-estado-badge pendiente">⏳ Pendiente</span>';
-            
-            div.innerHTML = `
-                <div class="producto-nombre">
-                    ${producto.cantidad}x ${producto.nombre}
-                    ${producto.observaciones ? `<div style="font-size: 0.8em; color: #666;">📝 ${producto.observaciones}</div>` : ''}
-                </div>
-                ${badge}
-            `;
-            
-            container.appendChild(div);
-        });
-        
-        // Mostrar "y X más" si hay más productos
-        if (orden.productos.length > 3) {
-            const masDiv = document.createElement('div');
-            masDiv.style.cssText = 'font-size: 0.8em; color: #666; text-align: center; margin-top: 0.5rem; font-style: italic;';
-            masDiv.textContent = `... y ${orden.productos.length - 3} productos más`;
-            container.appendChild(masDiv);
-        }
-    }
-    
-    /**
-     * Configurar botones de acción
-     */
-    function configurarBotonesAccion(tarjeta, orden) {
-        const container = tarjeta.querySelector('.acciones-orden');
-        container.innerHTML = '';
-        
-        // Botón modificar (siempre disponible si puede modificar)
-        if (puedeModificarOrden(orden)) {
-            const btnModificar = document.createElement('button');
-            btnModificar.className = 'btn-accion btn-modificar';
-            btnModificar.textContent = tieneFactura(orden) ? '✏️💰 Modificar + Factura' : '✏️ Modificar Orden';
-            btnModificar.onclick = (e) => {
-                e.stopPropagation();
-                abrirPanelModificacion(orden);
-            };
-            container.appendChild(btnModificar);
-        }
-        
-        // Botón entregar (si puede entregar)
-        if (orden.puede_entregar) {
-            const btnEntregar = document.createElement('button');
-            btnEntregar.className = 'btn-accion btn-entregar';
-            btnEntregar.textContent = '🍽️ Entregar';
-            btnEntregar.onclick = (e) => {
-                e.stopPropagation();
-                entregarOrden(orden.orden_id);
-            };
-            container.appendChild(btnEntregar);
-        }
-        
-        // Botón ver factura (si tiene factura)
-        if (orden.factura_info) {
-            const btnFactura = document.createElement('button');
-            btnFactura.className = 'btn-accion btn-ver-factura';
-            btnFactura.textContent = '🧾 Ver Factura';
-            btnFactura.onclick = (e) => {
-                e.stopPropagation();
-                verFactura(orden.orden_id);
-            };
-            container.appendChild(btnFactura);
-        }
-    }
-    
-    // === FUNCIONES DE UTILIDAD ===
-    
-    function determinarTipoOrden(orden) {
-        if (orden.factura_info) {
-            return orden.factura_info.estado_pago === 'PAGADA' ? 'factura-pagada' : 'factura-pendiente';
-        }
-        return 'orden-sin-factura';
-    }
-    
-    function determinarEstadoCSS(orden) {
-        if (orden.factura_info) {
-            if (orden.factura_info.estado_pago === 'PAGADA') {
-                return { clase: 'factura-pagada' };
-            } else {
-                return { clase: 'factura-pendiente' };
-            }
-        }
-        
-        switch (orden.estado) {
-            case 'EN_PROCESO':
-                return { clase: 'en-proceso' };
-            case 'LISTA':
-                return { clase: 'lista' };
-            case 'SERVIDA':
-                return { clase: 'servida' };
-            default:
-                return { clase: 'en-proceso' };
-        }
-    }
-    
-    function obtenerTextoEstado(orden) {
-        if (orden.factura_info) {
-            if (orden.factura_info.estado_pago === 'PAGADA') {
-                return '✅ Facturada y Pagada';
-            } else {
-                return '🧾 Facturada - Pago Pendiente';
-            }
-        }
-        
-        switch (orden.estado) {
-            case 'EN_PROCESO':
-                return orden.productos_listos_count > 0 ? 
-                    `🔄 Parcial (${orden.productos_listos_count}/${orden.productos.length})` : 
-                    '⏳ En Preparación';
-            case 'LISTA':
-                return '🍽️ Lista para Servir';
-            case 'SERVIDA':
-                return '✅ Servida';
-            default:
-                return '⏳ En Preparación';
-        }
-    }
-    
-    function puedeModificarOrden(orden) {
-        // Se puede modificar si:
-        // 1. Está EN_PROCESO o LISTA
-        // 2. Está SERVIDA pero tiene factura pendiente
-        return orden.estado !== 'SERVIDA' || orden.tiene_factura_pendiente;
-    }
-    
-    function tieneFactura(orden) {
-        return !!orden.factura_info;
-    }
-    
-    // === FUNCIONES DE ACCIÓN ===
-    
-    /**
-     * Seleccionar una orden
-     */
-    function seleccionarOrden(orden) {
-        // Remover selección anterior
-        document.querySelectorAll('.orden-item.seleccionada')
-            .forEach(item => item.classList.remove('seleccionada'));
-        
-        // Seleccionar nueva orden
-        const tarjeta = document.querySelector(`[data-orden-id="${orden.orden_id}"]`);
-        if (tarjeta) {
-            tarjeta.classList.add('seleccionada');
-            ordenSeleccionada = orden;
-            console.log('🎯 Orden seleccionada:', orden.orden_id);
-        }
-    }
-    
-    /**
-     * Abrir panel de modificación
-     */
-    function abrirPanelModificacion(orden) {
-        console.log('🔧 Abriendo panel de modificación para orden:', orden.orden_id);
-        
-        seleccionarOrden(orden);
-        
-        // Configurar título del panel
-        const titulo = document.getElementById('modificacion-titulo');
-        const tipoTexto = tieneFactura(orden) ? 
-            `Modificar Orden con Factura #${orden.factura_info?.numero || orden.factura_info?.id}` :
-            `Modificar Orden #${orden.orden_id}`;
-        titulo.textContent = tipoTexto;
-        
-        // Mostrar panel
-        panelModificacion.classList.add('visible');
-        
-        // Cargar contenido de modificación
-        cargarContenidoModificacion(orden);
-        
-        // Scroll al panel
-        panelModificacion.scrollIntoView({ behavior: 'smooth' });
-    }
-    
-    /**
-     * Cerrar panel de modificación
-     */
-    window.cerrarPanelModificacion = function() {
-        panelModificacion.classList.remove('visible');
-        
-        // Remover selección
-        document.querySelectorAll('.orden-item.seleccionada')
-            .forEach(item => item.classList.remove('seleccionada'));
-        
-        ordenSeleccionada = null;
-        
-        console.log('❌ Panel de modificación cerrado');
-    };
-    
-    /**
-     * Cargar contenido del panel de modificación
-     */
-    function cargarContenidoModificacion(orden) {
-        const content = document.getElementById('modificacion-content');
-        content.innerHTML = '<div class="loading-modificar">Cargando menú de productos...</div>';
-        
-        // Cargar categorías y productos
-        cargarMenuProductosModificacion(orden);
-    }
-
-    /**
-     * Cargar menú de productos para modificación
-     */
-    async function cargarMenuProductosModificacion(orden) {
-        const content = document.getElementById('modificacion-content');
-        
-        try {
-            // Obtener productos desde la pestaña de nuevo pedido
-            const menuOriginal = document.querySelector('#menu-productos');
-            if (!menuOriginal) {
-                throw new Error('No se pudo acceder al menú principal. Carga primero la pestaña "Nuevo Pedido".');
-            }
-            
-            // Extraer categorías y productos
-            const { categorias, productos } = extraerProductosDelMenu(menuOriginal);
-            
-            if (productos.length === 0) {
-                throw new Error('No hay productos disponibles en el menú.');
-            }
-            
-            // Renderizar interfaz
-            renderizarInterfazModificacion(content, categorias, productos, orden);
-            
-            // Inicializar lógica del menú
-            inicializarLogicaMenuModificacion(productos, orden);
-            
-        } catch (error) {
-            console.error('❌ Error cargando menú:', error);
-            content.innerHTML = `
-                <div style="text-align: center; padding: 2rem; background: #f8d7da; border-radius: 8px; color: #721c24;">
-                    <h4>❌ Error al cargar el menú</h4>
-                    <p>${error.message}</p>
-                    <button class="btn-actualizar" onclick="window.recargarPestana('nuevo-pedido')">
-                        🔄 Cargar Menú Principal
-                    </button>
-                </div>
-            `;
-        }
-    }
-
-    /**
-     * Extraer productos del menú principal
-     */
-    function extraerProductosDelMenu(menuOriginal) {
-        const categorias = [];
-        const productos = [];
-        
-        // Extraer categorías
-        menuOriginal.querySelectorAll('.category-btn').forEach(btn => {
-            if (btn.dataset.categoryId !== 'all') {
-                categorias.push({
-                    id: btn.dataset.categoryId,
-                    nombre: btn.textContent.trim()
-                });
-            }
-        });
-        
-        // Extraer productos
-        menuOriginal.querySelectorAll('.product-item').forEach(item => {
-            productos.push({
-                id: item.dataset.id,
-                nombre: item.dataset.nombre,
-                precio: parseFloat(item.dataset.precio),
-                stock: parseInt(item.dataset.stock),
-                categoriaId: item.dataset.categoryId
+            ordenes.forEach(orden => {
+                const tarjeta = crearTarjetaOrden(orden);
+                container.appendChild(tarjeta);
             });
-        });
-        
-        return { categorias, productos };
-    }
+        }
 
-    /**
-     * Renderizar interfaz de modificación
-     */
-    function renderizarInterfazModificacion(container, categorias, productos, orden) {
-        const interfazHTML = `
-            <div class="modificacion-grid">
-                <div class="menu-productos-modificacion">
-                    <h4>🍽️ Agregar Productos</h4>
-                    
-                    <div class="categoria-tabs-mod">
-                        <button class="categoria-btn-mod active" data-categoria="all">Todos</button>
-                        ${categorias.map(cat => 
-                            `<button class="categoria-btn-mod" data-categoria="${cat.id}">${cat.nombre}</button>`
-                        ).join('')}
-                    </div>
-                    
-                    <div class="productos-grid-mod" id="productos-grid-modificacion">
-                        ${productos.map(producto => renderizarProductoModificacion(producto)).join('')}
-                    </div>
-                </div>
-                
-                <div class="carrito-modificacion">
-                    <h4>🛒 Productos a Agregar</h4>
-                    <div id="carrito-items-mod">
-                        <p style="color: #888; text-align: center; font-style: italic;">
-                            Selecciona productos del menú
-                        </p>
-                    </div>
-                    <div class="carrito-total-mod">
-                        Total Adicional: $<span id="total-modificacion">0</span>
-                    </div>
-                    <button class="btn-confirmar-mod" id="btn-confirmar-modificacion" disabled>
-                        Agregar a la Orden
-                    </button>
-                </div>
-            </div>
+        /**
+         * Crear tarjeta individual de orden
+         */
+        function crearTarjetaOrden(orden) {
+            const template = document.getElementById('orden-item-template');
+            const clone = document.importNode(template.content, true);
+            const tarjeta = clone.querySelector('.orden-item');
             
-            ${renderizarDetalleOrdenCompleto(orden)}
-        `;
-        
-        container.innerHTML = interfazHTML;
-    }
+            // Configurar datos básicos
+            tarjeta.dataset.ordenId = orden.orden_id;
+            tarjeta.dataset.tipo = determinarTipoOrden(orden);
+            
+            // Configurar clases CSS según estado
+            const estadoCSS = determinarEstadoCSS(orden);
+            tarjeta.classList.add(estadoCSS.clase);
+            
+            // Llenar información
+            llenarInformacionBasica(tarjeta, orden);
+            llenarInformacionFactura(tarjeta, orden);
+            llenarDetallesExpandibles(tarjeta, orden);
+            configurarBotonesAccion(tarjeta, orden);
+            
+            // Event listeners
+            configurarEventListeners(tarjeta, orden);
+            
+            return tarjeta;
+        }
 
-    /**
-     * Renderizar detalle completo de la orden actual
-     */
-    function renderizarDetalleOrdenCompleto(orden) {
-        // Información básica de la orden
-        const mesaTexto = orden.es_domicilio ? '🏠 Domicilio' : 
-                         orden.es_reserva ? '📅 Reserva' : 
-                         `🍽️ Mesa #${orden.mesa.numero}`;
-        
-        const estadoTexto = obtenerTextoEstadoCompleto(orden);
-        const tiempoTranscurrido = orden.tiempo_transcurrido || 'N/A';
-        
-        // Información de cliente si es domicilio o reserva
-        let infoCliente = '';
-        if (orden.cliente_info && (orden.es_domicilio || orden.es_reserva)) {
+        /**
+         * Llenar información básica de la tarjeta
+         */
+        function llenarInformacionBasica(tarjeta, orden) {
+            // Mesa con icono
+            const mesaIcono = tarjeta.querySelector('.mesa-icono');
+            const mesaNumero = tarjeta.querySelector('.mesa-numero');
+            
             if (orden.es_domicilio) {
-                infoCliente = `
-                    <div class="info-cliente-detalle">
-                        <h5>🚚 Información del Domicilio</h5>
-                        <div class="cliente-grid">
-                            <div><strong>👤 Cliente:</strong> ${orden.cliente_info.nombre || 'No especificado'}</div>
-                            <div><strong>📞 Teléfono:</strong> ${orden.cliente_info.telefono || 'No especificado'}</div>
-                            <div class="direccion-completa"><strong>📍 Dirección:</strong> ${orden.cliente_info.direccion || 'No especificada'}</div>
-                        </div>
-                    </div>
-                `;
+                mesaIcono.textContent = '🏠';
+                mesaNumero.textContent = 'Domicilio';
             } else if (orden.es_reserva) {
-                infoCliente = `
-                    <div class="info-cliente-detalle">
-                        <h5>📅 Información de la Reserva</h5>
-                        <div class="cliente-grid">
-                            <div><strong>👤 Cliente:</strong> ${orden.cliente_info.nombre || 'No especificado'}</div>
-                            <div><strong>📞 Teléfono:</strong> ${orden.cliente_info.telefono || 'No especificado'}</div>
-                            <div><strong>👥 Personas:</strong> ${orden.cliente_info.personas || 'No especificado'}</div>
-                            <div><strong>📅 Fecha:</strong> ${orden.cliente_info.fecha_reserva || 'No especificada'}</div>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-        
-        // Información de factura si existe
-        let infoFactura = '';
-        if (orden.factura_info) {
-            const estadoPago = orden.factura_info.estado_pago;
-            const colorFactura = estadoPago === 'PAGADA' ? '#28a745' : '#dc3545';
-            const iconoFactura = estadoPago === 'PAGADA' ? '✅' : '⚠️';
-            
-            infoFactura = `
-                <div class="info-factura-detalle" style="border-left-color: ${colorFactura};">
-                    <h5>${iconoFactura} Información de Factura</h5>
-                    <div class="factura-grid">
-                        <div><strong>🧾 Número:</strong> ${orden.factura_info.numero || `FAC-${orden.factura_info.id}`}</div>
-                        <div><strong>💰 Total:</strong> ${(orden.factura_info.total || 0).toLocaleString()}</div>
-                        <div><strong>📊 Estado:</strong> ${estadoPago === 'PAGADA' ? 'Pagada' : 'Pendiente de Pago'}</div>
-                        ${orden.factura_info.metodo_pago ? `<div><strong>💳 Método:</strong> ${orden.factura_info.metodo_pago}</div>` : ''}
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Productos de la orden
-        const productosHTML = renderizarProductosOrdenDetalle(orden.productos || []);
-        
-        // Observaciones generales
-        let observacionesGenerales = '';
-        if (orden.observaciones && !orden.es_domicilio && !orden.es_reserva) {
-            observacionesGenerales = `
-                <div class="observaciones-generales">
-                    <h5>📝 Observaciones de la Orden</h5>
-                    <div class="observaciones-texto">${orden.observaciones}</div>
-                </div>
-            `;
-        }
-        
-        return `
-            <div class="detalle-orden-completo">
-                <div class="orden-header-detalle">
-                    <div class="orden-info-principal-detalle">
-                        <h4>📋 Orden #${orden.orden_id}</h4>
-                        <div class="meta-orden">
-                            <span class="mesa-detalle">${mesaTexto}</span>
-                            <span class="estado-detalle">${estadoTexto}</span>
-                            <span class="tiempo-detalle">⏱️ ${tiempoTranscurrido}</span>
-                            <span class="mesero-detalle">👨‍🍳 Mesero: ${orden.mesero?.nombre || 'No asignado'}</span>
-                        </div>
-                    </div>
-                    <div class="totales-orden-detalle">
-                        <div class="total-actual">💰 Total Actual: ${(orden.total || 0).toLocaleString()}</div>
-                        <div class="productos-count">${(orden.productos || []).length} productos</div>
-                    </div>
-                </div>
-                
-                ${infoCliente}
-                ${infoFactura}
-                
-                <div class="productos-orden-detalle">
-                    <h5>🍽️ Productos de la Orden (${(orden.productos || []).length})</h5>
-                    ${productosHTML}
-                </div>
-                
-                ${observacionesGenerales}
-            </div>
-        `;
-    }
-
-    /**
-     * Renderizar productos de la orden con detalle completo
-     */
-    function renderizarProductosOrdenDetalle(productos) {
-        if (!productos || productos.length === 0) {
-            return '<div class="sin-productos">😕 No hay productos en esta orden</div>';
-        }
-        
-        // Separar productos por tipo
-        const productosOriginales = productos.filter(p => !p.agregado_despues && !p.agregado_post_factura);
-        const productosAgregados = productos.filter(p => p.agregado_despues || p.agregado_post_factura);
-        
-        let html = '';
-        
-        // Productos originales
-        if (productosOriginales.length > 0) {
-            html += `
-                <div class="seccion-productos-originales">
-                    <h6>📦 Productos Originales (${productosOriginales.length})</h6>
-                    <div class="lista-productos-detalle">
-                        ${productosOriginales.map(producto => renderizarProductoIndividualDetalle(producto, 'original')).join('')}
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Productos agregados después
-        if (productosAgregados.length > 0) {
-            html += `
-                <div class="seccion-productos-agregados">
-                    <h6>🆕 Productos Agregados Después (${productosAgregados.length})</h6>
-                    <div class="lista-productos-detalle">
-                        ${productosAgregados.map(producto => renderizarProductoIndividualDetalle(producto, 'agregado')).join('')}
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Resumen de estados
-        const productosListos = productos.filter(p => p.estado === 'LISTO').length;
-        const productosPendientes = productos.filter(p => p.estado === 'PENDIENTE').length;
-        
-        html += `
-            <div class="resumen-productos-detalle">
-                <div class="estado-productos-grid">
-                    <div class="estado-productos-item listos">
-                        <span class="numero">${productosListos}</span>
-                        <span class="label">✅ Listos</span>
-                    </div>
-                    <div class="estado-productos-item pendientes">
-                        <span class="numero">${productosPendientes}</span>
-                        <span class="label">⏳ Pendientes</span>
-                    </div>
-                    <div class="estado-productos-item total">
-                        <span class="numero">${productos.length}</span>
-                        <span class="label">📦 Total</span>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        return html;
-    }
-
-    /**
-     * Renderizar producto individual con detalle
-     */
-    function renderizarProductoIndividualDetalle(producto, tipo) {
-        const estadoClass = producto.estado === 'LISTO' ? 'producto-listo' : 'producto-pendiente';
-        const tipoClass = tipo === 'agregado' ? 'producto-agregado' : 'producto-original';
-        const iconoEstado = producto.estado === 'LISTO' ? '✅' : '⏳';
-        const subtotal = producto.cantidad * producto.precio_unitario;
-        
-        // Tiempo de preparación si está listo
-        let tiempoListo = '';
-        if (producto.listo_en) {
-            const fecha = new Date(producto.listo_en);
-            tiempoListo = `<div class="tiempo-listo">🕐 Listo: ${fecha.toLocaleTimeString()}</div>`;
-        }
-        
-        // Observaciones del producto
-        let observacionesProducto = '';
-        if (producto.observaciones) {
-            observacionesProducto = `<div class="observaciones-producto">📝 ${producto.observaciones}</div>`;
-        }
-        
-        return `
-            <div class="producto-detalle-item ${estadoClass} ${tipoClass}">
-                <div class="producto-info-detalle">
-                    <div class="producto-principal">
-                        <span class="estado-icono">${iconoEstado}</span>
-                        <span class="cantidad-nombre">${producto.cantidad}x ${producto.nombre}</span>
-                        <span class="precio-unit">${(producto.precio_unitario || 0).toLocaleString()} c/u</span>
-                    </div>
-                    <div class="producto-secundario">
-                        <span class="subtotal-producto">Subtotal: ${subtotal.toLocaleString()}</span>
-                        ${tipo === 'agregado' ? '<span class="marcador-agregado">🆕 Agregado después</span>' : ''}
-                    </div>
-                    ${observacionesProducto}
-                    ${tiempoListo}
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * Obtener texto de estado completo
-     */
-    function obtenerTextoEstadoCompleto(orden) {
-        if (orden.factura_info) {
-            if (orden.factura_info.estado_pago === 'PAGADA') {
-                return '💰 Facturada y Pagada';
+                mesaIcono.textContent = '📅';
+                mesaNumero.textContent = 'Reserva';
             } else {
-                return '🧾 Servida - Factura Pendiente';
+                mesaIcono.textContent = '🍽️';
+                mesaNumero.textContent = `Mesa ${orden.mesa.numero}`;
+            }
+            
+            // Título de la orden
+            tarjeta.querySelector('.orden-titulo').textContent = `Orden #${orden.orden_id}`;
+            
+            // Descripción con productos y tiempo
+            tarjeta.querySelector('.productos-count').textContent = `${orden.productos?.length || 0} productos`;
+            tarjeta.querySelector('.tiempo-transcurrido').textContent = `⏱️ ${orden.tiempo_transcurrido || 'N/A'}`;
+            
+            // Preview de productos
+            const productosPreview = tarjeta.querySelector('.productos-preview');
+            if (orden.productos && orden.productos.length > 0) {
+                const primeros = orden.productos.slice(0, 2).map(p => 
+                    `${p.cantidad}x ${p.nombre}`
+                ).join(', ');
+                const extra = orden.productos.length > 2 ? ` y ${orden.productos.length - 2} más...` : '';
+                productosPreview.textContent = primeros + extra;
+            } else {
+                productosPreview.textContent = 'Sin productos';
+            }
+            
+            // Estado badge
+            const estadoBadge = tarjeta.querySelector('.estado-badge');
+            const estadoTexto = obtenerTextoEstado(orden);
+            const estadoCSS = determinarEstadoCSS(orden);
+            
+            estadoBadge.textContent = estadoTexto;
+            estadoBadge.className = `estado-badge ${estadoCSS.clase}`;
+            
+            // Progreso de productos
+            const progresoProductos = tarjeta.querySelector('.progreso-productos');
+            if (orden.estado === 'EN_PROCESO' && orden.productos_listos_count > 0) {
+                progresoProductos.textContent = `${orden.productos_listos_count}/${orden.productos.length} listos`;
+            } else {
+                progresoProductos.textContent = '';
+            }
+            
+            // Mesero
+            tarjeta.querySelector('.mesero-nombre').textContent = orden.mesero?.nombre || 'No asignado';
+            tarjeta.querySelector('.mesero-tiempo').textContent = `⏱️ ${orden.tiempo_transcurrido || 'N/A'}`;
+            
+            // Total
+            tarjeta.querySelector('.total-valor').textContent = `${(orden.total || 0).toLocaleString()}`;
+            tarjeta.querySelector('.total-productos').textContent = `${orden.productos?.length || 0} items`;
+        }
+
+        /**
+         * Llenar información de factura
+         */
+        function llenarInformacionFactura(tarjeta, orden) {
+            const facturaInfo = tarjeta.querySelector('.factura-info');
+            
+            if (orden.factura_info) {
+                facturaInfo.style.display = 'block';
+                tarjeta.querySelector('.factura-numero').textContent = 
+                    orden.factura_info.numero || `FAC-${orden.factura_info.id}`;
+                tarjeta.querySelector('.factura-estado').textContent = 
+                    orden.factura_info.estado_pago === 'PAGADA' ? 'Pagada' : 'Pendiente';
+            } else {
+                facturaInfo.style.display = 'none';
             }
         }
-        
-        switch (orden.estado) {
-            case 'EN_PROCESO':
-                const listos = orden.productos_listos_count || 0;
-                const total = (orden.productos || []).length;
-                return listos > 0 ? `🔄 En Preparación (${listos}/${total} listos)` : '⏳ En Preparación';
-            case 'LISTA':
-                return '🍽️ Lista para Servir';
-            case 'SERVIDA':
-                return '✅ Servida';
-            default:
-                return '⏳ En Preparación';
-        }
-    }
 
-    /**
-     * Renderizar producto individual
-     */
-    function renderizarProductoModificacion(producto) {
-        const sinStock = producto.stock <= 0;
-        const stockClass = sinStock ? 'sin-stock' : '';
-        const stockText = sinStock ? 'AGOTADO' : `Stock: ${producto.stock}`;
-        const stockTextClass = sinStock ? 'agotado' : '';
+        /**
+         * Llenar detalles expandibles
+         */
+        function llenarDetallesExpandibles(tarjeta, orden) {
+            const detalles = tarjeta.querySelector('.orden-detalles');
+            
+            // Información general
+            const infoGeneral = detalles.querySelector('.info-general');
+            infoGeneral.innerHTML = `
+                <p><strong>🆔 ID:</strong> ${orden.orden_id}</p>
+                <p><strong>👨‍🍳 Mesero:</strong> ${orden.mesero?.nombre || 'No asignado'}</p>
+                <p><strong>⏰ Tiempo:</strong> ${orden.tiempo_transcurrido || 'N/A'}</p>
+                <p><strong>📊 Estado:</strong> ${obtenerTextoEstado(orden)}</p>
+                ${orden.cliente_info ? `
+                    <p><strong>👤 Cliente:</strong> ${orden.cliente_info.nombre}</p>
+                    <p><strong>📞 Teléfono:</strong> ${orden.cliente_info.telefono}</p>
+                    ${orden.cliente_info.direccion ? `<p><strong>📍 Dirección:</strong> ${orden.cliente_info.direccion}</p>` : ''}
+                ` : ''}
+            `;
+            
+            // Lista de productos
+            const productosLista = detalles.querySelector('.productos-lista');
+            productosLista.innerHTML = '';
+            
+            if (orden.productos && orden.productos.length > 0) {
+                orden.productos.forEach(producto => {
+                    const productoDiv = document.createElement('div');
+                    productoDiv.className = `producto-detalle ${producto.estado.toLowerCase()}`;
+                    
+                    const iconoEstado = producto.estado === 'LISTO' ? '✅' : '⏳';
+                    const subtotal = producto.cantidad * producto.precio_unitario;
+                    
+                    productoDiv.innerHTML = `
+                        <div class="producto-info">
+                            <div class="producto-nombre">${producto.cantidad}x ${producto.nombre}</div>
+                            ${producto.observaciones ? `<div class="producto-observaciones">📝 ${producto.observaciones}</div>` : ''}
+                            <div style="font-size: 0.8em; color: #666;">Subtotal: ${subtotal.toLocaleString()}</div>
+                        </div>
+                        <div class="producto-estado-icon">${iconoEstado}</div>
+                    `;
+                    
+                    productosLista.appendChild(productoDiv);
+                });
+            } else {
+                productosLista.innerHTML = '<p style="color: #888; font-style: italic;">Sin productos</p>';
+            }
+            
+            // Observaciones
+            const observacionesContent = detalles.querySelector('.observaciones-content');
+            if (orden.observaciones) {
+                observacionesContent.innerHTML = `<p>${orden.observaciones}</p>`;
+            } else {
+                observacionesContent.innerHTML = '<p style="color: #888; font-style: italic;">Sin observaciones</p>';
+            }
+        }
+
+        /**
+         * Configurar botones de acción
+         */
+        function configurarBotonesAccion(tarjeta, orden) {
+            const container = tarjeta.querySelector('.orden-acciones');
+            container.innerHTML = '';
+            
+            // Botón modificar
+            if (puedeModificarOrden(orden)) {
+                const btnModificar = crearBotonAccion(
+                    'btn-modificar', 
+                    tieneFactura(orden) ? '✏️💰' : '✏️',
+                    tieneFactura(orden) ? 'Modificar + Factura' : 'Modificar Orden',
+                    () => abrirModalModificacion(orden)
+                );
+                container.appendChild(btnModificar);
+            }
+            
+            // Botón entregar
+            if (orden.puede_entregar) {
+                const btnEntregar = crearBotonAccion(
+                    'btn-entregar', 
+                    '🍽️',
+                    'Entregar',
+                    () => entregarOrden(orden.orden_id)
+                );
+                container.appendChild(btnEntregar);
+            }
+            
+            // Botón ver factura
+            if (orden.factura_info) {
+                const btnFactura = crearBotonAccion(
+                    'btn-ver-factura', 
+                    '🧾',
+                    'Ver Factura',
+                    () => abrirModalFactura(orden)
+                );
+                container.appendChild(btnFactura);
+            }
+        }
+
+        /**
+         * Crear botón de acción reutilizable
+         */
+        function crearBotonAccion(className, texto, titulo, callback) {
+            const btn = document.createElement('button');
+            btn.className = `btn-accion ${className}`;
+            btn.innerHTML = texto;
+            btn.title = titulo;
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                callback();
+            };
+            return btn;
+        }
+
+        /**
+         * Configurar event listeners de la tarjeta
+         */
+        function configurarEventListeners(tarjeta, orden) {
+            // Click en la tarjeta para expandir/contraer detalles
+            tarjeta.addEventListener('click', (e) => {
+                // No expandir si se hizo click en un botón
+                if (e.target.classList.contains('btn-accion')) {
+                    return;
+                }
+                
+                toggleDetallesOrden(tarjeta);
+            });
+        }
+
+        /**
+         * Alternar detalles de orden
+         */
+        function toggleDetallesOrden(tarjeta) {
+            const detalles = tarjeta.querySelector('.orden-detalles');
+            const isVisible = detalles.classList.contains('visible');
+            
+            // Cerrar todos los detalles abiertos
+            document.querySelectorAll('.orden-detalles.visible').forEach(d => {
+                d.classList.remove('visible');
+                d.parentElement.classList.remove('expandida');
+            });
+            
+            // Si no estaba visible, abrirlo
+            if (!isVisible) {
+                detalles.classList.add('visible');
+                tarjeta.classList.add('expandida');
+                
+                // Scroll suave para mostrar los detalles
+                setTimeout(() => {
+                    detalles.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'nearest' 
+                    });
+                }, 300);
+            }
+        }
+
+        // === FUNCIONES DE UTILIDAD ===
         
-        return `
-            <div class="producto-item-mod ${stockClass}" 
-                 data-producto-id="${producto.id}" 
-                 data-categoria="${producto.categoriaId}"
-                 data-precio="${producto.precio}"
-                 data-stock="${producto.stock}">
+        function determinarTipoOrden(orden) {
+            if (orden.factura_info) {
+                return orden.factura_info.estado_pago === 'PAGADA' ? 'factura-pagada' : 'factura-pendiente';
+            }
+            return 'orden-sin-factura';
+        }
+        
+        function determinarEstadoCSS(orden) {
+            if (orden.factura_info) {
+                return { clase: orden.factura_info.estado_pago === 'PAGADA' ? 'factura-pagada' : 'factura-pendiente' };
+            }
+            
+            const estados = {
+                'EN_PROCESO': 'en-proceso',
+                'LISTA': 'lista',
+                'SERVIDA': 'servida'
+            };
+            
+            return { clase: estados[orden.estado] || 'en-proceso' };
+        }
+        
+        function obtenerTextoEstado(orden) {
+            if (orden.factura_info) {
+                return orden.factura_info.estado_pago === 'PAGADA' ? 
+                    '✅ Facturada y Pagada' : '🧾 Factura Pendiente';
+            }
+            
+            const estados = {
+                'EN_PROCESO': orden.productos_listos_count > 0 ? 
+                    `🔄 Parcial (${orden.productos_listos_count}/${orden.productos.length})` : 
+                    '⏳ En Preparación',
+                'LISTA': '🍽️ Lista para Servir',
+                'SERVIDA': '✅ Servida'
+            };
+            
+            return estados[orden.estado] || '⏳ En Preparación';
+        }
+        
+        function puedeModificarOrden(orden) {
+            return orden.puede_modificar || (orden.estado !== 'SERVIDA' || orden.tiene_factura_pendiente);
+        }
+        
+        function tieneFactura(orden) {
+            return !!orden.factura_info;
+        }
+
+        // === FUNCIONES DE MODALES ===
+
+        /**
+         * Abrir modal de modificación
+         */
+        function abrirModalModificacion(orden) {
+            console.log('🔧 Abriendo modal de modificación para orden:', orden.orden_id);
+            
+            ordenSeleccionada = orden;
+            carritoModificacion = {};
+            
+            // Configurar título del modal
+            const titulo = document.getElementById('modificacion-titulo');
+            const tipoTexto = tieneFactura(orden) ? 
+                `Modificar Orden con Factura #${orden.factura_info?.numero || orden.factura_info?.id}` :
+                `Modificar Orden #${orden.orden_id}`;
+            titulo.textContent = tipoTexto;
+            
+            // Cargar productos disponibles
+            cargarProductosModificacion();
+            
+            // Cargar detalle completo de la orden
+            cargarDetalleOrdenCompleto(orden);
+            
+            // Mostrar modal
+            mostrarModal('modal-modificacion');
+        }
+
+        /**
+         * Cargar productos para modificación
+         */
+        function cargarProductosModificacion() {
+            const productosGrid = document.getElementById('productos-grid');
+            productosGrid.innerHTML = '';
+            
+            // Agrupar productos por categoría
+            const categorias = [...new Set(productosDisponibles.map(p => p.categoria))];
+            
+            productosDisponibles.forEach(producto => {
+                const productoCard = document.createElement('div');
+                productoCard.className = 'producto-card';
+                productoCard.dataset.productoId = producto.id;
+                productoCard.dataset.categoria = producto.categoria;
                 
-                <div class="producto-nombre-mod">${producto.nombre}</div>
-                <div class="producto-precio-mod">${producto.precio.toLocaleString()}</div>
-                <div class="stock-info-mod ${stockTextClass}">${stockText}</div>
+                const sinStock = producto.stock <= 0;
+                if (sinStock) {
+                    productoCard.style.opacity = '0.5';
+                    productoCard.style.pointerEvents = 'none';
+                }
                 
-                ${sinStock ? 
-                    '<div style="color: #cc0000; font-size: 0.8em; font-weight: 600;">❌ No Disponible</div>' :
-                    `<div class="quantity-controls-mod">
-                        <button class="qty-btn-mod" data-action="decrement">-</button>
-                        <span class="qty-value-mod">0</span>
-                        <button class="qty-btn-mod" data-action="increment">+</button>
+                productoCard.innerHTML = `
+                    <h6>${producto.nombre}</h6>
+                    <div style="color: var(--naranja-tostado); font-weight: 700; margin: 0.5rem 0;">
+                        ${producto.precio.toLocaleString()}
                     </div>
-                    <input type="text" class="obs-input-mod" placeholder="Observaciones..." maxlength="100">`
-                }
-            </div>
-        `;
-    }
-
-    /**
-     * Inicializar lógica del menú de modificación
-     */
-    function inicializarLogicaMenuModificacion(productos, orden) {
-        const carrito = {}; // { productoId: { cantidad, observaciones, precio, nombre } }
-        let stockVirtual = {}; // Control de stock en tiempo real
-        
-        // Inicializar stock virtual
-        productos.forEach(p => {
-            stockVirtual[p.id] = p.stock;
-        });
-        
-        // === EVENT LISTENERS ===
-        
-        // Filtros de categoría
-        document.querySelectorAll('.categoria-btn-mod').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.categoria-btn-mod').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+                    <div style="font-size: 0.8em; color: #666; margin-bottom: 1rem;">
+                        Stock: ${sinStock ? 'AGOTADO' : producto.stock}
+                    </div>
+                    ${!sinStock ? `
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <button onclick="cambiarCantidadProducto(${producto.id}, -1)" style="width: 30px; height: 30px; border: 1px solid #ddd; background: white; border-radius: 50%; cursor: pointer;">-</button>
+                            <span id="qty-${producto.id}" style="min-width: 30px; text-align: center; font-weight: 600;">0</span>
+                            <button onclick="cambiarCantidadProducto(${producto.id}, 1)" style="width: 30px; height: 30px; border: 1px solid #ddd; background: white; border-radius: 50%; cursor: pointer;">+</button>
+                        </div>
+                        <input type="text" id="obs-${producto.id}" placeholder="Observaciones..." style="width: 100%; padding: 0.25rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8em;" maxlength="100">
+                    ` : '<div style="color: #cc0000; font-weight: 600;">❌ No Disponible</div>'}
+                `;
                 
-                const categoria = btn.dataset.categoria;
-                filtrarProductosPorCategoria(categoria);
+                productosGrid.appendChild(productoCard);
             });
-        });
-        
-        // Controles de cantidad
-        document.getElementById('productos-grid-modificacion').addEventListener('click', (e) => {
-            if (e.target.classList.contains('qty-btn-mod')) {
-                const productoItem = e.target.closest('.producto-item-mod');
-                const productoId = productoItem.dataset.productoId;
-                const accion = e.target.dataset.action;
-                
-                manejarCambioCantidadModificacion(productoId, accion, carrito, stockVirtual, productos);
-            }
-        });
-        
-        // Observaciones
-        document.getElementById('productos-grid-modificacion').addEventListener('input', (e) => {
-            if (e.target.classList.contains('obs-input-mod')) {
-                const productoItem = e.target.closest('.producto-item-mod');
-                const productoId = productoItem.dataset.productoId;
-                
-                if (carrito[productoId]) {
-                    carrito[productoId].observaciones = e.target.value;
-                    actualizarCarritoModificacion(carrito);
-                }
-            }
-        });
-        
-        // Botón confirmar
-        document.getElementById('btn-confirmar-modificacion').addEventListener('click', () => {
-            confirmarModificacion(carrito, orden);
-        });
-        
-        // === FUNCIONES INTERNAS ===
-        
+            
+            // Configurar filtros de categorías
+            configurarFiltrosCategorias();
+        }
+
+        /**
+         * Configurar filtros de categorías
+         */
+        function configurarFiltrosCategorias() {
+            document.querySelectorAll('.categoria-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Remover active de todos
+                    document.querySelectorAll('.categoria-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    const categoria = btn.dataset.categoria;
+                    filtrarProductosPorCategoria(categoria);
+                });
+            });
+        }
+
+        /**
+         * Filtrar productos por categoría
+         */
         function filtrarProductosPorCategoria(categoria) {
-            document.querySelectorAll('.producto-item-mod').forEach(item => {
-                const itemCategoria = item.dataset.categoria;
-                if (categoria === 'all' || itemCategoria === categoria) {
-                    item.style.display = 'block';
+            document.querySelectorAll('.producto-card').forEach(card => {
+                const cardCategoria = card.dataset.categoria;
+                if (categoria === 'all' || cardCategoria === categoria) {
+                    card.style.display = 'block';
                 } else {
-                    item.style.display = 'none';
+                    card.style.display = 'none';
                 }
             });
         }
-        
-        function manejarCambioCantidadModificacion(productoId, accion, carrito, stockVirtual, productos) {
-            const producto = productos.find(p => p.id === productoId);
+
+        /**
+         * Cambiar cantidad de producto en el carrito
+         */
+        function cambiarCantidadProducto(productoId, cambio) {
+            const producto = productosDisponibles.find(p => p.id === productoId);
             if (!producto) return;
             
-            const stockDisponible = stockVirtual[productoId];
-            let cantidadActual = carrito[productoId] ? carrito[productoId].cantidad : 0;
+            let cantidadActual = carritoModificacion[productoId] ? carritoModificacion[productoId].cantidad : 0;
+            const nuevaCantidad = Math.max(0, cantidadActual + cambio);
             
-            if (accion === 'increment' && stockDisponible > 0) {
-                cantidadActual++;
-                stockVirtual[productoId]--;
-            } else if (accion === 'decrement' && cantidadActual > 0) {
-                cantidadActual--;
-                stockVirtual[productoId]++;
-            } else {
-                if (accion === 'increment' && stockDisponible <= 0) {
-                    window.mostrarNotificacion('❌ No hay stock suficiente', 'error');
-                }
+            // Verificar stock
+            if (cambio > 0 && nuevaCantidad > producto.stock) {
+                alert('❌ No hay stock suficiente');
                 return;
             }
             
             // Actualizar carrito
-            if (cantidadActual > 0) {
-                if (!carrito[productoId]) {
-                    carrito[productoId] = {
+            if (nuevaCantidad > 0) {
+                if (!carritoModificacion[productoId]) {
+                    carritoModificacion[productoId] = {
                         id: productoId,
                         nombre: producto.nombre,
                         precio: producto.precio,
                         observaciones: ''
                     };
                 }
-                carrito[productoId].cantidad = cantidadActual;
+                carritoModificacion[productoId].cantidad = nuevaCantidad;
             } else {
-                delete carrito[productoId];
+                delete carritoModificacion[productoId];
             }
             
             // Actualizar UI
-            const productoItem = document.querySelector(`[data-producto-id="${productoId}"]`);
-            const qtyDisplay = productoItem.querySelector('.qty-value-mod');
-            const stockInfo = productoItem.querySelector('.stock-info-mod');
+            document.getElementById(`qty-${productoId}`).textContent = nuevaCantidad;
+            actualizarCarritoUI();
             
-            if (qtyDisplay) qtyDisplay.textContent = cantidadActual;
-            if (stockInfo && !productoItem.classList.contains('sin-stock')) {
-                stockInfo.textContent = `Stock: ${stockVirtual[productoId]}`;
-                if (stockVirtual[productoId] <= 0) {
-                    stockInfo.textContent = 'TEMPORALMENTE AGOTADO';
-                    stockInfo.classList.add('agotado');
+            // Marcar producto como seleccionado
+            const card = document.querySelector(`[data-producto-id="${productoId}"]`);
+            if (card) {
+                if (nuevaCantidad > 0) {
+                    card.classList.add('selected');
                 } else {
-                    stockInfo.classList.remove('agotado');
+                    card.classList.remove('selected');
                 }
             }
-            
-            actualizarCarritoModificacion(carrito);
         }
-        
-        function actualizarCarritoModificacion(carrito) {
-            const container = document.getElementById('carrito-items-mod');
+
+        /**
+         * Actualizar UI del carrito
+         */
+        function actualizarCarritoUI() {
+            const carritoItems = document.getElementById('carrito-items');
             const totalEl = document.getElementById('total-modificacion');
             const btnConfirmar = document.getElementById('btn-confirmar-modificacion');
             
-            const items = Object.values(carrito);
+            const items = Object.values(carritoModificacion);
             let total = 0;
             
             if (items.length === 0) {
-                container.innerHTML = '<p style="color: #888; text-align: center; font-style: italic;">Selecciona productos del menú</p>';
+                carritoItems.innerHTML = '<p style="color: #888; text-align: center; font-style: italic;">Selecciona productos del menú</p>';
                 btnConfirmar.disabled = true;
             } else {
-                container.innerHTML = items.map(item => {
+                carritoItems.innerHTML = items.map(item => {
                     const subtotal = item.cantidad * item.precio;
                     total += subtotal;
                     
+                    // Obtener observaciones del input
+                    const obsInput = document.getElementById(`obs-${item.id}`);
+                    if (obsInput) {
+                        item.observaciones = obsInput.value;
+                    }
+                    
                     return `
-                        <div class="carrito-item-mod">
+                        <div class="carrito-item">
                             <div>
                                 <strong>${item.cantidad}x ${item.nombre}</strong>
                                 ${item.observaciones ? `<div style="font-size: 0.8em; color: #666;">📝 ${item.observaciones}</div>` : ''}
@@ -2003,12 +2470,299 @@ window.inicializar_modificar_orden = function() {
             
             totalEl.textContent = total.toLocaleString();
         }
-        
-        async function confirmarModificacion(carrito, orden) {
-            const items = Object.values(carrito);
+
+        /**
+         * Cargar detalle completo de la orden
+         */
+        function cargarDetalleOrdenCompleto(orden) {
+            const container = document.getElementById('orden-detalle-completo');
+            
+            // Información básica de la orden
+            const mesaTexto = orden.es_domicilio ? '🏠 Domicilio' : 
+                             orden.es_reserva ? '📅 Reserva' : 
+                             `🍽️ Mesa #${orden.mesa.numero}`;
+            
+            const estadoTexto = obtenerTextoEstado(orden);
+            
+            // Información de cliente si es domicilio o reserva
+            let infoCliente = '';
+            if (orden.cliente_info && (orden.es_domicilio || orden.es_reserva)) {
+                infoCliente = `
+                    <div style="background: rgba(23, 162, 184, 0.05); border-left: 4px solid #17a2b8; padding: 1rem; margin: 1rem 0; border-radius: 8px;">
+                        <h5 style="margin: 0 0 0.75rem 0; color: #17a2b8;">
+                            ${orden.es_domicilio ? '🚚 Información del Domicilio' : '📅 Información de la Reserva'}
+                        </h5>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem; font-size: 0.9em;">
+                            <div><strong>👤 Cliente:</strong> ${orden.cliente_info.nombre || 'No especificado'}</div>
+                            <div><strong>📞 Teléfono:</strong> ${orden.cliente_info.telefono || 'No especificado'}</div>
+                            ${orden.cliente_info.direccion ? `<div style="grid-column: 1 / -1;"><strong>📍 Dirección:</strong> ${orden.cliente_info.direccion}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Información de factura si existe
+            let infoFactura = '';
+            if (orden.factura_info) {
+                const estadoPago = orden.factura_info.estado_pago;
+                const colorFactura = estadoPago === 'PAGADA' ? '#28a745' : '#dc3545';
+                const iconoFactura = estadoPago === 'PAGADA' ? '✅' : '⚠️';
+                
+                infoFactura = `
+                    <div style="background: rgba(${estadoPago === 'PAGADA' ? '40, 167, 69' : '220, 53, 69'}, 0.05); border-left: 4px solid ${colorFactura}; padding: 1rem; margin: 1rem 0; border-radius: 8px;">
+                        <h5 style="margin: 0 0 0.75rem 0; color: ${colorFactura};">${iconoFactura} Información de Factura</h5>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem; font-size: 0.9em;">
+                            <div><strong>🧾 Número:</strong> ${orden.factura_info.numero || `FAC-${orden.factura_info.id}`}</div>
+                            <div><strong>💰 Total:</strong> ${(orden.factura_info.total || 0).toLocaleString()}</div>
+                            <div><strong>📊 Estado:</strong> ${estadoPago === 'PAGADA' ? 'Pagada' : 'Pendiente de Pago'}</div>
+                            ${orden.factura_info.metodo_pago ? `<div><strong>💳 Método:</strong> ${orden.factura_info.metodo_pago}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Productos de la orden
+            const productosHTML = renderizarProductosDetalle(orden.productos || []);
+            
+            container.innerHTML = `
+                <div style="margin-top: 2rem; background: white; border: 1px solid #dee2e6; border-radius: 12px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, #17a2b8, #138496); color: white; padding: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+                            <div>
+                                <h4 style="margin: 0 0 0.5rem 0; font-size: 1.3em;">📋 Orden #${orden.orden_id}</h4>
+                                <div style="display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.9em; opacity: 0.95;">
+                                    <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 12px;">${mesaTexto}</span>
+                                    <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 12px;">${estadoTexto}</span>
+                                    <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 12px;">⏱️ ${orden.tiempo_transcurrido}</span>
+                                    <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 12px;">👨‍🍳 ${orden.mesero?.nombre || 'No asignado'}</span>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 1.2em; font-weight: 700; margin-bottom: 0.25rem;">💰 Total Actual: ${(orden.total || 0).toLocaleString()}</div>
+                                <div style="font-size: 0.9em; opacity: 0.9;">${(orden.productos || []).length} productos</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${infoCliente}
+                    ${infoFactura}
+                    
+                    <div style="padding: 1.5rem;">
+                        <h5 style="margin: 0 0 1rem 0; color: var(--carbon-suave); border-bottom: 2px solid var(--gris-piedra); padding-bottom: 0.5rem;">🍽️ Productos de la Orden (${(orden.productos || []).length})</h5>
+                        ${productosHTML}
+                    </div>
+                    
+                    ${orden.observaciones ? `
+                        <div style="padding: 1rem 1.5rem; background: rgba(255, 193, 7, 0.1); border-top: 1px solid #eee;">
+                            <h5 style="margin: 0 0 0.5rem 0; color: #856404;">📝 Observaciones de la Orden</h5>
+                            <div style="background: white; padding: 0.75rem; border-radius: 4px; border-left: 3px solid #ffc107; font-style: italic;">${orden.observaciones}</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        /**
+         * Renderizar productos con detalle
+         */
+        function renderizarProductosDetalle(productos) {
+            if (!productos || productos.length === 0) {
+                return '<div style="text-align: center; padding: 2rem; color: #666; font-style: italic; background: #f8f9fa; border-radius: 6px;">😕 No hay productos en esta orden</div>';
+            }
+            
+            let html = '<div style="display: flex; flex-direction: column; gap: 0.5rem;">';
+            
+            productos.forEach(producto => {
+                const estadoClass = producto.estado === 'LISTO' ? 'producto-listo' : 'producto-pendiente';
+                const iconoEstado = producto.estado === 'LISTO' ? '✅' : '⏳';
+                const subtotal = producto.cantidad * producto.precio_unitario;
+                
+                const bgColor = producto.estado === 'LISTO' ? '#f8fff8' : '#fafafa';
+                const borderColor = producto.estado === 'LISTO' ? '#d4edda' : '#eee';
+                
+                html += `
+                    <div style="padding: 0.75rem; border: 1px solid ${borderColor}; border-radius: 6px; background: ${bgColor};">
+                        <div style="display: flex; align-items: center; gap: 0.75rem; font-weight: 600;">
+                            <span style="font-size: 1.1em;">${iconoEstado}</span>
+                            <span style="flex: 1;">${producto.cantidad}x ${producto.nombre}</span>
+                            <span style="color: #666; font-size: 0.9em;">${(producto.precio_unitario || 0).toLocaleString()} c/u</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85em; color: #666; margin-top: 0.25rem;">
+                            <span>Subtotal: ${subtotal.toLocaleString()}</span>
+                        </div>
+                        ${producto.observaciones ? `<div style="font-size: 0.85em; color: var(--naranja-tostado); font-style: italic; padding: 0.25rem 0.5rem; background: rgba(232, 119, 46, 0.1); border-radius: 4px; margin-top: 0.25rem;">📝 ${producto.observaciones}</div>` : ''}
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            
+            // Resumen de estados
+            const productosListos = productos.filter(p => p.estado === 'LISTO').length;
+            const productosPendientes = productos.filter(p => p.estado === 'PENDIENTE').length;
+            
+            html += `
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #eee;">
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                        <div style="text-align: center; padding: 0.75rem; border-radius: 6px; background: #d4edda; color: #155724;">
+                            <span style="display: block; font-size: 1.5em; font-weight: 700; margin-bottom: 0.25rem;">${productosListos}</span>
+                            <span style="font-size: 0.85em; font-weight: 600;">✅ Listos</span>
+                        </div>
+                        <div style="text-align: center; padding: 0.75rem; border-radius: 6px; background: #fff3cd; color: #856404;">
+                            <span style="display: block; font-size: 1.5em; font-weight: 700; margin-bottom: 0.25rem;">${productosPendientes}</span>
+                            <span style="font-size: 0.85em; font-weight: 600;">⏳ Pendientes</span>
+                        </div>
+                        <div style="text-align: center; padding: 0.75rem; border-radius: 6px; background: #d1ecf1; color: #0c5460;">
+                            <span style="display: block; font-size: 1.5em; font-weight: 700; margin-bottom: 0.25rem;">${productos.length}</span>
+                            <span style="font-size: 0.85em; font-weight: 600;">📦 Total</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return html;
+        }
+
+        /**
+         * Abrir modal de factura
+         */
+        function abrirModalFactura(orden) {
+            console.log('🧾 Abriendo modal de factura para orden:', orden.orden_id);
+            
+            const titulo = document.getElementById('factura-titulo');
+            titulo.textContent = `Factura #${orden.factura_info.numero || orden.factura_info.id}`;
+            
+            cargarContenidoFactura(orden);
+            mostrarModal('modal-factura');
+        }
+
+        /**
+         * Cargar contenido de factura
+         */
+        function cargarContenidoFactura(orden) {
+            const container = document.getElementById('factura-content');
+            const factura = orden.factura_info;
+            
+            const estadoPago = factura.estado_pago;
+            const colorEstado = estadoPago === 'PAGADA' ? '#28a745' : '#dc3545';
+            const iconoEstado = estadoPago === 'PAGADA' ? '✅' : '⚠️';
+            
+            // Calcular totales
+            const subtotal = orden.productos.reduce((sum, p) => sum + (p.cantidad * p.precio_unitario), 0);
+            const iva = Math.round(subtotal * 0.19);
+            const total = subtotal + iva;
+            
+            container.innerHTML = `
+                <div class="factura-header" style="background: linear-gradient(135deg, ${colorEstado}, ${estadoPago === 'PAGADA' ? '#1e7e34' : '#bd2130'});">
+                    <div class="factura-numero">${factura.numero || `FAC-${factura.id}`}</div>
+                    <div class="factura-fecha">📅 Fecha: ${factura.fecha || new Date().toLocaleDateString()}</div>
+                    <div style="margin-top: 1rem; font-size: 1.2em;">${iconoEstado} ${estadoPago === 'PAGADA' ? 'PAGADA' : 'PENDIENTE DE PAGO'}</div>
+                </div>
+                
+                <div class="factura-detalle">
+                    <h5 style="margin: 0 0 1rem 0;">📋 Información de la Orden</h5>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <div><strong>🆔 Orden:</strong> #${orden.orden_id}</div>
+                        <div><strong>🍽️ Mesa:</strong> ${orden.es_domicilio ? '🏠 Domicilio' : orden.es_reserva ? '📅 Reserva' : `Mesa ${orden.mesa.numero}`}</div>
+                        <div><strong>👨‍🍳 Mesero:</strong> ${orden.mesero?.nombre || 'No asignado'}</div>
+                        <div><strong>⏰ Tiempo:</strong> ${orden.tiempo_transcurrido || 'N/A'}</div>
+                    </div>
+                    
+                    ${orden.cliente_info ? `
+                        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dee2e6;">
+                            <h6 style="margin: 0 0 0.5rem 0;">👤 Información del Cliente</h6>
+                            <div><strong>Nombre:</strong> ${orden.cliente_info.nombre}</div>
+                            <div><strong>Teléfono:</strong> ${orden.cliente_info.telefono}</div>
+                            ${orden.cliente_info.direccion ? `<div><strong>Dirección:</strong> ${orden.cliente_info.direccion}</div>` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div class="factura-productos">
+                    <h5 style="margin: 0 0 1rem 0; border-bottom: 2px solid #dee2e6; padding-bottom: 0.5rem;">🍽️ Productos Facturados</h5>
+                    ${orden.productos.map(producto => {
+                        const subtotalProducto = producto.cantidad * producto.precio_unitario;
+                        return `
+                            <div class="factura-producto">
+                                <div>
+                                    <strong>${producto.cantidad}x ${producto.nombre}</strong>
+                                    ${producto.observaciones ? `<div style="font-size: 0.85em; color: #666; font-style: italic;">📝 ${producto.observaciones}</div>` : ''}
+                                    <div style="font-size: 0.85em; color: #666;">${producto.precio_unitario.toLocaleString()} c/u</div>
+                                </div>
+                                <div style="font-weight: 600;">${subtotalProducto.toLocaleString()}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                
+                <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span>Subtotal:</span>
+                        <span>${subtotal.toLocaleString()}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span>IVA (19%):</span>
+                        <span>${iva.toLocaleString()}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.1em; padding-top: 0.5rem; border-top: 1px solid #dee2e6;">
+                        <span>TOTAL:</span>
+                        <span>${total.toLocaleString()}</span>
+                    </div>
+                </div>
+                
+                ${factura.metodo_pago ? `
+                    <div style="text-align: center; padding: 1rem; background: #d4edda; border-radius: 8px; color: #155724;">
+                        <strong>💳 Método de Pago:</strong> ${factura.metodo_pago}
+                    </div>
+                ` : ''}
+                
+                <div style="text-align: center; margin-top: 2rem;">
+                    <button onclick="imprimirFactura()" style="background: var(--azul-info); color: white; border: none; padding: 1rem 2rem; border-radius: 8px; font-weight: 600; cursor: pointer; margin-right: 1rem;">
+                        🖨️ Imprimir Factura
+                    </button>
+                    ${estadoPago !== 'PAGADA' ? `
+                        <button onclick="marcarComoPagada(${orden.orden_id})" style="background: var(--verde-listo); color: white; border: none; padding: 1rem 2rem; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                            💰 Marcar como Pagada
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // === FUNCIONES DE MODAL ===
+
+        /**
+         * Mostrar modal
+         */
+        function mostrarModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.add('visible');
+            document.body.style.overflow = 'hidden';
+        }
+
+        /**
+         * Cerrar modal
+         */
+        function cerrarModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('visible');
+            document.body.style.overflow = 'auto';
+            
+            // Limpiar datos si es modal de modificación
+            if (modalId === 'modal-modificacion') {
+                carritoModificacion = {};
+                ordenSeleccionada = null;
+            }
+        }
+
+        /**
+         * Confirmar modificación de orden
+         */
+        async function confirmarModificacion() {
+            const items = Object.values(carritoModificacion);
             if (items.length === 0) return;
             
-            const tieneFactura = !!orden.factura_info;
+            const tieneFactura = !!ordenSeleccionada.factura_info;
             const mensaje = tieneFactura ? 
                 `¿Agregar ${items.length} productos a la orden con factura?\nSe actualizará el total de la factura.` :
                 `¿Agregar ${items.length} productos a la orden?`;
@@ -2026,11 +2780,12 @@ window.inicializar_modificar_orden = function() {
                     observaciones: item.observaciones || ''
                 }));
                 
-                const response = await fetch(`/api/orden/${orden.orden_id}/agregar-productos/`, {
+                const url = `/api/orden/${ordenSeleccionada.orden_id}/agregar-productos/`;
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': window.csrfToken
+                        'X-CSRFToken': getCsrfToken()
                     },
                     body: JSON.stringify({
                         productos: productosParaAgregar,
@@ -2044,195 +2799,799 @@ window.inicializar_modificar_orden = function() {
                     throw new Error(result.error || 'Error en el servidor');
                 }
                 
-                window.mostrarNotificacion(`✅ ${result.mensaje}`, 'success');
+                alert(`✅ ${result.mensaje || 'Productos agregados exitosamente'}`);
                 
-                // Cerrar panel y recargar
-                cerrarPanelModificacion();
-                cargarOrdenesModificar();
+                // Cerrar modal y recargar
+                cerrarModal('modal-modificacion');
+                cargarOrdenes();
                 
             } catch (error) {
                 console.error('❌ Error:', error);
-                window.mostrarNotificacion(`❌ Error: ${error.message}`, 'error');
+                alert(`❌ Error: ${error.message}`);
             } finally {
                 btnConfirmar.disabled = false;
                 btnConfirmar.textContent = 'Agregar a la Orden';
             }
         }
-    }
 
-    /**
-     * Entregar orden
-     */
-    async function entregarOrden(ordenId) {
-        if (!confirm('¿Confirmas que esta orden ha sido entregada?\nSe generará una factura pendiente.')) {
-            return;
-        }
-        
-        try {
-            const response = await fetch(`/api/mesero/orden/${ordenId}/entregar/`, {
-                method: 'POST',
-                headers: { 'X-CSRFToken': window.csrfToken }
-            });
-            
-            const result = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(result.error);
+        // === FUNCIONES DE ACCIÓN ===
+
+        /**
+         * Entregar orden
+         */
+        async function entregarOrden(ordenId) {
+            if (!confirm('¿Confirmas que esta orden ha sido entregada?\nSe generará una factura pendiente.')) {
+                return;
             }
             
-            window.mostrarNotificacion(`✅ Orden #${ordenId} entregada exitosamente.`, 'success');
-            
-            // Recargar órdenes
-            cargarOrdenesModificar();
-            
-        } catch (error) {
-            console.error('❌ Error entregando orden:', error);
-            window.mostrarNotificacion(`❌ Error: ${error.message}`, 'error');
-        }
-    }
-    
-    /**
-     * Ver factura
-     */
-    function verFactura(ordenId) {
-        console.log('🧾 Ver factura para orden:', ordenId);
-        // Implementar modal de factura o redirección
-        window.mostrarNotificacion('🧾 Función de ver factura en desarrollo', 'info');
-    }
-    
-    // === MANEJO DE FILTROS ===
-    
-    /**
-     * Actualizar filtros de estado según el tipo seleccionado
-     */
-    function actualizarFiltrosEstado(tipo) {
-        const estadosContainer = document.getElementById('estados-botones');
-        const estadosLabel = document.getElementById('estados-label');
-        
-        // Limpiar filtro de estado actual
-        filtrosActivos.estado = null;
-        
-        // Configurar según el tipo
-        if (tipo === 'facturas') {
-            estadosLabel.textContent = 'Estado de Pago:';
-            estadosContainer.innerHTML = `
-                <button class="filtro-btn" data-estado="NO_PAGADA">❌ No Pagada</button>
-                <button class="filtro-btn" data-estado="PAGADA">✅ Pagada</button>
-            `;
-        } else if (tipo === 'ordenes') {
-            estadosLabel.textContent = 'Estado de Orden:';
-            estadosContainer.innerHTML = `
-                <button class="filtro-btn" data-estado="EN_PROCESO">⏳ En Preparación</button>
-                <button class="filtro-btn" data-estado="LISTA">🍽️ Lista para Servir</button>
-                <button class="filtro-btn" data-estado="SERVIDA">✅ Servida</button>
-            `;
-        } else {
-            // Para "todos", mostrar ambos tipos de estado
-            estadosLabel.textContent = 'Estado:';
-            estadosContainer.innerHTML = `
-                <button class="filtro-btn" data-estado="EN_PROCESO">⏳ En Preparación</button>
-                <button class="filtro-btn" data-estado="LISTA">🍽️ Lista para Servir</button>
-                <button class="filtro-btn" data-estado="SERVIDA">✅ Servida</button>
-                <button class="filtro-btn" data-estado="NO_PAGADA">🧾 Factura Pendiente</button>
-                <button class="filtro-btn" data-estado="PAGADA">💰 Factura Pagada</button>
-            `;
-        }
-        
-        // Reconfigurar event listeners para los nuevos botones
-        configurarFiltrosEstado();
-    }
-    
-    /**
-     * Configurar event listeners para filtros de estado
-     */
-    function configurarFiltrosEstado() {
-        document.querySelectorAll('#estados-botones [data-estado]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                // Toggle del filtro
-                if (btn.classList.contains('active')) {
-                    btn.classList.remove('active');
-                    filtrosActivos.estado = null;
-                } else {
-                    document.querySelectorAll('#estados-botones [data-estado]').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    filtrosActivos.estado = btn.dataset.estado;
+            try {
+                const response = await fetch(`/api/mesero/orden/${ordenId}/entregar/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Error en el servidor');
                 }
                 
-                console.log('🔍 Filtro de estado actualizado:', filtrosActivos.estado);
-                aplicarFiltrosYRenderizar();
+                alert(`✅ Orden #${ordenId} entregada exitosamente`);
+                cargarOrdenes();
+                
+            } catch (error) {
+                console.error('❌ Error entregando orden:', error);
+                alert(`❌ Error: ${error.message}`);
+            }
+        }
+
+        /**
+         * Imprimir factura
+         */
+        function imprimirFactura() {
+            alert('🖨️ Función de impresión en desarrollo');
+        }
+
+        /**
+         * Marcar factura como pagada
+         */
+        async function marcarComoPagada(ordenId) {
+            if (!confirm('¿Confirmas que esta factura ha sido pagada?')) {
+                return;
+            }
+            
+            try {
+                // Esta funcionalidad requiere implementación en el backend
+                console.log('💰 Marcando factura como pagada para orden:', ordenId);
+                alert('✅ Funcionalidad en desarrollo - implementar endpoint de pago');
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                alert(`❌ Error: ${error.message}`);
+            }
+        }
+
+        // === MANEJO DE FILTROS ===
+
+        /**
+         * Actualizar filtros de estado según el tipo seleccionado
+         */
+        function actualizarFiltrosEstado(tipo) {
+            const estadosContainer = document.getElementById('estados-botones');
+            const estadosLabel = document.getElementById('estados-label');
+            
+            filtrosActivos.estado = null;
+            
+            const filtrosConfig = {
+                'facturas': {
+                    label: 'Estado de Pago:',
+                    botones: [
+                        { estado: 'NO_PAGADA', texto: '❌ No Pagada' },
+                        { estado: 'PAGADA', texto: '✅ Pagada' }
+                    ]
+                },
+                'ordenes': {
+                    label: 'Estado de Orden:',
+                    botones: [
+                        { estado: 'EN_PROCESO', texto: '⏳ En Preparación' },
+                        { estado: 'LISTA', texto: '🍽️ Lista para Servir' },
+                        { estado: 'SERVIDA', texto: '✅ Servida' }
+                    ]
+                },
+                'todos': {
+                    label: 'Estado:',
+                    botones: [
+                        { estado: 'EN_PROCESO', texto: '⏳ En Preparación' },
+                        { estado: 'LISTA', texto: '🍽️ Lista para Servir' },
+                        { estado: 'SERVIDA', texto: '✅ Servida' },
+                        { estado: 'NO_PAGADA', texto: '🧾 Factura Pendiente' },
+                        { estado: 'PAGADA', texto: '💰 Factura Pagada' }
+                    ]
+                }
+            };
+            
+            const config = filtrosConfig[tipo] || filtrosConfig['todos'];
+            estadosLabel.textContent = config.label;
+            
+            estadosContainer.innerHTML = config.botones.map(btn => 
+                `<button class="filtro-btn" data-estado="${btn.estado}">${btn.texto}</button>`
+            ).join('');
+            
+            configurarFiltrosEstado();
+        }
+
+        /**
+         * Configurar event listeners para filtros de estado
+         */
+        function configurarFiltrosEstado() {
+            document.querySelectorAll('#estados-botones [data-estado]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (btn.classList.contains('active')) {
+                        btn.classList.remove('active');
+                        filtrosActivos.estado = null;
+                    } else {
+                        document.querySelectorAll('#estados-botones [data-estado]').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        filtrosActivos.estado = btn.dataset.estado;
+                    }
+                    
+                    console.log('🔍 Filtro de estado actualizado:', filtrosActivos.estado);
+                    aplicarFiltrosYRenderizar();
+                });
+            });
+        }
+
+        /**
+         * Configurar event listeners para filtros
+         */
+        function configurarFiltros() {
+            document.querySelectorAll('[data-tipo]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('[data-tipo]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    const nuevoTipo = btn.dataset.tipo;
+                    filtrosActivos.tipo = nuevoTipo;
+                    
+                    console.log('🔍 Filtro de tipo actualizado:', nuevoTipo);
+                    actualizarFiltrosEstado(nuevoTipo);
+                    aplicarFiltrosYRenderizar();
+                });
+            });
+            
+            configurarFiltrosEstado();
+        }
+
+        // === EVENT LISTENERS GLOBALES ===
+
+        /**
+         * Cerrar modales con ESC
+         */
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modalesAbiertos = document.querySelectorAll('.modal-overlay.visible');
+                modalesAbiertos.forEach(modal => {
+                    modal.classList.remove('visible');
+                });
+                document.body.style.overflow = 'auto';
+            }
+        });
+
+        /**
+         * Cerrar modales clickeando fuera
+         */
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('visible');
+                    document.body.style.overflow = 'auto';
+                }
             });
         });
+
+        /**
+         * Actualizar observaciones en tiempo real
+         */
+        document.addEventListener('input', (e) => {
+            if (e.target.id && e.target.id.startsWith('obs-')) {
+                const productoId = e.target.id.replace('obs-', '');
+                if (carritoModificacion[productoId]) {
+                    carritoModificacion[productoId].observaciones = e.target.value;
+                    actualizarCarritoUI();
+                }
+            }
+        });
+
+        /**
+         * Configurar botón de confirmar modificación
+         */
+        document.getElementById('btn-confirmar-modificacion').addEventListener('click', confirmarModificacion);
+
+        // === INICIALIZACIÓN ===
+
+        /**
+         * Inicializar aplicación
+         */
+        function inicializarApp() {
+            console.log('🚀 Inicializando sistema de modificar órdenes...');
+            
+            // Configurar filtros
+            configurarFiltros();
+            
+            // Cargar órdenes iniciales
+            cargarOrdenes();
+            
+            // Auto-actualización cada 30 segundos
+            intervalId = setInterval(cargarOrdenes, 30000);
+            
+            console.log('✅ Sistema inicializado correctamente');
+        }
+
+        // === AUTO-INICIALIZACIÓN ===
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', inicializarApp);
+        } else {
+            inicializarApp();
+        }
+
+        // === FUNCIONES GLOBALES EXPUESTAS ===
+        window.cargarOrdenes = cargarOrdenes;
+        window.cerrarModal = cerrarModal;
+        window.cambiarCantidadProducto = cambiarCantidadProducto;
+        window.confirmarModificacion = confirmarModificacion;
+        window.imprimirFactura = imprimirFactura;
+        window.marcarComoPagada = marcarComoPagada;
+
+        console.log('📝 Script de modificar órdenes conectado al backend');
+    </script>
+
+<script>
+    // === AGREGAR ESTAS VARIABLES GLOBALES AL INICIO ===
+let paginacionData = {
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    pageSize: 20,
+    hasNext: false,
+    hasPrevious: false
+};
+
+let busquedaActual = '';
+let timeoutBusqueda = null;
+
+// === MODIFICAR LA FUNCIÓN cargarOrdenes EXISTENTE ===
+async function cargarOrdenes(page = 1, mantenerFiltros = true) {
+    const container = document.getElementById('ordenes-container');
+    const header = container.querySelector('.ordenes-table-header');
+    
+    // Mostrar loading solo si es página nueva
+    if (page === 1) {
+        container.innerHTML = '';
+        if (header) container.appendChild(header);
+        
+        const loading = document.createElement('div');
+        loading.className = 'loading';
+        loading.textContent = 'Cargando órdenes disponibles...';
+        container.appendChild(loading);
     }
     
-    /**
-     * Configurar event listeners para filtros
-     */
-    function configurarFiltros() {
-        // Filtros de tipo
-        document.querySelectorAll('[data-tipo]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                // Actualizar estado activo
-                document.querySelectorAll('[data-tipo]').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                const nuevoTipo = btn.dataset.tipo;
-                filtrosActivos.tipo = nuevoTipo;
-                
-                console.log('🔍 Filtro de tipo actualizado:', nuevoTipo);
-                
-                // Actualizar filtros de estado según el tipo
-                actualizarFiltrosEstado(nuevoTipo);
-                
-                // Aplicar filtros
-                aplicarFiltrosYRenderizar();
-            });
+    try {
+        // Construir URL con parámetros
+        const params = new URLSearchParams({
+            page: page,
+            page_size: paginacionData.pageSize,
+            filtro: filtrosActivos.tipo || 'todas'
         });
         
-        // Configurar filtros de estado iniciales
-        configurarFiltrosEstado();
-    }
-    
-    // === INICIALIZACIÓN ===
-    
-    // Configurar filtros
-    configurarFiltros();
-    
-    // Cargar órdenes iniciales
-    cargarOrdenesModificar();
-    
-    // Auto-actualización cada 30 segundos
-    const intervalId = setInterval(cargarOrdenesModificar, 30000);
-    
-    console.log('✅ Modificar orden inicializado correctamente');
-    
-    // === CLEANUP ===
-    return function cleanup() {
-        console.log('🧹 Limpiando modificar orden');
-        
-        if (intervalId) {
-            clearInterval(intervalId);
+        if (busquedaActual) {
+            params.append('search', busquedaActual);
         }
         
-        cerrarPanelModificacion();
+        if (filtrosActivos.estado) {
+            params.append('estado', filtrosActivos.estado);
+        }
         
-        // Limpiar variables
-        ordenesData = [];
-        ordenSeleccionada = null;
-        filtrosActivos = {
-            tipo: 'todos',
-            estado: null
-        };
-    };
-};
-
-// === FUNCIÓN DE ACTUALIZACIÓN GLOBAL ===
-window.actualizar_modificar_orden = function() {
-    if (typeof window.cargarOrdenesModificar === 'function') {
-        console.log('🔄 Actualizando modificar orden por long polling');
-        window.cargarOrdenesModificar();
+        const url = `/api/mesero/todas-ordenes/?${params.toString()}`;
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('📋 Datos paginados recibidos:', data);
+        
+        // Actualizar datos globales
+        ordenesData = data.ordenes || [];
+        paginacionData = data.pagination || paginacionData;
+        
+        // Cargar productos si es necesario
+        if (productosDisponibles.length === 0) {
+            await cargarProductosDisponibles();
+        }
+        
+        // Renderizar órdenes
+        renderizarOrdenes(ordenesData);
+        
+        // Renderizar controles de paginación
+        renderizarPaginacion();
+        
+        // Actualizar info de resultados
+        actualizarInfoResultados();
+        
+    } catch (error) {
+        console.error('❌ Error cargando órdenes:', error);
+        mostrarError(error.message);
     }
-};
+}
 
-// Hacer función de inicialización disponible globalmente
-console.log('✅ Función inicializar_modificar_orden definida globalmente');
+// === NUEVA FUNCIÓN: RENDERIZAR PAGINACIÓN ===
+function renderizarPaginacion() {
+    let container = document.getElementById('paginacion-container');
+    
+    // Crear contenedor si no existe
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'paginacion-container';
+        container.className = 'paginacion-container';
+        
+        // Insertar después del container de órdenes
+        const ordenesContainer = document.getElementById('ordenes-container');
+        ordenesContainer.parentNode.insertBefore(container, ordenesContainer.nextSibling);
+    }
+    
+    const { currentPage, totalPages, hasNext, hasPrevious } = paginacionData;
+    
+    if (totalPages <= 1) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'flex';
+    
+    let html = '';
+    
+    // Botón anterior
+    html += `
+        <button class="btn-pagina" 
+                onclick="cambiarPagina(${currentPage - 1})" 
+                ${!hasPrevious ? 'disabled' : ''}>
+            ⬅️ Anterior
+        </button>
+    `;
+    
+    // Números de página (con lógica inteligente)
+    const rangoPaginas = generarRangoPaginas(currentPage, totalPages);
+    
+    rangoPaginas.forEach(page => {
+        if (page === '...') {
+            html += '<span style="padding: 0.75rem;">...</span>';
+        } else {
+            const isActive = page === currentPage;
+            html += `
+                <button class="btn-pagina ${isActive ? 'active' : ''}" 
+                        onclick="cambiarPagina(${page})">
+                    ${page}
+                </button>
+            `;
+        }
+    });
+    
+    // Botón siguiente
+    html += `
+        <button class="btn-pagina" 
+                onclick="cambiarPagina(${currentPage + 1})" 
+                ${!hasNext ? 'disabled' : ''}>
+            Siguiente ➡️
+        </button>
+    `;
+    
+    // Selector de tamaño de página
+    html += `
+        <div class="page-size-selector">
+            <label>Mostrar:</label>
+            <select onchange="cambiarTamañoPagina(this.value)">
+                <option value="10" ${paginacionData.pageSize === 10 ? 'selected' : ''}>10</option>
+                <option value="20" ${paginacionData.pageSize === 20 ? 'selected' : ''}>20</option>
+                <option value="50" ${paginacionData.pageSize === 50 ? 'selected' : ''}>50</option>
+                <option value="100" ${paginacionData.pageSize === 100 ? 'selected' : ''}>100</option>
+            </select>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// === NUEVA FUNCIÓN: GENERAR RANGO INTELIGENTE DE PÁGINAS ===
+function generarRangoPaginas(currentPage, totalPages) {
+    const rango = [];
+    
+    if (totalPages <= 7) {
+        // Mostrar todas las páginas
+        for (let i = 1; i <= totalPages; i++) {
+            rango.push(i);
+        }
+    } else {
+        // Lógica inteligente
+        rango.push(1);
+        
+        if (currentPage > 4) {
+            rango.push('...');
+        }
+        
+        const start = Math.max(2, currentPage - 1);
+        const end = Math.min(totalPages - 1, currentPage + 1);
+        
+        for (let i = start; i <= end; i++) {
+            if (!rango.includes(i)) {
+                rango.push(i);
+            }
+        }
+        
+        if (currentPage < totalPages - 3) {
+            rango.push('...');
+        }
+        
+        if (!rango.includes(totalPages)) {
+            rango.push(totalPages);
+        }
+    }
+    
+    return rango;
+}
+
+// === NUEVA FUNCIÓN: CAMBIAR PÁGINA ===
+function cambiarPagina(page) {
+    if (page < 1 || page > paginacionData.totalPages || page === paginacionData.currentPage) {
+        return;
+    }
+    
+    cargarOrdenes(page);
+    
+    // Scroll al top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// === NUEVA FUNCIÓN: CAMBIAR TAMAÑO DE PÁGINA ===
+function cambiarTamañoPagina(newSize) {
+    paginacionData.pageSize = parseInt(newSize);
+    cargarOrdenes(1); // Volver a página 1
+}
+
+// === NUEVA FUNCIÓN: ACTUALIZAR INFO DE RESULTADOS ===
+function actualizarInfoResultados() {
+    let infoElement = document.getElementById('info-resultados');
+    
+    // Crear elemento si no existe
+    if (!infoElement) {
+        const infoContainer = document.querySelector('.info-resultados');
+        if (infoContainer) {
+            infoElement = infoContainer.querySelector('#info-resultados');
+        }
+    }
+    
+    if (!infoElement) return;
+    
+    const { currentPage, totalCount, pageSize } = paginacionData;
+    const inicio = (currentPage - 1) * pageSize + 1;
+    const fin = Math.min(currentPage * pageSize, totalCount);
+    
+    if (totalCount === 0) {
+        infoElement.textContent = 'No se encontraron resultados';
+    } else {
+        infoElement.textContent = `Mostrando ${inicio}-${fin} de ${totalCount} órdenes`;
+    }
+    
+    // Actualizar filtro actual
+    const filtroActualElement = document.getElementById('filtro-actual');
+    if (filtroActualElement) {
+        let textoFiltro = `Filtro: ${filtrosActivos.tipo || 'Todos'}`;
+        if (filtrosActivos.estado) {
+            textoFiltro += ` - ${filtrosActivos.estado}`;
+        }
+        if (busquedaActual) {
+            textoFiltro += ` - Búsqueda: "${busquedaActual}"`;
+        }
+        filtroActualElement.textContent = textoFiltro;
+    }
+}
+
+// === NUEVAS FUNCIONES DE BÚSQUEDA ===
+function buscarOrdenes() {
+    const input = document.getElementById('busqueda-ordenes');
+    busquedaActual = input.value.trim();
+    cargarOrdenes(1); // Buscar desde página 1
+}
+
+function limpiarBusqueda() {
+    const input = document.getElementById('busqueda-ordenes');
+    input.value = '';
+    busquedaActual = '';
+    cargarOrdenes(1);
+}
+
+// === NUEVA FUNCIÓN: ABRIR MODAL DE PAGO ===
+function abrirModalPago(orden) {
+    console.log('💰 Abriendo modal de pago para orden:', orden.orden_id);
+    
+    const modal = document.getElementById('modal-pago');
+    const titulo = document.getElementById('modal-pago-titulo');
+    const content = document.getElementById('modal-pago-content');
+    
+    if (!modal || !titulo || !content) {
+        console.error('❌ Modal de pago no encontrado en el DOM');
+        return;
+    }
+    
+    // Configurar título
+    titulo.textContent = `Procesar Pago - Factura #${orden.factura_info.numero || orden.factura_info.id}`;
+    
+    // Cargar formulario de pago
+    cargarFormularioPago(orden);
+    
+    // Mostrar modal
+    modal.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+}
+
+// === NUEVA FUNCIÓN: CARGAR FORMULARIO DE PAGO ===
+function cargarFormularioPago(orden) {
+    const content = document.getElementById('modal-pago-content');
+    const factura = orden.factura_info;
+    const total = factura.total || 0;
+    
+    content.innerHTML = `
+        <form class="form-pago" id="form-pago">
+            <div class="monto-container">
+                <div class="monto-info">
+                    <div class="monto-total">Total a Pagar: $${total.toLocaleString()}</div>
+                    <div class="monto-detalle">Factura #${factura.numero || factura.id}</div>
+                    <div class="monto-detalle">Mesa: ${orden.es_domicilio ? '🏠 Domicilio' : orden.es_reserva ? '📅 Reserva' : `🍽️ Mesa ${orden.mesa.numero}`}</div>
+                </div>
+                
+                <div class="form-group-pago">
+                    <label class="form-label-pago" for="monto-pagado">Monto Recibido *</label>
+                    <input type="number" 
+                           id="monto-pagado" 
+                           class="form-input-pago" 
+                           placeholder="Ingrese el monto recibido"
+                           step="0.01"
+                           min="0"
+                           required
+                           oninput="calcularCambio(${total})">
+                </div>
+            </div>
+            
+            <div class="cambio-info" id="cambio-info">
+                <!-- Se actualiza dinámicamente -->
+            </div>
+            
+            <div class="form-group-pago">
+                <label class="form-label-pago" for="metodo-pago">Método de Pago *</label>
+                <select id="metodo-pago" class="form-select-pago" required>
+                    <option value="">-- Seleccione método --</option>
+                    <option value="EFECTIVO">💵 Efectivo</option>
+                    <option value="TARJETA_CREDITO">💳 Tarjeta de Crédito</option>
+                    <option value="TARJETA_DEBITO">💳 Tarjeta de Débito</option>
+                    <option value="TRANSFERENCIA">🏦 Transferencia</option>
+                    <option value="DIGITAL">📱 Pago Digital</option>
+                    <option value="MIXTO">🔄 Pago Mixto</option>
+                </select>
+            </div>
+            
+            <div class="form-group-pago">
+                <label class="form-label-pago" for="cliente-nombre">Nombre del Cliente</label>
+                <input type="text" 
+                       id="cliente-nombre" 
+                       class="form-input-pago" 
+                       placeholder="Nombre del cliente (opcional)"
+                       value="${orden.cliente_info?.nombre || ''}">
+            </div>
+            
+            <div class="form-group-pago">
+                <label class="form-label-pago" for="cliente-identificacion">Identificación del Cliente</label>
+                <input type="text" 
+                       id="cliente-identificacion" 
+                       class="form-input-pago" 
+                       placeholder="Cédula o documento (opcional)">
+            </div>
+            
+            <div class="form-group-pago">
+                <label class="form-label-pago" for="observaciones-pago">Observaciones del Pago</label>
+                <textarea id="observaciones-pago" 
+                          class="form-textarea-pago" 
+                          placeholder="Observaciones adicionales (opcional)"></textarea>
+            </div>
+            
+            <div class="botones-pago">
+                <button type="button" class="btn-cancelar-pago" onclick="cerrarModal('modal-pago')">
+                    ❌ Cancelar
+                </button>
+                <button type="submit" class="btn-confirmar-pago" id="btn-confirmar-pago">
+                    💰 Confirmar Pago
+                </button>
+            </div>
+        </form>
+    `;
+    
+    // Configurar event listener del formulario
+    document.getElementById('form-pago').addEventListener('submit', (e) => {
+        e.preventDefault();
+        confirmarPago(orden);
+    });
+}
+
+// === NUEVA FUNCIÓN: CALCULAR CAMBIO ===
+function calcularCambio(totalFactura) {
+    const montoInput = document.getElementById('monto-pagado');
+    const cambioInfo = document.getElementById('cambio-info');
+    
+    if (!montoInput || !cambioInfo) return;
+    
+    const montoPagado = parseFloat(montoInput.value) || 0;
+    const cambio = montoPagado - totalFactura;
+    
+    cambioInfo.style.display = 'block';
+    cambioInfo.classList.remove('positivo', 'negativo');
+    
+    if (cambio > 0) {
+        cambioInfo.classList.add('positivo');
+        cambioInfo.innerHTML = `💰 Cambio a entregar: <strong>$${cambio.toLocaleString()}</strong>`;
+    } else if (cambio < 0) {
+        cambioInfo.classList.add('negativo');
+        cambioInfo.innerHTML = `⚠️ Falta por pagar: <strong>$${Math.abs(cambio).toLocaleString()}</strong>`;
+    } else {
+        cambioInfo.classList.add('positivo');
+        cambioInfo.innerHTML = `✅ Pago exacto - Sin cambio`;
+    }
+}
+
+// === NUEVA FUNCIÓN: CONFIRMAR PAGO ===
+async function confirmarPago(orden) {
+    const btnConfirmar = document.getElementById('btn-confirmar-pago');
+    const form = document.getElementById('form-pago');
+    
+    // Validar formulario
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    // Obtener datos del formulario
+    const montoPagado = parseFloat(document.getElementById('monto-pagado').value);
+    const metodoPago = document.getElementById('metodo-pago').value;
+    const clienteNombre = document.getElementById('cliente-nombre').value.trim();
+    const clienteIdentificacion = document.getElementById('cliente-identificacion').value.trim();
+    const observacionesPago = document.getElementById('observaciones-pago').value.trim();
+    
+    const totalFactura = orden.factura_info.total;
+    
+    // Validaciones adicionales
+    if (montoPagado <= 0) {
+        alert('❌ El monto pagado debe ser mayor a 0');
+        return;
+    }
+    
+    if (montoPagado < totalFactura) {
+        const confirmarParcial = confirm(`⚠️ El monto recibido (${montoPagado.toLocaleString()}) es menor al total de la factura (${totalFactura.toLocaleString()}).\n\n¿Deseas procesar un pago parcial?`);
+        if (!confirmarParcial) return;
+    }
+    
+    // Confirmar operación
+    const cambio = montoPagado - totalFactura;
+    let mensajeConfirmacion = `💰 Confirmar pago de $${montoPagado.toLocaleString()}`;
+    if (cambio > 0) {
+        mensajeConfirmacion += `\n💵 Cambio a entregar: $${cambio.toLocaleString()}`;
+    }
+    mensajeConfirmacion += `\n\n¿Proceder con el pago?`;
+    
+    if (!confirm(mensajeConfirmacion)) return;
+    
+    // Deshabilitar botón y mostrar loading
+    btnConfirmar.disabled = true;
+    btnConfirmar.textContent = '⏳ Procesando...';
+    
+    try {
+        const response = await fetch(`/api/factura/${orden.factura_info.id}/pagar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                monto_pagado: montoPagado,
+                metodo_pago: metodoPago,
+                cliente_nombre: clienteNombre,
+                cliente_identificacion: clienteIdentificacion,
+                observaciones_pago: observacionesPago
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.error || `Error ${response.status}`);
+        }
+        
+        // Mostrar resultado exitoso
+        let mensaje = `✅ Pago procesado exitosamente!\n\n`;
+        mensaje += `💰 Total factura: $${totalFactura.toLocaleString()}\n`;
+        mensaje += `💵 Monto recibido: $${montoPagado.toLocaleString()}\n`;
+        
+        if (result.pago.cambio > 0) {
+            mensaje += `🔄 Cambio: $${result.pago.cambio.toLocaleString()}\n`;
+        }
+        
+        mensaje += `📊 Estado: ${result.pago.estado_pago}\n`;
+        mensaje += `💳 Método: ${metodoPago}`;
+        
+        alert(mensaje);
+        
+        // Cerrar modal y recargar
+        cerrarModal('modal-pago');
+        cargarOrdenes();
+        
+    } catch (error) {
+        console.error('❌ Error procesando pago:', error);
+        alert(`❌ Error procesando pago: ${error.message}`);
+    } finally {
+        btnConfirmar.disabled = false;
+        btnConfirmar.textContent = '💰 Confirmar Pago';
+    }
+}
+
+// === MODIFICAR LA FUNCIÓN marcarComoPagada EXISTENTE ===
+async function marcarComoPagada(ordenId) {
+    const orden = ordenesData.find(o => o.orden_id === ordenId);
+    if (!orden || !orden.factura_info) {
+        alert('❌ No se encontró la orden o factura');
+        return;
+    }
+    
+    // Abrir modal de pago en lugar de confirmación simple
+    abrirModalPago(orden);
+}
+
+// === BÚSQUEDA EN TIEMPO REAL CON DEBOUNCE ===
+document.addEventListener('DOMContentLoaded', () => {
+    const inputBusqueda = document.getElementById('busqueda-ordenes');
+    if (inputBusqueda) {
+        inputBusqueda.addEventListener('input', (e) => {
+            clearTimeout(timeoutBusqueda);
+            timeoutBusqueda = setTimeout(() => {
+                busquedaActual = e.target.value.trim();
+                cargarOrdenes(1);
+            }, 500); // Esperar 500ms después de que el usuario deje de escribir
+        });
+        
+        // Buscar con Enter
+        inputBusqueda.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                clearTimeout(timeoutBusqueda);
+                buscarOrdenes();
+            }
+        });
+    }
+});
+
+// === EXPONER FUNCIONES GLOBALMENTE ===
+window.cambiarPagina = cambiarPagina;
+window.cambiarTamañoPagina = cambiarTamañoPagina;
+window.buscarOrdenes = buscarOrdenes;
+window.limpiarBusqueda = limpiarBusqueda;
+window.abrirModalPago = abrirModalPago;
+window.calcularCambio = calcularCambio;
+window.confirmarPago = confirmarPago;
+
+// === AGREGAR AL FINAL DEL SCRIPT EXISTENTE ===
+console.log('✅ Funcionalidades de paginación y pago agregadas correctamente');
 </script>

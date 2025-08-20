@@ -1,0 +1,189 @@
+-- ===============================
+-- SISTEMA RESTAURANTE
+-- ===============================
+
+-- Crear la base de datos si no existe y seleccionarla
+CREATE DATABASE IF NOT EXISTS restaurante_bd CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE restaurante_bd;
+
+-- ===============================
+-- TABLAS BÁSICAS
+-- ===============================
+
+-- Roles
+CREATE TABLE IF NOT EXISTS roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    descripcion VARCHAR(255),
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- Usuarios
+CREATE TABLE IF NOT EXISTS usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    telefono VARCHAR(20),
+    id_rol INT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_rol) REFERENCES roles(id) ON DELETE CASCADE
+);
+
+-- Categorías de Productos
+CREATE TABLE IF NOT EXISTS categorias_productos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    descripcion VARCHAR(255),
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- Productos
+CREATE TABLE IF NOT EXISTS productos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion VARCHAR(500),
+    cantidad INT DEFAULT 0,
+    precio DECIMAL(10,2) NOT NULL,
+    id_categoria INT NOT NULL,
+    tiempo_preparacion INT DEFAULT 15,
+    imagen_url VARCHAR(255),
+    is_available BOOLEAN DEFAULT TRUE,
+    is_active BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (id_categoria) REFERENCES categorias_productos(id) ON DELETE CASCADE
+);
+
+-- Mesas
+CREATE TABLE IF NOT EXISTS mesas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    numero INT NOT NULL UNIQUE,
+    capacidad INT NOT NULL,
+    ubicacion VARCHAR(50) NOT NULL,
+    estado VARCHAR(20) DEFAULT 'LIBRE',
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- Órdenes
+CREATE TABLE IF NOT EXISTS ordenes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    numero_orden VARCHAR(20) UNIQUE,
+    mesero_id INT NOT NULL,
+    mesa_id INT NOT NULL,
+    estado VARCHAR(20) DEFAULT 'NUEVA',
+    observaciones VARCHAR(500),
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    confirmado_en TIMESTAMP NULL,
+    enviado_cocina_en TIMESTAMP NULL,
+    listo_en TIMESTAMP NULL,
+    FOREIGN KEY (mesero_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (mesa_id) REFERENCES mesas(id) ON DELETE CASCADE
+);
+
+-- Productos de la orden
+CREATE TABLE IF NOT EXISTS orden_productos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    orden_id INT NOT NULL,
+    producto_id INT NOT NULL,
+    cantidad INT NOT NULL,
+    precio_unitario DECIMAL(10,2) NOT NULL,
+    estado VARCHAR(20) DEFAULT 'PENDIENTE',
+    observaciones VARCHAR(300),
+    listo_en TIMESTAMP NULL,
+    FOREIGN KEY (orden_id) REFERENCES ordenes(id) ON DELETE CASCADE,
+    FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE
+);
+
+-- Facturas
+CREATE TABLE IF NOT EXISTS facturas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    numero_factura VARCHAR(20) UNIQUE,
+    orden_id INT NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    impuesto DECIMAL(10,2) DEFAULT 0,
+    descuento DECIMAL(10,2) DEFAULT 0,
+    total DECIMAL(10,2) NOT NULL,
+    metodo_pago VARCHAR(30) DEFAULT 'PENDIENTE',
+    estado_pago VARCHAR(20) DEFAULT 'NO_PAGADA',
+    cliente_nombre VARCHAR(100),
+    cliente_identificacion VARCHAR(20),
+    cliente_telefono VARCHAR(20),
+    observaciones VARCHAR(500),
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    pagado_en TIMESTAMP NULL,
+    FOREIGN KEY (orden_id) REFERENCES ordenes(id) ON DELETE CASCADE
+);
+-- ===============================
+-- TRIGGER SIMPLE PARA MARCAR ORDEN LISTA
+-- ===============================
+-- Elimina el trigger si ya existe para evitar errores al recrearlo
+DROP TRIGGER IF EXISTS tr_orden_lista;
+
+DELIMITER //
+
+CREATE TRIGGER tr_orden_lista
+AFTER UPDATE ON orden_productos
+FOR EACH ROW
+BEGIN
+    DECLARE productos_pendientes INT DEFAULT 0;
+    
+    -- Se activa solo cuando un producto cambia su estado a 'LISTO'
+    IF OLD.estado != 'LISTO' AND NEW.estado = 'LISTO' THEN
+        
+        -- Contar cuántos productos de la misma orden aún no están listos
+        SELECT COUNT(*) INTO productos_pendientes
+        FROM orden_productos
+        WHERE orden_id = NEW.orden_id AND estado != 'LISTO';
+        
+        -- Si ya no quedan productos pendientes, marcar la orden completa como 'LISTA'
+        IF productos_pendientes = 0 THEN
+            UPDATE ordenes
+            SET estado = 'LISTA', listo_en = NOW()
+            WHERE id = NEW.orden_id;
+        END IF;
+    END IF;
+END //
+
+DELIMITER ;restaurante_bd
+-- ===============================
+-- DATOS INICIALES
+-- ===============================
+
+-- Roles
+INSERT INTO roles (nombre, descripcion) VALUES
+('ADMIN', 'Administrador del sistema'),
+('MESERO', 'Encargado de tomar pedidos'),
+('COCINERO', 'Encargado de la preparación de alimentos'),
+('CAJERO', 'Encargado de gestionar los pagos');
+
+-- Usuarios
+INSERT INTO usuarios (nombre, email, password, telefono, id_rol) VALUES
+('Admin Sistema', 'admin@restaurante.comdjango_content_type', '12345678', '3001234567', 1),
+('Ian Mesero', 'ian@restaurante.com', '12345678', '3007654321', 2),
+('María Cocinera', 'maria@restaurante.com', '12345678', '3009876543', 3),
+('Silvio Cajero', 'silvio@restaurante.com', '12345678', '3005432109', 4);
+
+-- Categorías de Productos
+INSERT INTO categorias_productos (nombre) VALUES
+('Aves'),
+('Carnes'),
+('Pescados'),
+('Típicos'),
+('Bebidas');
+
+-- Productos
+INSERT INTO productos (nombre, cantidad, precio, id_categoria, tiempo_preparacion) VALUES
+('Pernil de Gallina', 12, 30000, 1, 12),
+('Pechuga de Pollo', 6, 30000, 1, 15),
+('Carne Asada', 100, 27000, 2, 8),
+('Tilapia Mediana', 5, 25000, 3, 10),
+('Trucha a la Plancha', 10, 30000, 3, 15),
+('Tacacho con Cecina', 20, 20000, 4, 30); -- Ajusté el precio de Tacacho, 2000 es muy poco
+
+-- Mesas
+INSERT INTO mesas (numero, capacidad, ubicacion) VALUES
+(1, 4, 'Exterior'),
+(2, 2, 'Interior'),
+(3, 6, 'Exterior'),
+(4, 4, 'Interior'),
+(5, 8, 'Salón principal');
